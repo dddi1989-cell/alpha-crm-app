@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_synced_at": "2026-08-20T03:06:49.936Z",
+  "last_synced_at": "2026-08-20T03:07:26.985Z",
   "accounts": [
     {
       "id": 1,
@@ -14,6 +14,19 @@
       "org_name": null,
       "created_at": "2026-08-20T02:52:22.136Z",
       "updated_at": "2026-08-20T02:52:22.136Z"
+    },
+    {
+      "id": 2,
+      "username": "2544831",
+      "password_hash": "751b2ef3772016e278a4a3a968b604c626b41bd66c88075a62bdd584b4fa2628",
+      "name": "김지형",
+      "phone": "01084773798",
+      "role": "FA",
+      "parent_id": null,
+      "org_id": null,
+      "org_name": null,
+      "created_at": "2026-08-20T03:07:26.984Z",
+      "updated_at": "2026-08-20T03:07:26.984Z"
     }
   ],
   "organizations": []
