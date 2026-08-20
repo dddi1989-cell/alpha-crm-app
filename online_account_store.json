@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_synced_at": "2026-08-20T04:10:18.188Z",
+  "last_synced_at": "2026-08-20T04:10:24.917Z",
   "accounts": [
     {
       "id": 1,
@@ -74,11 +74,11 @@
       "name": "박성도",
       "phone": "01079809130",
       "role": "Agent",
-      "parent_id": 2,
+      "parent_id": 6,
       "org_id": 5,
       "org_name": "Crocodile팀",
       "created_at": "2026-08-18T00:12:11.371Z",
-      "updated_at": "2026-08-20T04:10:18.188Z"
+      "updated_at": "2026-08-19T02:33:35.389Z"
     },
     {
       "id": 8,
