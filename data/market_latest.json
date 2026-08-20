@@ -1,0 +1,214 @@
+{
+  "date": "2026-08-21",
+  "updated_at": "2026-08-21 08:50 KST",
+  "title": "[2026-08-21] 오늘의 증시 & 글로벌 금융 시황 모닝 브리핑",
+  "summary_3lines": [
+    "🇺🇸 뉴욕증시: 나스닥(26,067.17, -1.00%), S&P 500(7,641.16, -0.87%) 마감.",
+    "🇰🇷 국내증시: 코스피(6,852.58, -0.00%상승) 출발, 대형 기술주 중심 수급 주목.",
+    "📊 매크로: 원/달러 환율 1,392.4원(+0.22%), WTI 원유 86.29 $/배럴 변동에 따른 금융 시장 모니터링."
+  ],
+  "domestic": {
+    "indices": [
+      {
+        "name": "KOSPI",
+        "value": "6,852.58",
+        "change_rate": "-0.00%상승",
+        "is_up": true
+      },
+      {
+        "name": "KOSDAQ",
+        "value": "840.89",
+        "change_rate": "-0.00%상승",
+        "is_up": true
+      }
+    ],
+    "top_stocks": [
+      {
+        "ticker": "005930",
+        "name": "삼성전자",
+        "price": "72,400원",
+        "change_rate": "+1.12%",
+        "is_up": true
+      },
+      {
+        "ticker": "000660",
+        "name": "SK하이닉스",
+        "price": "188,500원",
+        "change_rate": "+2.45%",
+        "is_up": true
+      },
+      {
+        "ticker": "373220",
+        "name": "LG에너지솔루션",
+        "price": "382,000원",
+        "change_rate": "+0.39%",
+        "is_up": true
+      },
+      {
+        "ticker": "207940",
+        "name": "삼성바이오로직스",
+        "price": "998,000원",
+        "change_rate": "-0.20%",
+        "is_up": false
+      },
+      {
+        "ticker": "005380",
+        "name": "현대차",
+        "price": "235,500원",
+        "change_rate": "+1.51%",
+        "is_up": true
+      }
+    ],
+    "market_sentiment": "안정"
+  },
+  "overseas": {
+    "indices": [
+      {
+        "symbol": "^GSPC",
+        "name": "S&P 500",
+        "value": "7,641.16",
+        "change_rate": "-0.87%",
+        "is_up": false
+      },
+      {
+        "symbol": "^IXIC",
+        "name": "나스닥 (NASDAQ)",
+        "value": "26,067.17",
+        "change_rate": "-1.00%",
+        "is_up": false
+      },
+      {
+        "symbol": "^DJI",
+        "name": "다우존스 (Dow Jones)",
+        "value": "52,759.21",
+        "change_rate": "-1.32%",
+        "is_up": false
+      }
+    ],
+    "macro": [
+      {
+        "symbol": "USDKRW=X",
+        "name": "원/달러 환율",
+        "value": "1,392.4원",
+        "change_rate": "+0.22%",
+        "is_up": true
+      },
+      {
+        "symbol": "CL=F",
+        "name": "WTI 원유",
+        "value": "86.29 $/배럴",
+        "change_rate": "+0.54%",
+        "is_up": true
+      },
+      {
+        "symbol": "^TNX",
+        "name": "미국 10년물 국채금리",
+        "value": "4.70 %",
+        "change_rate": "+0.92%",
+        "is_up": true
+      }
+    ],
+    "tech_stocks": [
+      {
+        "symbol": "NVDA",
+        "name": "엔비디아 (NVIDIA)",
+        "price": "$216.85",
+        "change_rate": "-0.33%",
+        "is_up": false
+      },
+      {
+        "symbol": "AAPL",
+        "name": "애플 (Apple)",
+        "price": "$311.30",
+        "change_rate": "-1.75%",
+        "is_up": false
+      },
+      {
+        "symbol": "MSFT",
+        "name": "마이크로소프트 (Microsoft)",
+        "price": "$481.15",
+        "change_rate": "-0.65%",
+        "is_up": false
+      },
+      {
+        "symbol": "TSLA",
+        "name": "테슬라 (Tesla)",
+        "price": "$345.13",
+        "change_rate": "-1.71%",
+        "is_up": false
+      },
+      {
+        "symbol": "GOOGL",
+        "name": "알파벳/구글 (Google)",
+        "price": "$340.67",
+        "change_rate": "-1.17%",
+        "is_up": false
+      }
+    ]
+  },
+  "news": [
+    {
+      "source_type": "국내증시",
+      "title": "",
+      "summary": "",
+      "url": "https://finance.naver.com/news/news_read.naver?article_id=0006355431&office_id=018&mode=mainnews&type=&date=2026-08-21&page=1",
+      "press": "이데일리"
+    },
+    {
+      "source_type": "국내증시",
+      "title": "",
+      "summary": "",
+      "url": "https://finance.naver.com/news/news_read.naver?article_id=0005564470&office_id=014&mode=mainnews&type=&date=2026-08-21&page=1",
+      "press": "파이낸셜뉴스"
+    },
+    {
+      "source_type": "국내증시",
+      "title": "",
+      "summary": "",
+      "url": "https://finance.naver.com/news/news_read.naver?article_id=0004653750&office_id=011&mode=mainnews&type=&date=2026-08-21&page=1",
+      "press": "서울경제"
+    },
+    {
+      "source_type": "국내증시",
+      "title": "",
+      "summary": "",
+      "url": "https://finance.naver.com/news/news_read.naver?article_id=0001187459&office_id=366&mode=mainnews&type=&date=2026-08-21&page=1",
+      "press": "조선비즈"
+    },
+    {
+      "source_type": "국내증시",
+      "title": "",
+      "summary": "",
+      "url": "https://finance.naver.com/news/news_read.naver?article_id=0006355416&office_id=018&mode=mainnews&type=&date=2026-08-21&page=1",
+      "press": "이데일리"
+    },
+    {
+      "source_type": "글로벌시황",
+      "title": "",
+      "summary": "Yahoo Finance",
+      "url": "",
+      "press": "Yahoo Finance"
+    },
+    {
+      "source_type": "글로벌시황",
+      "title": "",
+      "summary": "Yahoo Finance",
+      "url": "",
+      "press": "Yahoo Finance"
+    },
+    {
+      "source_type": "글로벌시황",
+      "title": "",
+      "summary": "Yahoo Finance",
+      "url": "",
+      "press": "Yahoo Finance"
+    },
+    {
+      "source_type": "글로벌시황",
+      "title": "",
+      "summary": "Yahoo Finance",
+      "url": "",
+      "press": "Yahoo Finance"
+    }
+  ]
+}
