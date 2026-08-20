@@ -594,6 +594,32 @@ function importLegacyLocalDatabases(db) {
   }
 }
 
+async function syncCloudUpdateManifest(version, downloadUrl, title, releaseNotes) {
+  try {
+    const manifest = {
+      latestVersion: version || '1.5.9',
+      minRequiredVersion: '1.0.0',
+      title: title || `v${version} 공식 정식 배포 버전`,
+      releaseDate: new Date().toISOString().split('T')[0],
+      downloadUrl: downloadUrl || `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/v${version}/ALPHA_CRM_MicroPatch_v${version}.asar`,
+      installerUrl: `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/v${version}/ALPHA_CRM_Setup_${version}.exe`,
+      releaseNotes: releaseNotes || '정식 업데이트 패치',
+      forceUpdate: false,
+      targetFile: 'resources/app.asar'
+    };
+
+    const manifestJson = JSON.stringify(manifest, null, 2);
+    githubUploadFile('update_manifest.json', Buffer.from(manifestJson, 'utf8'), `Update manifest to v${version}`)
+      .then(ok => {
+        if (ok) console.log(`[Cloud-Sync] Successfully pushed update_manifest.json for v${version}`);
+      }).catch(e => {
+        console.log('[Cloud-Sync] Failed to push update_manifest.json:', e.message);
+      });
+  } catch (err) {
+    console.error('syncCloudUpdateManifest error:', err);
+  }
+}
+
 let syncIntervalId = null;
 
 function startPeriodicCloudSync(db, mainWindow) {
