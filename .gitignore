@@ -10,7 +10,6 @@ release/
 *.blockmap
 
 # Environment & Temp
-scripts/
 .env
 *.tmp
 *.log
