@@ -5,7 +5,7 @@
   "releaseDate": "2026-08-20",
   "downloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.3/ALPHA_CRM_MicroPatch_v1.6.3.asar",
   "installerUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.3/ALPHA_CRM_Setup_1.6.3.exe",
-  "releaseNotes": "하위 조직원 고객 일정 조회 전용(수정/추가 차단) 권한 강화 패치",
+  "releaseNotes": "상품전략자료실 공유 게시판 및 읽기전용 권한 강화",
   "forceUpdate": false,
   "targetFile": "resources/app.asar"
 }
