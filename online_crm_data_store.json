@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_synced_at": "2026-08-20T06:36:50.643Z",
+  "last_synced_at": "2026-08-20T23:17:06.401Z",
   "customers": [
     {
       "id": 1,
@@ -14,12 +14,12 @@
       "company": "",
       "status": "Active",
       "notes": "",
-      "created_at": "2026-08-10T02:04:45.754Z",
+      "created_at": "2026-08-07T00:01:36.525Z",
       "updated_at": "2026-08-18T02:53:27.086Z",
-      "user_id": 3,
       "report_pdf_path": "C:\\Users\\홍인기\\AppData\\Roaming\\offline-crm-app\\reports\\report_1787021558776_OZ_REPORT_Print_LTRH110.pdf",
       "report_excel_path": "",
-      "birth_date": ""
+      "birth_date": "",
+      "user_id": 3
     },
     {
       "id": 2,
@@ -35,10 +35,10 @@
       "notes": "인천 남동구 염전로411번길 21, 102동 1204호(간석동,헤렌시티)",
       "created_at": "2026-08-13T02:57:39.348Z",
       "updated_at": "2026-08-13T03:04:02.516Z",
-      "user_id": 5,
       "report_pdf_path": "",
       "report_excel_path": "",
-      "birth_date": ""
+      "birth_date": "",
+      "user_id": 5
     },
     {
       "id": 3,
@@ -52,12 +52,12 @@
       "company": "",
       "status": "Active",
       "notes": "",
-      "created_at": "2026-08-13T03:03:43.537Z",
+      "created_at": "2026-08-11T00:05:44.439Z",
       "updated_at": "2026-08-11T00:05:44.439Z",
-      "user_id": 2,
       "report_pdf_path": "C:\\Users\\dddi1\\Desktop\\나광채 보장분석 리포트.pdf",
       "report_excel_path": "C:\\Users\\dddi1\\Desktop\\나광채.xlsx",
-      "birth_date": "1987-04-25"
+      "birth_date": "1987-04-25",
+      "user_id": 2
     },
     {
       "id": 4,
@@ -71,12 +71,12 @@
       "company": "",
       "status": "Inactive",
       "notes": "",
-      "created_at": "2026-08-17T03:24:05.625Z",
+      "created_at": "2026-08-11T00:10:18.605Z",
       "updated_at": "2026-08-11T00:10:18.605Z",
-      "user_id": 2,
       "report_pdf_path": "C:\\Users\\dddi1\\Desktop\\조희숙.pdf",
       "report_excel_path": "C:\\Users\\dddi1\\Desktop\\조희숙.xlsx",
-      "birth_date": "1959-12-11"
+      "birth_date": "1959-12-11",
+      "user_id": 2
     },
     {
       "id": 5,
@@ -92,10 +92,10 @@
       "notes": "",
       "created_at": "2026-08-11T00:12:42.778Z",
       "updated_at": "2026-08-11T00:12:42.778Z",
-      "user_id": 2,
       "report_pdf_path": "C:\\Users\\dddi1\\Desktop\\김남영.pdf",
       "report_excel_path": "C:\\Users\\dddi1\\Desktop\\김남영.xlsx",
-      "birth_date": "1961-11-28"
+      "birth_date": "1961-11-28",
+      "user_id": 2
     },
     {
       "id": 6,
@@ -111,10 +111,10 @@
       "notes": "",
       "created_at": "2026-08-11T00:15:01.512Z",
       "updated_at": "2026-08-11T00:15:01.512Z",
-      "user_id": 2,
       "report_pdf_path": "C:\\Users\\dddi1\\Desktop\\윤은숙.pdf",
       "report_excel_path": "C:\\Users\\dddi1\\Desktop\\윤은숙.xlsx",
-      "birth_date": "1969-03-25"
+      "birth_date": "1969-03-25",
+      "user_id": 2
     },
     {
       "id": 7,
@@ -130,10 +130,10 @@
       "notes": "",
       "created_at": "2026-08-11T00:17:03.038Z",
       "updated_at": "2026-08-11T00:17:03.038Z",
-      "user_id": 2,
       "report_pdf_path": "C:\\Users\\dddi1\\Desktop\\유슬기.pdf",
       "report_excel_path": "C:\\Users\\dddi1\\Desktop\\유슬기.xlsx",
-      "birth_date": "1984-05-15"
+      "birth_date": "1984-05-15",
+      "user_id": 2
     },
     {
       "id": 8,
@@ -149,10 +149,10 @@
       "notes": "960129-1143527",
       "created_at": "2026-08-19T00:34:51.148Z",
       "updated_at": "2026-08-19T00:36:20.922Z",
-      "user_id": 5,
       "report_pdf_path": "",
       "report_excel_path": "",
-      "birth_date": "1996-01-29"
+      "birth_date": "1996-01-29",
+      "user_id": 5
     },
     {
       "id": 9,
@@ -168,10 +168,10 @@
       "notes": "국민 273  21  0100  083",
       "created_at": "2026-08-19T05:18:41.858Z",
       "updated_at": "2026-08-19T05:18:41.858Z",
-      "user_id": 5,
       "report_pdf_path": "",
       "report_excel_path": "",
-      "birth_date": "1967-11-03"
+      "birth_date": "1967-11-03",
+      "user_id": 5
     }
   ],
   "schedules": [
@@ -184,7 +184,7 @@
       "reminder_offset_minutes": 10,
       "status": "Pending",
       "notified": 1,
-      "created_at": "2026-08-07T01:46:58.380Z",
+      "created_at": "2026-08-07T00:04:16.002Z",
       "updated_at": "2026-08-07T01:46:58.380Z",
       "user_id": 3,
       "category_type": "UserSchedule"
@@ -198,7 +198,7 @@
       "reminder_offset_minutes": 10,
       "status": "Pending",
       "notified": 0,
-      "created_at": "2026-08-10T02:05:54.993Z",
+      "created_at": "2026-08-07T00:07:58.903Z",
       "updated_at": "2026-08-18T02:28:01.897Z",
       "user_id": 3,
       "category_type": "UserSchedule"
@@ -212,7 +212,7 @@
       "reminder_offset_minutes": 10,
       "status": "Completed",
       "notified": 1,
-      "created_at": "2026-08-10T04:20:14.828Z",
+      "created_at": "2026-08-07T01:06:20.332Z",
       "updated_at": "2026-08-11T01:03:10.676Z",
       "user_id": 2,
       "category_type": "UserSchedule"
@@ -225,7 +225,7 @@
       "scheduled_at": "2026-08-20T15:10:00.000Z",
       "reminder_offset_minutes": 10,
       "status": "Pending",
-      "notified": 0,
+      "notified": 1,
       "created_at": "2026-08-13T02:56:58.503Z",
       "updated_at": "2026-08-07T01:09:25.629Z",
       "user_id": 2,
@@ -240,7 +240,7 @@
       "reminder_offset_minutes": 10,
       "status": "Completed",
       "notified": 1,
-      "created_at": "2026-08-13T02:57:54.996Z",
+      "created_at": "2026-08-07T01:10:59.055Z",
       "updated_at": "2026-08-11T23:01:40.494Z",
       "user_id": 2,
       "category_type": "UserSchedule"
@@ -268,7 +268,7 @@
       "reminder_offset_minutes": 10,
       "status": "Completed",
       "notified": 1,
-      "created_at": "2026-08-13T03:03:43.538Z",
+      "created_at": "2026-08-07T02:10:57.215Z",
       "updated_at": "2026-08-11T01:03:13.036Z",
       "user_id": 2,
       "category_type": "UserSchedule"
@@ -296,7 +296,7 @@
       "reminder_offset_minutes": 1440,
       "status": "Pending",
       "notified": 0,
-      "created_at": "2026-08-17T03:23:00.557Z",
+      "created_at": "2026-08-11T00:05:44.440Z",
       "updated_at": "2026-08-19T00:36:20.928Z",
       "user_id": 2,
       "category_type": "UserSchedule"
@@ -310,7 +310,7 @@
       "reminder_offset_minutes": 1440,
       "status": "Pending",
       "notified": 0,
-      "created_at": "2026-08-17T03:24:54.093Z",
+      "created_at": "2026-08-11T00:05:44.440Z",
       "updated_at": "2026-08-19T00:36:20.927Z",
       "user_id": 2,
       "category_type": "UserSchedule"
@@ -652,6 +652,30 @@
       "category_type": "UserSchedule"
     }
   ],
-  "posts": [],
-  "post_attachments": []
+  "posts": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "author_name": "최고 관리자 (Admin)",
+      "title": "2026년 8월 상품의 정석_생/손보편",
+      "content": "안녕하십니까, 상품전략연구소입니다.\n주요 보종별 TOP5를 엄선하여 상세 비교하는 \"상품의 정석\" 8월 업데이트를 안내합니다.\n해당 자료는 매월 1회 정기 배포될 예정입니다.\n영업에 많은 도움이 되셨으면 좋겠습니다.\n감사합니다.",
+      "category": "상품전략",
+      "views": 5,
+      "created_at": "2026-08-20T06:25:30.996Z",
+      "updated_at": "2026-08-20T06:27:47.665Z"
+    }
+  ],
+  "post_attachments": [
+    {
+      "id": 1,
+      "post_id": 1,
+      "file_name": "2608_인카_NEW상품의정석_v2.pdf",
+      "file_size": 25102529,
+      "file_type": "pdf",
+      "file_data": null,
+      "created_at": "2026-08-20T06:25:42.517Z",
+      "file_path": "C:\\Users\\dddi1\\AppData\\Roaming\\offline-crm-app\\board_attachments\\1_1787207142517_2608_인카_NEW상품의정석_v2.pdf",
+      "download_url": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/board-assets/board_1787207143815_04km9_2608____NEW______v2.pdf"
+    }
+  ]
 }
