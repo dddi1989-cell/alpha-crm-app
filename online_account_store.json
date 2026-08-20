@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_synced_at": "2026-08-20T03:07:26.985Z",
+  "last_synced_at": "2026-08-20T03:08:39.317Z",
   "accounts": [
     {
       "id": 1,
@@ -12,7 +12,7 @@
       "parent_id": null,
       "org_id": null,
       "org_name": null,
-      "created_at": "2026-08-20T02:52:22.136Z",
+      "created_at": "2026-08-14T05:20:23.289Z",
       "updated_at": "2026-08-20T02:52:22.136Z"
     },
     {
@@ -25,9 +25,102 @@
       "parent_id": null,
       "org_id": null,
       "org_name": null,
-      "created_at": "2026-08-20T03:07:26.984Z",
+      "created_at": "2026-08-12T08:23:17.459Z",
       "updated_at": "2026-08-20T03:07:26.984Z"
+    },
+    {
+      "id": 3,
+      "username": "2331713",
+      "password_hash": "e0b711584cb89c4506a7c4327a384a34a057d1c998bedd0f9b7566f7fa0c2340",
+      "name": "홍인기",
+      "phone": "01083970137",
+      "role": "SM",
+      "parent_id": 5,
+      "org_id": 5,
+      "org_name": "Crocodile팀",
+      "created_at": "2026-08-16T07:45:12.121Z",
+      "updated_at": "2026-08-19T02:33:35.389Z"
+    },
+    {
+      "id": 4,
+      "username": "2534013",
+      "password_hash": "eb7d538f0c5e123743617b55c9015b8e0f3494c4a27b42e843f576472f9aded8",
+      "name": "방소리",
+      "phone": "01025447989",
+      "role": "SM",
+      "parent_id": 5,
+      "org_id": 4,
+      "org_name": "AXIS",
+      "created_at": "2026-08-18T00:09:52.428Z",
+      "updated_at": "2026-08-19T02:27:36.940Z"
+    },
+    {
+      "id": 5,
+      "username": "1930311",
+      "password_hash": "a4168f40f2f9ad904ae276e1672790bf9f79ceef8ade602ec92f5062b84f7278",
+      "name": "박서현",
+      "phone": "01025749161",
+      "role": "SM",
+      "parent_id": 2,
+      "org_id": 4,
+      "org_name": "AXIS",
+      "created_at": "2026-08-18T00:10:26.731Z",
+      "updated_at": "2026-08-19T02:32:48.327Z"
+    },
+    {
+      "id": 7,
+      "username": "2640781",
+      "password_hash": "1a9aaed85b947a596c30e1f218d3e81f5e9ce8b61e1e522e53552b42e466c573",
+      "name": "박성도",
+      "phone": "01079809130",
+      "role": "Agent",
+      "parent_id": 6,
+      "org_id": 5,
+      "org_name": "Crocodile팀",
+      "created_at": "2026-08-18T00:12:11.371Z",
+      "updated_at": "2026-08-19T02:33:35.389Z"
     }
   ],
-  "organizations": []
+  "organizations": [
+    {
+      "id": 1,
+      "name": "워라벨 총괄 사업단",
+      "type": "Executive",
+      "parent_id": null,
+      "created_at": "2026-08-19T02:19:29.527Z",
+      "updated_at": "2026-08-19T02:26:04.694Z"
+    },
+    {
+      "id": 2,
+      "name": "必본부",
+      "type": "Division",
+      "parent_id": 1,
+      "created_at": "2026-08-19T02:19:29.527Z",
+      "updated_at": "2026-08-19T02:26:24.557Z"
+    },
+    {
+      "id": 3,
+      "name": "ALPHA지점",
+      "type": "Team",
+      "parent_id": 2,
+      "created_at": "2026-08-19T02:19:29.527Z",
+      "updated_at": "2026-08-19T02:28:53.724Z"
+    },
+    {
+      "id": 4,
+      "name": "AXIS",
+      "type": "Team",
+      "parent_id": 3,
+      "created_at": "2026-08-19T02:19:29.527Z",
+      "updated_at": "2026-08-19T02:28:21.116Z"
+    },
+    {
+      "id": 5,
+      "name": "Crocodile팀",
+      "type": "Team",
+      "parent_id": 4,
+      "created_at": "2026-08-19T02:19:29.527Z",
+      "updated_at": "2026-08-19T02:33:35.389Z"
+    }
+  ]
 }
