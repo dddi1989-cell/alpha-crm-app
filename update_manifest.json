@@ -1,15 +1,13 @@
 {
   "productionVersion": "1.5.8",
   "productionTitle": "v1.5.8 공식 정식 배포 버전",
-  "productionNotes": "1. 관리자 등록 계정 로그인 인증 오류 해결 (클라우드 계정/조직도 외래키 안전 병합)\n2. 사용자 초기 비밀번호 다중 검증 및 사번 비밀번호 지원 강화\n3. 대규모 백엔드 구조 모듈화 (서비스/IPC 계층 분리)\n4. 업데이트 팝업 문구 개선 ('최신 버전 업데이트') 및 실시간 다운로드 프로그레스 바 연동\n5. 업데이트 완료 후 100% 무인 자동 재구동(Relaunch) 다중 안전망 구축\n6. 일반 사용자 로그인 시 상위 조직 노출 차단 (본인 소속 조직 및 하부 조직만 한정 조회)\n7. 타인 고객/일정 수정 및 삭제 권한 완전 차단\n8. 프로그램 완전 종료 시 자동 로그아웃 보안 적용",
+  "productionNotes": "사용자 로그인 인증 및 계정 동기화 안정화 정식 패치",
   "productionDownloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.5.8/ALPHA_CRM_MicroPatch_v1.5.8.asar",
-
   "adminTestVersion": "1.5.8",
   "adminTitle": "v1.5.8 공식 정식 배포 버전",
-  "adminNotes": "1. 관리자 등록 계정 로그인 인증 오류 해결 (클라우드 계정/조직도 외래키 안전 병합)\n2. 사용자 초기 비밀번호 다중 검증 및 사번 비밀번호 지원 강화\n3. 대규모 백엔드 구조 모듈화 (서비스/IPC 계층 분리)\n4. 업데이트 팝업 문구 개선 ('최신 버전 업데이트') 및 실시간 다운로드 프로그레스 바 연동\n5. 업데이트 완료 후 100% 무인 자동 재구동(Relaunch) 다중 안전망 구축\n6. 일반 사용자 로그인 시 상위 조직 노출 차단 (본인 소속 조직 및 하부 조직만 한정 조회)\n7. 타인 고객/일정 수정 및 삭제 권한 완전 차단\n8. 프로그램 완전 종료 시 자동 로그아웃 보안 적용",
+  "adminNotes": "사용자 로그인 인증 및 계정 동기화 안정화 정식 패치",
   "adminDownloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.5.8/ALPHA_CRM_MicroPatch_v1.5.8.asar",
-
   "latestVersion": "1.5.8",
   "downloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.5.8/ALPHA_CRM_MicroPatch_v1.5.8.asar",
-  "updated_at": "2026-08-20T12:00:00.000Z"
+  "updated_at": "2026-08-20T03:04:58.440Z"
 }
