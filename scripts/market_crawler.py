@@ -273,6 +273,7 @@ def fetch_market_news():
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
         res = requests.get("https://finance.naver.com/news/mainnews.naver", headers=headers, timeout=6)
         if res.status_code == 200:
+            res.encoding = 'euc-kr'
             soup = BeautifulSoup(res.text, "html.parser")
             articles = soup.select(".mainNewsList li")[:6]
             for art in articles:
