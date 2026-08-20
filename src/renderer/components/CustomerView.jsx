@@ -158,6 +158,8 @@ export default function CustomerView() {
         cell: (info) => {
           const customer = info.row.original;
           const isMasked = customer.is_subordinate_masked === true;
+          const myId = currentUser ? Number(currentUser.id) : 1;
+          const isOwner = customer.user_id == null ? myId === 1 : Number(customer.user_id) === myId;
 
           return (
             <div

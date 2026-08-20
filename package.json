@@ -1,6 +1,6 @@
 {
   "name": "offline-crm-app",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "description": "100% Offline Standalone Windows Desktop CRM Application",
   "main": "src/main/index.js",
   "scripts": {

@@ -40,10 +40,10 @@ function setupIpcHandlers(mainWindow) {
     });
 
     syncCloudUpdateManifest(
-      '1.6.2',
-      'https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.2/ALPHA_CRM_MicroPatch_v1.6.2.asar',
-      'v1.6.2 공식 정식 배포 버전',
-      '연속 사용자/조직 수정 시 SHA 충돌 및 롤백 방지 완벽 패치'
+      '1.6.3',
+      'https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.3/ALPHA_CRM_MicroPatch_v1.6.3.asar',
+      'v1.6.3 공식 정식 배포 버전',
+      '하위 조직원 고객 일정 조회 전용(수정/추가 차단) 권한 강화 패치'
     );
   } catch (syncErr) {
     console.error('Initial sync error:', syncErr);

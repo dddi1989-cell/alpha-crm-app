@@ -106,10 +106,11 @@ export default function ScheduleModal() {
             <input
               type="text"
               required
+              disabled={!isOwner}
               placeholder="예: 영업 미팅 및 계약 팔로업"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
             />
           </div>
 
@@ -120,8 +121,9 @@ export default function ScheduleModal() {
               </label>
               <select
                 value={formData.customer_id}
+                disabled={!isOwner}
                 onChange={(e) => setFormData({ ...formData, customer_id: e.target.value })}
-                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <option value="">-- 연결 없음 (일반) --</option>
                 {customers.map((c) => (
@@ -139,9 +141,10 @@ export default function ScheduleModal() {
               <input
                 type="datetime-local"
                 required
+                disabled={!isOwner}
                 value={formData.scheduled_at}
                 onChange={(e) => setFormData({ ...formData, scheduled_at: e.target.value })}
-                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
           </div>
@@ -154,8 +157,9 @@ export default function ScheduleModal() {
               </label>
               <select
                 value={formData.reminder_offset_minutes}
+                disabled={!isOwner}
                 onChange={(e) => setFormData({ ...formData, reminder_offset_minutes: Number(e.target.value) })}
-                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <option value={0}>⏰ 정시 알림 (일정 시간)</option>
                 <option value={5}>🔔 5분 전 미리 알림</option>
@@ -174,8 +178,9 @@ export default function ScheduleModal() {
               </label>
               <select
                 value={formData.status}
+                disabled={!isOwner}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <option value="Pending">대기 중 (Pending)</option>
                 <option value="Completed">완료됨 (Completed)</option>
@@ -190,10 +195,11 @@ export default function ScheduleModal() {
             </label>
             <textarea
               rows={3}
+              disabled={!isOwner}
               placeholder="미팅 안건, 알림 내용 또는 메모를 입력하세요..."
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
             />
           </div>
 

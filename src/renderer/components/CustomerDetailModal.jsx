@@ -235,7 +235,7 @@ export default function CustomerDetailModal() {
                       <span>📊 엑셀 열람</span>
                     </button>
                   )}
-                  {(customer.report_pdf_path || customer.report_excel_path) && (
+                  {isOwner && (customer.report_pdf_path || customer.report_excel_path) && (
                     <button
                       onClick={handleReParsePdfForDetail}
                       disabled={isExtracting}
@@ -297,6 +297,7 @@ export default function CustomerDetailModal() {
           {/* ========================================================================= */}
           {/* RECENT 3 YEARS SCHEDULES SECTION (최근 3년 이내 일정 목록) */}
           {/* ========================================================================= */}
+          {/* Recent Schedules Section (Last 3 Years) */}
           <div className="space-y-3 pt-2">
             <div className="flex items-center justify-between pb-2 border-b border-slate-800">
               <div className="flex items-center space-x-2">
@@ -311,30 +312,34 @@ export default function CustomerDetailModal() {
                     </span>
                   </h4>
                   <p className="text-[11px] text-slate-400">
-                    현재 시점으로부터 최근 3년간 진행되었거나 예정된 이 고객의 전체 일정입니다.
+                    현재 시점으로부터 최근 3년간 진행되었거나 예정된 이 고객의 전체 일정입니다. {!isOwner && '(조회 전용)'}
                   </p>
                 </div>
               </div>
 
-              <button
-                onClick={handleAddScheduleClick}
-                className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center space-x-1 shadow-md transition-all"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>새 일정 추가</span>
-              </button>
+              {isOwner && (
+                <button
+                  onClick={handleAddScheduleClick}
+                  className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center space-x-1 shadow-md transition-all"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>새 일정 추가</span>
+                </button>
+              )}
             </div>
 
             {recentSchedules.length === 0 ? (
               <div className="p-8 text-center bg-slate-900/40 rounded-2xl border border-slate-800/60 space-y-2">
                 <AlertCircle className="w-8 h-8 text-slate-600 mx-auto opacity-60" />
                 <p className="text-xs text-slate-400">최근 3년 이내에 등록된 일정이 없습니다.</p>
-                <button
-                  onClick={handleAddScheduleClick}
-                  className="text-xs text-indigo-400 hover:underline font-semibold"
-                >
-                  + 이 고객의 첫 일정 등록하기
-                </button>
+                {isOwner && (
+                  <button
+                    onClick={handleAddScheduleClick}
+                    className="text-xs text-indigo-400 hover:underline font-semibold"
+                  >
+                    + 이 고객의 첫 일정 등록하기
+                  </button>
+                )}
               </div>
             ) : (
               <div className="space-y-2.5 max-h-72 overflow-y-auto custom-scrollbar">
@@ -362,17 +367,29 @@ export default function CustomerDetailModal() {
                       }`}
                     >
                       <div className="flex items-start space-x-3">
-                        <button
-                          onClick={() => toggleScheduleStatus(schedule)}
-                          className={`mt-0.5 p-1 rounded-lg border transition-colors ${
-                            isCompleted
-                              ? 'bg-emerald-950 border-emerald-700 text-emerald-400'
-                              : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-emerald-400'
-                          }`}
-                          title={isCompleted ? '완료 취소' : '완료 처리'}
-                        >
-                          <CheckCircle2 className="w-4 h-4" />
-                        </button>
+                        {isOwner ? (
+                          <button
+                            onClick={() => toggleScheduleStatus(schedule)}
+                            className={`mt-0.5 p-1 rounded-lg border transition-colors ${
+                              isCompleted
+                                ? 'bg-emerald-950 border-emerald-700 text-emerald-400'
+                                : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-emerald-400'
+                            }`}
+                            title={isCompleted ? '완료 취소' : '완료 처리'}
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <div
+                            className={`mt-0.5 p-1 rounded-lg border ${
+                              isCompleted
+                                ? 'bg-emerald-950/60 border-emerald-800 text-emerald-400'
+                                : 'bg-slate-800/60 border-slate-700 text-slate-500'
+                            }`}
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                          </div>
+                        )}
 
                         <div className="space-y-1">
                           <div className="flex items-center space-x-2">
@@ -407,16 +424,18 @@ export default function CustomerDetailModal() {
                         </div>
                       </div>
 
-                      <button
-                        onClick={() => {
-                          closeCustomerDetailModal();
-                          openScheduleModal(schedule);
-                        }}
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-400 hover:bg-slate-800 transition-colors shrink-0"
-                        title="일정 수정"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
+                      {isOwner && (
+                        <button
+                          onClick={() => {
+                            closeCustomerDetailModal();
+                            openScheduleModal(schedule);
+                          }}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-400 hover:bg-slate-800 transition-colors shrink-0"
+                          title="일정 수정"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   );
                 })}
