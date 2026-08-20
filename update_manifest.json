@@ -1,13 +1,13 @@
 {
-  "productionVersion": "1.5.8",
-  "productionTitle": "v1.5.8 공식 정식 배포 버전",
-  "productionNotes": "사용자 로그인 인증 및 계정 동기화 안정화 정식 패치",
-  "productionDownloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.5.8/ALPHA_CRM_MicroPatch_v1.5.8.asar",
-  "adminTestVersion": "1.5.8",
-  "adminTitle": "v1.5.8 공식 정식 배포 버전",
-  "adminNotes": "사용자 로그인 인증 및 계정 동기화 안정화 정식 패치",
-  "adminDownloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.5.8/ALPHA_CRM_MicroPatch_v1.5.8.asar",
-  "latestVersion": "1.5.8",
-  "downloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.5.8/ALPHA_CRM_MicroPatch_v1.5.8.asar",
-  "updated_at": "2026-08-20T03:04:58.440Z"
+  "productionVersion": "1.5.7",
+  "productionTitle": "v1.5.7 공식 정식 배포 버전",
+  "productionNotes": "모듈화 구조 개편 및 무인 자동 재구동 안정화 정식 패치",
+  "productionDownloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.5.7/ALPHA_CRM_MicroPatch_v1.5.7.asar",
+  "adminTestVersion": "1.5.7",
+  "adminTitle": "v1.5.7 공식 정식 배포 버전",
+  "adminNotes": "모듈화 구조 개편 및 무인 자동 재구동 안정화 정식 패치",
+  "adminDownloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.5.7/ALPHA_CRM_MicroPatch_v1.5.7.asar",
+  "latestVersion": "1.5.7",
+  "downloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.5.7/ALPHA_CRM_MicroPatch_v1.5.7.asar",
+  "updated_at": "2026-08-20T03:06:10.635Z"
 }
