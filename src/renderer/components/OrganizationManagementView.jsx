@@ -428,12 +428,15 @@ export default function OrganizationManagementView() {
     }
 
     try {
+      const parsedParentId = orgFormData.parent_id ? Number(orgFormData.parent_id) : null;
+
       if (editingOrg) {
         const res = await api.org.updateOrganization({
           id: editingOrg.id,
           name: orgFormData.name.trim(),
           type: orgFormData.type,
-          parent_id: orgFormData.parent_id || null
+          parent_id: parsedParentId,
+          currentUserId: currentUser?.id
         });
         if (res?.success) {
           setOrgSuccessMsg(`[${orgFormData.name}] 조직 정보가 수정되었습니다.`);
@@ -447,7 +450,8 @@ export default function OrganizationManagementView() {
         const res = await api.org.createOrganization({
           name: orgFormData.name.trim(),
           type: orgFormData.type,
-          parent_id: orgFormData.parent_id || null
+          parent_id: parsedParentId,
+          currentUserId: currentUser?.id
         });
         if (res?.success) {
           setOrgSuccessMsg(`[${orgFormData.name}] 신규 조직이 생성되었습니다.`);
@@ -468,7 +472,7 @@ export default function OrganizationManagementView() {
       return;
     }
     try {
-      const res = await api.org.deleteOrganization(org.id);
+      const res = await api.org.deleteOrganization({ id: org.id, currentUserId: currentUser?.id });
       if (res?.success) {
         alert(`[${org.name}] 조직이 삭제되었습니다.`);
         await loadOrganizations();
@@ -535,6 +539,8 @@ export default function OrganizationManagementView() {
 
     const selectedOrg = organizations.find(o => String(o.id) === String(userFormData.org_id));
     const targetOrgName = selectedOrg ? selectedOrg.name : (userFormData.org_name || '');
+    const parsedOrgId = userFormData.org_id ? Number(userFormData.org_id) : null;
+    const parsedParentId = userFormData.parent_id ? Number(userFormData.parent_id) : null;
 
     try {
       if (editingUser) {
@@ -544,9 +550,10 @@ export default function OrganizationManagementView() {
           phone: userFormData.phone.trim(),
           password: userFormData.password.trim(),
           role: userFormData.role,
-          parent_id: userFormData.parent_id || null,
-          org_id: userFormData.org_id || null,
-          org_name: targetOrgName
+          parent_id: parsedParentId,
+          org_id: parsedOrgId,
+          org_name: targetOrgName,
+          currentUserId: currentUser?.id
         });
         if (res?.success) {
           setAdminSuccessMsg(`[${userFormData.name}] 사용자 정보가 성공적으로 수정되었습니다.`);
@@ -563,9 +570,10 @@ export default function OrganizationManagementView() {
           name: userFormData.name.trim(),
           phone: userFormData.phone.trim(),
           role: userFormData.role,
-          parent_id: userFormData.parent_id || null,
-          org_id: userFormData.org_id || null,
-          org_name: targetOrgName
+          parent_id: parsedParentId,
+          org_id: parsedOrgId,
+          org_name: targetOrgName,
+          currentUserId: currentUser?.id
         });
         if (res?.success) {
           setAdminSuccessMsg(`[${userFormData.name}] 신규 사용자가 등록되었습니다.`);

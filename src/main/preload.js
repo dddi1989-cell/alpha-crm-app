@@ -18,7 +18,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getAccessibleSubordinates: (currentUserId) => ipcRenderer.invoke('users:get-accessible-subordinates', currentUserId),
     create: (data) => ipcRenderer.invoke('users:create', data),
     update: (data) => ipcRenderer.invoke('users:update', data),
-    delete: (id) => ipcRenderer.invoke('users:delete', id),
+    delete: (params) => ipcRenderer.invoke('users:delete', params),
     setActiveUser: (userId) => ipcRenderer.invoke('users:set-active-user', userId)
   },
   org: {
@@ -26,7 +26,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getAllOrganizations: (params) => ipcRenderer.invoke('org:get-all-organizations', params),
     createOrganization: (data) => ipcRenderer.invoke('org:create-organization', data),
     updateOrganization: (data) => ipcRenderer.invoke('org:update-organization', data),
-    deleteOrganization: (id) => ipcRenderer.invoke('org:delete-organization', { id }),
+    deleteOrganization: (params) => ipcRenderer.invoke('org:delete-organization', typeof params === 'object' ? params : { id: params }),
     getOrganizationAggregateData: (params) => ipcRenderer.invoke('org:get-organization-aggregate-data', params)
   },
   schedules: {

@@ -336,6 +336,7 @@ function registerAuthHandlers(mainWindow, triggerDualBackup) {
         const orgRow = db.prepare('SELECT name FROM organizations WHERE id = ?').get(resolvedOrgId);
         if (orgRow) resolvedOrgName = orgRow.name;
       }
+      const resolvedParentId = parent_id ? Number(parent_id) : null;
 
       const hash = crypto.createHash('sha256').update(effectivePassword).digest('hex');
       const now = new Date().toISOString();
@@ -344,9 +345,9 @@ function registerAuthHandlers(mainWindow, triggerDualBackup) {
         INSERT INTO users (username, password_hash, name, phone, role, parent_id, org_id, org_name, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
-      const info = stmt.run(trimmedUsername, hash, name.trim(), (phone || '').trim(), role, parent_id || null, resolvedOrgId, resolvedOrgName, now, now);
+      const info = stmt.run(trimmedUsername, hash, name.trim(), (phone || '').trim(), role, resolvedParentId, resolvedOrgId, resolvedOrgName, now, now);
 
-      syncCloudAccounts(db);
+      await syncCloudAccounts(db);
       triggerDualBackup();
 
       return { success: true, id: info.lastInsertRowid };
@@ -356,7 +357,7 @@ function registerAuthHandlers(mainWindow, triggerDualBackup) {
     }
   });
 
-  ipcMain.handle('users:update', async (event, { id, password, name, phone, role, parent_id, org_id, currentUserId = null }) => {
+  ipcMain.handle('users:update', async (event, { id, password, name, phone, role, parent_id, org_id, org_name, currentUserId = null }) => {
     const db = getDb();
     if (!id || !name) {
       return { success: false, error: '사용자 ID와 성명은 필수입니다.' };
@@ -376,10 +377,12 @@ function registerAuthHandlers(mainWindow, triggerDualBackup) {
       let resolvedOrgName = undefined;
       if (resolvedOrgId !== undefined && resolvedOrgId !== null) {
         const orgRow = db.prepare('SELECT name FROM organizations WHERE id = ?').get(resolvedOrgId);
-        resolvedOrgName = orgRow ? orgRow.name : null;
+        resolvedOrgName = orgRow ? orgRow.name : (org_name || null);
       } else if (resolvedOrgId === null) {
         resolvedOrgName = null;
       }
+
+      let resolvedParentId = parent_id !== undefined ? (parent_id ? Number(parent_id) : null) : undefined;
 
       if (password && password.trim()) {
         const hash = crypto.createHash('sha256').update(password.trim()).digest('hex');
@@ -387,28 +390,28 @@ function registerAuthHandlers(mainWindow, triggerDualBackup) {
           db.prepare(`
             UPDATE users SET password_hash = ?, name = ?, phone = ?, role = ?, parent_id = ?, org_id = ?, org_name = ?, updated_at = ?
             WHERE id = ?
-          `).run(hash, name.trim(), (phone || '').trim(), role || 'FA', parent_id || null, resolvedOrgId, resolvedOrgName, now, id);
+          `).run(hash, name.trim(), (phone || '').trim(), role || 'FA', resolvedParentId !== undefined ? resolvedParentId : null, resolvedOrgId, resolvedOrgName, now, id);
         } else {
           db.prepare(`
             UPDATE users SET password_hash = ?, name = ?, phone = ?, role = ?, parent_id = ?, updated_at = ?
             WHERE id = ?
-          `).run(hash, name.trim(), (phone || '').trim(), role || 'FA', parent_id || null, now, id);
+          `).run(hash, name.trim(), (phone || '').trim(), role || 'FA', resolvedParentId !== undefined ? resolvedParentId : null, now, id);
         }
       } else {
         if (resolvedOrgId !== undefined) {
           db.prepare(`
             UPDATE users SET name = ?, phone = ?, role = ?, parent_id = ?, org_id = ?, org_name = ?, updated_at = ?
             WHERE id = ?
-          `).run(name.trim(), (phone || '').trim(), role || 'FA', parent_id || null, resolvedOrgId, resolvedOrgName, now, id);
+          `).run(name.trim(), (phone || '').trim(), role || 'FA', resolvedParentId !== undefined ? resolvedParentId : null, resolvedOrgId, resolvedOrgName, now, id);
         } else {
           db.prepare(`
             UPDATE users SET name = ?, phone = ?, role = ?, parent_id = ?, updated_at = ?
             WHERE id = ?
-          `).run(name.trim(), (phone || '').trim(), role || 'FA', parent_id || null, now, id);
+          `).run(name.trim(), (phone || '').trim(), role || 'FA', resolvedParentId !== undefined ? resolvedParentId : null, now, id);
         }
       }
 
-      syncCloudAccounts(db);
+      await syncCloudAccounts(db);
       triggerDualBackup();
 
       return { success: true };

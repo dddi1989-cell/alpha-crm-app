@@ -185,12 +185,12 @@ async function syncCloudAccounts(db) {
     const storePath = getCloudAccountStorePath();
     fs.writeFileSync(storePath, jsonStr, 'utf8');
 
-    githubUploadFile(GITHUB_ACCOUNT_FILE, Buffer.from(jsonStr, 'utf8'), 'Auto-sync users and organizations')
-      .then(ok => {
-        if (ok) console.log('[Cloud-Sync] Successfully pushed accounts and organizations to GitHub repository.');
-      });
+    const ok = await githubUploadFile(GITHUB_ACCOUNT_FILE, Buffer.from(jsonStr, 'utf8'), 'Auto-sync users and organizations');
+    if (ok) console.log('[Cloud-Sync] Successfully pushed accounts and organizations to GitHub repository.');
+    return ok;
   } catch (err) {
     console.error('syncCloudAccounts error:', err);
+    return false;
   }
 }
 
@@ -252,7 +252,7 @@ function _mergeOrganizationsIntoDB(db, cloudOrgs) {
           o.id,
           o.name,
           o.type || 'Team',
-          o.parent_id || null,
+          o.parent_id ? Number(o.parent_id) : null,
           o.created_at || new Date().toISOString(),
           o.updated_at || new Date().toISOString()
         );
@@ -300,8 +300,8 @@ function _mergeAccountsIntoDB(db, cloudAccounts) {
           a.name,
           a.phone || '',
           a.role || 'FA',
-          a.parent_id || null,
-          a.org_id || null,
+          a.parent_id ? Number(a.parent_id) : null,
+          a.org_id ? Number(a.org_id) : null,
           a.org_name || null,
           a.created_at || new Date().toISOString(),
           a.updated_at || new Date().toISOString()
@@ -333,12 +333,12 @@ async function syncCloudData(db) {
     const storePath = getCloudCrmDataStorePath();
     fs.writeFileSync(storePath, jsonStr, 'utf8');
 
-    githubUploadFile(GITHUB_CRM_DATA_FILE, Buffer.from(jsonStr, 'utf8'), 'Auto-sync CRM customers and schedules')
-      .then(ok => {
-        if (ok) console.log('[Cloud-Sync] Successfully pushed customers and schedules to GitHub cloud store.');
-      });
+    const ok = await githubUploadFile(GITHUB_CRM_DATA_FILE, Buffer.from(jsonStr, 'utf8'), 'Auto-sync CRM customers and schedules');
+    if (ok) console.log('[Cloud-Sync] Successfully pushed customers and schedules to GitHub cloud store.');
+    return ok;
   } catch (err) {
     console.error('syncCloudData error:', err);
+    return false;
   }
 }
 

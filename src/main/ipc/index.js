@@ -40,10 +40,10 @@ function setupIpcHandlers(mainWindow) {
     });
 
     syncCloudUpdateManifest(
-      '1.6.0',
-      'https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.0/ALPHA_CRM_MicroPatch_v1.6.0.asar',
-      'v1.6.0 공식 정식 배포 버전',
-      '온라인 실시간 동기화, 하위 조직원 고객정보 권한 제한 및 참조 오류 수정 패치'
+      '1.6.1',
+      'https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.1/ALPHA_CRM_MicroPatch_v1.6.1.asar',
+      'v1.6.1 공식 정식 배포 버전',
+      '조직도 및 사용자 상위관리자 실시간 동기화/저장 안정화 패치'
     );
   } catch (syncErr) {
     console.error('Initial sync error:', syncErr);
