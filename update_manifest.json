@@ -5,7 +5,7 @@
   "releaseDate": "2026-08-20",
   "downloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.1/ALPHA_CRM_MicroPatch_v1.6.1.asar",
   "installerUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.1/ALPHA_CRM_Setup_1.6.1.exe",
-  "releaseNotes": "조직도 및 사용자 상위관리자 실시간 동기화/저장 안정화 정식 패치",
+  "releaseNotes": "조직도 및 사용자 상위관리자 실시간 동기화/저장 안정화 패치",
   "forceUpdate": false,
   "targetFile": "resources/app.asar"
 }
