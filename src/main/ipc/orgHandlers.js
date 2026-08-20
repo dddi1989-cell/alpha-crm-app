@@ -127,8 +127,17 @@ function registerOrgHandlers(mainWindow, triggerDualBackup) {
     }
   });
 
-  ipcMain.handle('org:create-organization', async (event, { name, type = 'Team', parent_id = null }) => {
+  ipcMain.handle('org:create-organization', async (event, { name, type = 'Team', parent_id = null, currentUserId = null }) => {
     const db = getDb();
+    
+    // Check Admin permission
+    if (currentUserId) {
+      const actor = db.prepare('SELECT role, username FROM users WHERE id = ?').get(currentUserId);
+      if (!actor || (actor.role !== 'Admin' && actor.role !== 'admin' && actor.username !== 'admin')) {
+        return { success: false, error: '조직 생성 권한이 없습니다. (최고 관리자 전용)' };
+      }
+    }
+
     if (!name || !name.trim()) {
       return { success: false, error: '조직명(팀/본부 이름)을 입력해 주세요.' };
     }
@@ -152,8 +161,17 @@ function registerOrgHandlers(mainWindow, triggerDualBackup) {
     }
   });
 
-  ipcMain.handle('org:update-organization', async (event, { id, name, type, parent_id }) => {
+  ipcMain.handle('org:update-organization', async (event, { id, name, type, parent_id, currentUserId = null }) => {
     const db = getDb();
+    
+    // Check Admin permission
+    if (currentUserId) {
+      const actor = db.prepare('SELECT role, username FROM users WHERE id = ?').get(currentUserId);
+      if (!actor || (actor.role !== 'Admin' && actor.role !== 'admin' && actor.username !== 'admin')) {
+        return { success: false, error: '조직 정보 수정 권한이 없습니다. (최고 관리자 전용)' };
+      }
+    }
+
     if (!id || !name || !name.trim()) {
       return { success: false, error: '조직 ID와 조직명은 필수입니다.' };
     }
@@ -188,8 +206,19 @@ function registerOrgHandlers(mainWindow, triggerDualBackup) {
     }
   });
 
-  ipcMain.handle('org:delete-organization', async (event, id) => {
+  ipcMain.handle('org:delete-organization', async (event, params) => {
     const db = getDb();
+    const id = typeof params === 'object' ? params.id : params;
+    const currentUserId = typeof params === 'object' ? params.currentUserId : null;
+
+    // Check Admin permission
+    if (currentUserId) {
+      const actor = db.prepare('SELECT role, username FROM users WHERE id = ?').get(currentUserId);
+      if (!actor || (actor.role !== 'Admin' && actor.role !== 'admin' && actor.username !== 'admin')) {
+        return { success: false, error: '조직 삭제 권한이 없습니다. (최고 관리자 전용)' };
+      }
+    }
+
     try {
       const members = db.prepare('SELECT COUNT(*) as count FROM users WHERE org_id = ?').get(id);
       if (members.count > 0) {
@@ -219,8 +248,9 @@ function registerOrgHandlers(mainWindow, triggerDualBackup) {
 
       const placeholders = subUserIds.map(() => '?').join(',');
 
+      // 1. Subordinate Schedules (Allowed in full)
       const schedules = db.prepare(`
-        SELECT s.*, u.name as user_name, u.role as user_role, u.org_name as user_org_name, c.name as customer_name, c.phone as customer_phone
+        SELECT s.*, u.name as user_name, u.role as user_role, u.org_name as user_org_name, c.name as customer_name
         FROM schedules s
         LEFT JOIN users u ON s.user_id = u.id
         LEFT JOIN customers c ON s.customer_id = c.id
@@ -228,8 +258,9 @@ function registerOrgHandlers(mainWindow, triggerDualBackup) {
         ORDER BY s.scheduled_at ASC
       `).all(...subUserIds);
 
+      // 2. Subordinate Customers (Masked to Long-Touch summary only)
       const customers = db.prepare(`
-        SELECT c.*, u.name as user_name, u.role as user_role, u.org_name as user_org_name
+        SELECT c.id, c.user_id, c.name, c.status, c.created_at, u.name as user_name, u.role as user_role, u.org_name as user_org_name
         FROM customers c
         LEFT JOIN users u ON c.user_id = u.id
         WHERE c.user_id IN (${placeholders})
@@ -240,11 +271,26 @@ function registerOrgHandlers(mainWindow, triggerDualBackup) {
       const past6MonthsTime = now.getTime() - (180 * 24 * 60 * 60 * 1000);
       const future1MonthTime = now.getTime() + (30 * 24 * 60 * 60 * 1000);
 
-      const longTouchCustomers = customers.filter(cust => {
+      const longTouchCustomers = [];
+
+      for (const cust of customers) {
         const custSchedules = schedules.filter(s => {
           if (s.customer_id && String(s.customer_id) === String(cust.id)) return true;
           if (s.title && cust.name && s.title.includes(cust.name)) return true;
           return false;
+        });
+
+        // Find most recent schedule date
+        let latestScheduleDate = null;
+        let latestScheduleTime = 0;
+        custSchedules.forEach(s => {
+          if (s.scheduled_at) {
+            const t = new Date(s.scheduled_at).getTime();
+            if (!isNaN(t) && t > latestScheduleTime) {
+              latestScheduleTime = t;
+              latestScheduleDate = s.scheduled_at;
+            }
+          }
         });
 
         const hasRecentSchedule = custSchedules.some(s => {
@@ -253,8 +299,29 @@ function registerOrgHandlers(mainWindow, triggerDualBackup) {
           return !isNaN(stTime) && stTime >= past6MonthsTime && stTime <= future1MonthTime;
         });
 
-        return cust.status === 'Inactive' || !hasRecentSchedule;
-      });
+        const isLongTouch = cust.status === 'Inactive' || !hasRecentSchedule;
+
+        if (isLongTouch) {
+          const baseTime = latestScheduleTime > 0 ? latestScheduleTime : new Date(cust.created_at || now).getTime();
+          const elapsedMs = Math.max(0, now.getTime() - baseTime);
+          const elapsedDays = Math.floor(elapsedMs / (1000 * 60 * 60 * 24));
+          const elapsedMonths = Math.floor(elapsedDays / 30);
+
+          longTouchCustomers.push({
+            id: cust.id,
+            name: cust.name,
+            user_id: cust.user_id,
+            user_name: cust.user_name || '미배정',
+            user_role: cust.user_role || 'FA',
+            user_org_name: cust.user_org_name || '',
+            status: cust.status,
+            last_schedule_date: latestScheduleDate,
+            elapsed_days: elapsedDays,
+            elapsed_months: elapsedMonths > 0 ? elapsedMonths : (elapsedDays > 0 ? 1 : 0),
+            is_long_touch: true
+          });
+        }
+      }
 
       return {
         success: true,
@@ -302,17 +369,8 @@ function registerOrgHandlers(mainWindow, triggerDualBackup) {
       }
 
       const placeholders = userIds.map(() => '?').join(',');
-
-      const customers = db.prepare(`
-        SELECT c.*, u.name as user_name, u.role as user_role, u.org_name as user_org_name
-        FROM customers c
-        LEFT JOIN users u ON c.user_id = u.id
-        WHERE c.user_id IN (${placeholders})
-        ORDER BY c.name ASC
-      `).all(...userIds);
-
       const schedules = db.prepare(`
-        SELECT s.*, u.name as user_name, u.role as user_role, u.org_name as user_org_name, c.name as customer_name, c.phone as customer_phone
+        SELECT s.*, u.name as user_name, u.role as user_role, u.org_name as user_org_name, c.name as customer_name
         FROM schedules s
         LEFT JOIN users u ON s.user_id = u.id
         LEFT JOIN customers c ON s.customer_id = c.id
@@ -320,34 +378,36 @@ function registerOrgHandlers(mainWindow, triggerDualBackup) {
         ORDER BY s.scheduled_at ASC
       `).all(...userIds);
 
+      const rawCustomers = db.prepare(`
+        SELECT c.id, c.user_id, c.name, c.status, c.created_at, u.name as user_name, u.role as user_role, u.org_name as user_org_name
+        FROM customers c
+        LEFT JOIN users u ON c.user_id = u.id
+        WHERE c.user_id IN (${placeholders})
+      `).all(...userIds);
+
       const now = new Date();
       const past6MonthsTime = now.getTime() - (180 * 24 * 60 * 60 * 1000);
       const future1MonthTime = now.getTime() + (30 * 24 * 60 * 60 * 1000);
 
       const longTouchList = [];
-      const processedCustomers = customers.map(cust => {
+      rawCustomers.forEach(cust => {
         const custSchedules = schedules.filter(s => {
           if (s.customer_id && String(s.customer_id) === String(cust.id)) return true;
           if (s.title && cust.name && s.title.includes(cust.name)) return true;
-          if (s.description && cust.name && s.description.includes(cust.name)) return true;
           return false;
         });
 
-        let lastTouchedAt = null;
-        let untouchedDays = null;
-        const pastSchedules = custSchedules
-          .filter(s => s.scheduled_at && new Date(s.scheduled_at).getTime() <= now.getTime())
-          .sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime());
-
-        if (pastSchedules.length > 0) {
-          lastTouchedAt = pastSchedules[0].scheduled_at;
-          const diffMs = now.getTime() - new Date(lastTouchedAt).getTime();
-          untouchedDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-        } else if (cust.created_at) {
-          lastTouchedAt = cust.created_at;
-          const diffMs = now.getTime() - new Date(lastTouchedAt).getTime();
-          untouchedDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-        }
+        let latestScheduleDate = null;
+        let latestScheduleTime = 0;
+        custSchedules.forEach(s => {
+          if (s.scheduled_at) {
+            const t = new Date(s.scheduled_at).getTime();
+            if (!isNaN(t) && t > latestScheduleTime) {
+              latestScheduleTime = t;
+              latestScheduleDate = s.scheduled_at;
+            }
+          }
+        });
 
         const hasScheduleInWindow = custSchedules.some(s => {
           if (!s.scheduled_at) return false;
@@ -355,20 +415,26 @@ function registerOrgHandlers(mainWindow, triggerDualBackup) {
           return !isNaN(stTime) && stTime >= past6MonthsTime && stTime <= future1MonthTime;
         });
 
-        const isLongTouch = cust.status === 'Inactive' || !hasScheduleInWindow;
-        const enrichedCustomer = {
-          ...cust,
-          is_long_touch: isLongTouch,
-          last_touched_at: lastTouchedAt,
-          untouched_days: untouchedDays,
-          schedule_count: custSchedules.length
-        };
+        if (cust.status === 'Inactive' || !hasScheduleInWindow) {
+          const baseTime = latestScheduleTime > 0 ? latestScheduleTime : new Date(cust.created_at || now).getTime();
+          const elapsedMs = Math.max(0, now.getTime() - baseTime);
+          const elapsedDays = Math.floor(elapsedMs / (1000 * 60 * 60 * 24));
+          const elapsedMonths = Math.floor(elapsedDays / 30);
 
-        if (isLongTouch) {
-          longTouchList.push(enrichedCustomer);
+          longTouchList.push({
+            id: cust.id,
+            name: cust.name,
+            user_id: cust.user_id,
+            user_name: cust.user_name || '미배정',
+            user_role: cust.user_role || 'FA',
+            user_org_name: cust.user_org_name || '',
+            status: cust.status,
+            last_schedule_date: latestScheduleDate,
+            elapsed_days: elapsedDays,
+            elapsed_months: elapsedMonths > 0 ? elapsedMonths : (elapsedDays > 0 ? 1 : 0),
+            is_long_touch: true
+          });
         }
-
-        return enrichedCustomer;
       });
 
       const thisMonthYear = now.getFullYear();
@@ -381,14 +447,14 @@ function registerOrgHandlers(mainWindow, triggerDualBackup) {
 
       const stats = {
         memberCount: orgUsers.length,
-        totalCustomers: processedCustomers.length,
+        totalCustomers: rawCustomers.length,
         longTouchCustomers: longTouchList.length,
-        activeCustomers: processedCustomers.filter(c => c.status === 'Active' && !c.is_long_touch).length,
-        leadCustomers: processedCustomers.filter(c => c.status === 'Lead' && !c.is_long_touch).length,
+        activeCustomers: rawCustomers.filter(c => c.status === 'Active').length,
+        leadCustomers: rawCustomers.filter(c => c.status === 'Lead').length,
         totalSchedules: schedules.length,
         pendingSchedules: schedules.filter(s => s.status === 'Pending').length,
         completedSchedules: schedules.filter(s => s.status === 'Completed').length,
-        upcomingThisMonth
+        upcomingThisMonth: upcomingThisMonth
       };
 
       return {
@@ -396,7 +462,7 @@ function registerOrgHandlers(mainWindow, triggerDualBackup) {
         orgInfo: { id: orgId, name: orgName },
         members: orgUsers,
         stats,
-        customers: processedCustomers,
+        customers: [], // Hide general customer details
         longTouchList,
         schedules
       };

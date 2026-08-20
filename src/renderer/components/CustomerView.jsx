@@ -157,30 +157,37 @@ export default function CustomerView() {
         header: '고객명 & 소개자 & 담당자',
         cell: (info) => {
           const customer = info.row.original;
-          const isOwner = !currentUser || !customer.user_id || Number(customer.user_id) === Number(currentUser.id) || Number(currentUser.id) === 1;
+          const isMasked = customer.is_subordinate_masked === true;
 
           return (
             <div
-              onClick={() => openCustomerDetailModal(customer)}
-              className="flex items-center space-x-3 cursor-pointer group"
-              title="클릭하여 고객 상세정보 및 최근 3년 일정 조회"
+              onClick={() => {
+                if (isMasked) return;
+                openCustomerDetailModal(customer);
+              }}
+              className={`flex items-center space-x-3 ${isMasked ? 'cursor-default' : 'cursor-pointer group'}`}
+              title={isMasked ? '하위 조직원의 고객 상세 정보는 보호됩니다. (장기 미터치 현황 조회 전용)' : '클릭하여 고객 상세정보 및 최근 3년 일정 조회'}
             >
               <div className="w-9 h-9 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center font-bold text-sm group-hover:scale-105 group-hover:bg-indigo-600 group-hover:text-white transition-all">
                 {customer.name ? customer.name.charAt(0).toUpperCase() : 'C'}
               </div>
               <div className="space-y-0.5">
                 <div className="flex items-center space-x-1.5">
-                  <span className="font-bold text-white group-hover:text-indigo-400 transition-colors">
+                  <span className={`font-bold text-white ${!isMasked ? 'group-hover:text-indigo-400' : ''} transition-colors`}>
                     {customer.name}
                   </span>
-                  {!isOwner && (
+                  {isMasked ? (
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-950 text-amber-400 border border-amber-800 font-medium">
+                      미터치 조회전용
+                    </span>
+                  ) : !isOwner && (
                     <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 border border-slate-700 font-medium">
                       조회 전용
                     </span>
                   )}
                 </div>
 
-                {/* Subordinate Manager Badge (담당 조직원 이름과 직급 노출) */}
+                {/* Subordinate Manager Badge */}
                 {customer.user_name && (
                   <div className="flex items-center space-x-1 text-[11px] text-indigo-300 font-semibold bg-indigo-950/70 px-2 py-0.5 rounded-md border border-indigo-800/60 w-fit">
                     <User className="w-3 h-3 text-indigo-400 shrink-0" />
@@ -191,14 +198,19 @@ export default function CustomerView() {
                   </div>
                 )}
 
-                {customer.referrer_name && (
+                {customer.referrer_name && !isMasked && (
                   <div className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 text-[10px] font-medium">
                     <UserCheck className="w-3 h-3 text-emerald-400" />
                     <span>소개자: {customer.referrer_name}</span>
                   </div>
                 )}
-                {customer.notes && (
+                {customer.notes && !isMasked && (
                   <span className="text-xs text-slate-400 line-clamp-1 max-w-xs block">{customer.notes}</span>
+                )}
+                {isMasked && customer.elapsed_days !== undefined && (
+                  <span className="text-xs text-amber-400 font-bold block">
+                    ⏳ 마지막 일정 이후 {customer.elapsed_days}일 경과
+                  </span>
                 )}
               </div>
             </div>
@@ -209,6 +221,9 @@ export default function CustomerView() {
         header: '연락처 & 생년월일',
         cell: (info) => {
           const customer = info.row.original;
+          if (customer.is_subordinate_masked) {
+            return <span className="text-xs text-slate-500 font-mono">보호됨 (비공개)</span>;
+          }
           return (
             <div className="space-y-1 text-xs">
               {customer.phone && (
@@ -231,6 +246,9 @@ export default function CustomerView() {
         header: '가입 보험 정보 (가입일 & 경과월수)',
         cell: (info) => {
           const customer = info.row.original;
+          if (customer.is_subordinate_masked) {
+            return <span className="text-xs text-slate-500">—</span>;
+          }
           const list = Array.isArray(customer.insurances) ? customer.insurances : [];
           return <CustomerInsuranceCell list={list} customer={customer} />;
         }
@@ -238,7 +256,16 @@ export default function CustomerView() {
       columnHelper.accessor('status', {
         header: '상태',
         cell: (info) => {
+          const customer = info.row.original;
           const status = info.getValue();
+          if (customer.is_subordinate_masked) {
+            return (
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-950/70 text-amber-300 border border-amber-800/60">
+                <span className="w-1.5 h-1.5 rounded-full mr-1.5 bg-amber-400"></span>
+                장기미터치
+              </span>
+            );
+          }
           const statusText = status === 'Active' ? '보유고객' : status === 'Lead' ? '가망고객' : '장기미터치고객';
           return (
             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${
@@ -263,6 +290,17 @@ export default function CustomerView() {
           const customer = info.row.original;
           const myId = currentUser ? Number(currentUser.id) : 1;
           const isOwner = customer.user_id == null ? myId === 1 : Number(customer.user_id) === myId;
+          const isMasked = customer.is_subordinate_masked === true;
+
+          if (isMasked) {
+            return (
+              <div className="flex items-center justify-end">
+                <span className="text-[10px] text-amber-400 px-2 py-0.5 rounded bg-amber-950/60 border border-amber-800/50">
+                  미터치 현황
+                </span>
+              </div>
+            );
+          }
 
           return (
             <div className="flex items-center justify-end space-x-2">

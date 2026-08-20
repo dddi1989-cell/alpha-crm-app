@@ -119,9 +119,19 @@ function migrateExistingCustomerReportFiles(db) {
 }
 
 function registerCustomerHandlers(mainWindow, triggerDualBackup, broadcastSchedulesUpdated, syncCustomerInsuranceExpirySchedules) {
-  ipcMain.handle('customers:get-all', async (event, { search = '', status = '', userId = null, user_id = null, includeSubordinates = false } = {}) => {
+  ipcMain.handle('customers:get-all', async (event, { search = '', status = '', userId = null, user_id = null, actingUserId = null, currentUserId = null, includeSubordinates = false } = {}) => {
     const db = getDb();
     const targetUserId = userId || user_id;
+    const callerId = actingUserId || currentUserId;
+
+    let callerUser = null;
+    let isTopAdmin = false;
+    if (callerId) {
+      callerUser = db.prepare('SELECT id, role, username FROM users WHERE id = ?').get(callerId);
+      if (callerUser && (callerUser.role === 'Admin' || callerUser.role === 'admin' || callerUser.username === 'admin')) {
+        isTopAdmin = true;
+      }
+    }
 
     let query = `
       SELECT c.*, u.name as user_name, u.role as user_role, u.org_name as user_org_name, r.name as referrer_name 
@@ -176,7 +186,87 @@ function registerCustomerHandlers(mainWindow, triggerDualBackup, broadcastSchedu
         throw err;
       }
     }
-    return rows.map(normalizeCustomerInsurances);
+
+    const normalized = rows.map(normalizeCustomerInsurances);
+
+    // If viewer is top admin or viewing their own customers, return all data
+    if (isTopAdmin || !callerId || (targetUserId && Number(targetUserId) === Number(callerId) && !includeSubordinates)) {
+      return normalized;
+    }
+
+    // For managers viewing subordinate customers:
+    // Only return customers that belong to caller, OR long-touch subordinate customers with masked personal info
+    const now = new Date();
+    const past6MonthsTime = now.getTime() - (180 * 24 * 60 * 60 * 1000);
+    const future1MonthTime = now.getTime() + (30 * 24 * 60 * 60 * 1000);
+
+    const allSchedules = db.prepare('SELECT customer_id, scheduled_at, title FROM schedules').all();
+
+    const filtered = [];
+
+    for (const cust of normalized) {
+      // 1. Caller's own customer: full access
+      if (Number(cust.user_id) === Number(callerId)) {
+        filtered.push(cust);
+        continue;
+      }
+
+      // 2. Subordinate customer: Check if Long-Touch
+      const custSchedules = allSchedules.filter(s => {
+        if (s.customer_id && String(s.customer_id) === String(cust.id)) return true;
+        if (s.title && cust.name && s.title.includes(cust.name)) return true;
+        return false;
+      });
+
+      let latestScheduleDate = null;
+      let latestScheduleTime = 0;
+      custSchedules.forEach(s => {
+        if (s.scheduled_at) {
+          const t = new Date(s.scheduled_at).getTime();
+          if (!isNaN(t) && t > latestScheduleTime) {
+            latestScheduleTime = t;
+            latestScheduleDate = s.scheduled_at;
+          }
+        }
+      });
+
+      const hasRecentSchedule = custSchedules.some(s => {
+        if (!s.scheduled_at) return false;
+        const stTime = new Date(s.scheduled_at).getTime();
+        return !isNaN(stTime) && stTime >= past6MonthsTime && stTime <= future1MonthTime;
+      });
+
+      const isLongTouch = cust.status === 'Inactive' || !hasRecentSchedule;
+
+      if (isLongTouch) {
+        const baseTime = latestScheduleTime > 0 ? latestScheduleTime : new Date(cust.created_at || now).getTime();
+        const elapsedMs = Math.max(0, now.getTime() - baseTime);
+        const elapsedDays = Math.floor(elapsedMs / (1000 * 60 * 60 * 24));
+        const elapsedMonths = Math.floor(elapsedDays / 30);
+
+        filtered.push({
+          id: cust.id,
+          name: cust.name,
+          user_id: cust.user_id,
+          user_name: cust.user_name || '미배정',
+          user_role: cust.user_role || 'FA',
+          user_org_name: cust.user_org_name || '',
+          status: cust.status,
+          phone: '***-****-****', // Masked
+          email: '***@***',       // Masked
+          birth_date: '****-**-**',// Masked
+          notes: '하위 조직원 장기 미터치 관리 대상',
+          insurances: [],
+          last_schedule_date: latestScheduleDate,
+          elapsed_days: elapsedDays,
+          elapsed_months: elapsedMonths > 0 ? elapsedMonths : (elapsedDays > 0 ? 1 : 0),
+          is_subordinate_masked: true,
+          is_long_touch: true
+        });
+      }
+    }
+
+    return filtered;
   });
 
   ipcMain.handle('customers:open-pdf', async (event, filePath) => {

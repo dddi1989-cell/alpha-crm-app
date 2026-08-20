@@ -1,6 +1,6 @@
 const { getDb } = require('../database');
 const { performDualBackup } = require('../backupEngine');
-const { loadCloudAccounts, loadCloudData, syncCloudAccounts, syncCloudData, syncCloudUpdateManifest } = require('../services/cloudSyncService');
+const { loadCloudAccounts, loadCloudData, syncCloudAccounts, syncCloudData, syncCloudUpdateManifest, importLegacyLocalDatabases } = require('../services/cloudSyncService');
 const { autoCheckAndApplyMicroPatch } = require('../services/updaterService');
 
 const { registerAuthHandlers } = require('./authHandlers');
@@ -21,16 +21,29 @@ function setupIpcHandlers(mainWindow) {
   // Initial sync of all data on launch
   try {
     const db = getDb();
-    loadCloudAccounts(db);
-    loadCloudData(db);
-    syncCustomerInsuranceExpirySchedules(db);
-    syncCloudAccounts(db);
-    syncCloudData(db);
+    
+    // 1. Recover legacy offline local databases if existing on this machine
+    importLegacyLocalDatabases(db);
+
+    // 2. Load latest cloud accounts and CRM data first
+    loadCloudAccounts(db).then(() => {
+      syncCustomerInsuranceExpirySchedules(db);
+      return loadCloudData(db);
+    }).then(() => {
+      // 3. Only sync outwards after loading
+      syncCloudAccounts(db);
+      syncCloudData(db);
+      // 4. Start periodic background sync (every 60s)
+      startPeriodicCloudSync(db, mainWindow);
+    }).catch(err => {
+      console.error('[Launch-Sync] Background sync error:', err.message);
+    });
+
     syncCloudUpdateManifest(
-      '1.5.8',
-      'https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.5.8/ALPHA_CRM_MicroPatch_v1.5.8.asar',
-      'v1.5.8 공식 정식 배포 버전',
-      '사용자 로그인 인증 및 계정 동기화 안정화 정식 패치'
+      '1.5.9',
+      'https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.5.9/ALPHA_CRM_MicroPatch_v1.5.9.asar',
+      'v1.5.9 공식 정식 배포 버전',
+      '온라인 실시간 동기화, 하위 조직원 고객정보 권한 제한 및 Admin 전용 제어 패치'
     );
   } catch (syncErr) {
     console.error('Initial sync error:', syncErr);

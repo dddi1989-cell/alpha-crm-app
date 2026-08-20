@@ -981,21 +981,9 @@ export default function OrganizationManagementView() {
               </div>
 
               {/* ========================================================================= */}
-              {/* Monitoring Sub-Tabs (장기미터치 / 캘린더 / 전체 고객) */}
+              {/* Sub-tab Navigation (Only Schedules & Long-touch customers) */}
               {/* ========================================================================= */}
-              <div className="flex border-b border-slate-300 dark:border-slate-800 space-x-4">
-                <button
-                  onClick={() => setActiveSubTab('longtouch')}
-                  className={`pb-3 text-xs font-extrabold flex items-center space-x-2 border-b-2 transition-all ${
-                    activeSubTab === 'longtouch'
-                      ? 'border-amber-500 text-amber-700 dark:text-amber-400'
-                      : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <Flame className="w-4 h-4" />
-                  <span>🔥 6개월 장기미터치 집중 모니터링 ({filteredLongTouchCustomers.length}명)</span>
-                </button>
-
+              <div className="flex border-b border-slate-200 dark:border-slate-800 space-x-6">
                 <button
                   onClick={() => setActiveSubTab('schedules')}
                   className={`pb-3 text-xs font-extrabold flex items-center space-x-2 border-b-2 transition-all ${
@@ -1009,15 +997,15 @@ export default function OrganizationManagementView() {
                 </button>
 
                 <button
-                  onClick={() => setActiveSubTab('all-customers')}
+                  onClick={() => setActiveSubTab('longtouch')}
                   className={`pb-3 text-xs font-extrabold flex items-center space-x-2 border-b-2 transition-all ${
-                    activeSubTab === 'all-customers'
-                      ? 'border-blue-500 text-blue-700 dark:text-blue-400'
+                    activeSubTab === 'longtouch'
+                      ? 'border-amber-500 text-amber-700 dark:text-amber-400'
                       : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  <Users className="w-4 h-4" />
-                  <span>👥 보유 고객 전체 목록 ({filteredAllCustomers.length}명)</span>
+                  <Clock className="w-4 h-4" />
+                  <span>⏳ 장기 미터치 고객 현황 ({filteredLongTouchCustomers.length}명)</span>
                 </button>
               </div>
 
@@ -1027,13 +1015,13 @@ export default function OrganizationManagementView() {
                   <div className="flex flex-col md:flex-row justify-between items-center gap-3">
                     <div>
                       <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center space-x-2">
-                        <span>6개월 이상 미접촉(장기미터치) 고객 현황</span>
+                        <span>장기 미터치(6개월 이상 미접촉) 고객 현황</span>
                         <span className="text-xs bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-800 font-bold">
                           총 {filteredLongTouchCustomers.length}명
                         </span>
                       </h3>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        최근 6개월간 일정이 없거나 비활성화된 고객입니다. 상위 관리자는 담당자에게 일정 등록을 지도할 수 있습니다.
+                        하위 조직원의 고객 중 최근 6개월 이상 일정이 없거나 비활성화된 고객의 이름과 경과 기간만 표시됩니다.
                       </p>
                     </div>
 
@@ -1041,7 +1029,7 @@ export default function OrganizationManagementView() {
                       <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
                       <input
                         type="text"
-                        placeholder="고객명, 연락처, 담당자 검색..."
+                        placeholder="고객명, 담당자 검색..."
                         value={customerSearchFilter}
                         onChange={(e) => setCustomerSearchFilter(e.target.value)}
                         className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-amber-500"
@@ -1052,7 +1040,7 @@ export default function OrganizationManagementView() {
                   {filteredLongTouchCustomers.length === 0 ? (
                     <div className="text-center py-12 text-slate-500 space-y-2">
                       <CheckCircle2 className="w-8 h-8 mx-auto text-emerald-500 opacity-80" />
-                      <p className="text-sm font-bold text-slate-700 dark:text-slate-300">6개월 이상 장기미터치 고객이 없습니다.</p>
+                      <p className="text-sm font-bold text-slate-700 dark:text-slate-300">장기 미터치 고객이 없습니다.</p>
                       <p className="text-xs text-slate-500">모든 고객과 원활하게 일정 및 터치가 이루어지고 있습니다.</p>
                     </div>
                   ) : (
@@ -1060,49 +1048,29 @@ export default function OrganizationManagementView() {
                       <table className="w-full text-left text-xs">
                         <thead>
                           <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-bold bg-slate-50 dark:bg-slate-900/40">
-                            {monitoringMode === 'team' && <th className="p-3">담당 설계사</th>}
+                            <th className="p-3">담당 조직원</th>
                             <th className="p-3">고객명</th>
-                            <th className="p-3">연락처</th>
-                            <th className="p-3">주요 보험사/상품</th>
-                            <th className="p-3">마지막 터치일</th>
-                            <th className="p-3">미터치 경과</th>
+                            <th className="p-3">마지막 일정 일자</th>
+                            <th className="p-3">미터치 경과 기간</th>
                             <th className="p-3">상태</th>
-                            <th className="p-3 text-right">상세조회</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
                           {filteredLongTouchCustomers.map((cust) => (
                             <tr key={cust.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                              {monitoringMode === 'team' && (
-                                <td className="p-3">
-                                  <div className="flex flex-col">
-                                    <span className="font-bold text-indigo-600 dark:text-indigo-400">
-                                      {cust.user_name || '미배정'} ({cust.user_role || 'FA'})
+                              <td className="p-3">
+                                <div className="flex flex-col">
+                                  <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                                    {cust.user_name || '미배정'} ({cust.user_role || 'FA'})
+                                  </span>
+                                  {cust.user_org_name && (
+                                    <span className="text-[10px] text-slate-500 font-medium">
+                                      📁 {cust.user_org_name}
                                     </span>
-                                    {cust.user_org_name && (
-                                      <span className="text-[10px] text-slate-500 font-medium">
-                                        📁 {cust.user_org_name}
-                                      </span>
-                                    )}
-                                  </div>
-                                </td>
-                              )}
-                              <td className="p-3 font-extrabold text-slate-900 dark:text-white">{cust.name}</td>
-                              <td className="p-3 text-slate-600 dark:text-slate-300 font-mono">{cust.phone || '-'}</td>
-                              <td className="p-3 text-slate-600 dark:text-slate-300">
-                                {cust.insurances?.length > 0 ? (
-                                  <div className="space-y-0.5">
-                                    {cust.insurances.map((ins, idx) => (
-                                      <div key={idx} className="truncate max-w-xs">
-                                        <span className="font-bold text-slate-800 dark:text-slate-200">{ins.provider}</span>
-                                        {ins.details && <span className="text-slate-500 ml-1">({ins.details})</span>}
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <span className="text-slate-400">-</span>
-                                )}
+                                  )}
+                                </div>
                               </td>
+                              <td className="p-3 font-extrabold text-slate-900 dark:text-white">{cust.name}</td>
                               <td className="p-3 text-slate-500 font-mono">
                                 {cust.last_touched_at ? new Date(cust.last_touched_at).toLocaleDateString('ko-KR') : '터치 기록 없음'}
                               </td>

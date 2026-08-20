@@ -98,8 +98,41 @@ function githubUploadFile(remotePath, contentBuffer, commitMessage) {
   });
 }
 
-function githubDownloadFile(remotePath) {
+function fetchRawGitHub(remotePath) {
   return new Promise((resolve) => {
+    const rawUrl = 'https://raw.githubusercontent.com/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/main/' + remotePath;
+    const req = https.get(rawUrl, {
+      headers: {
+        'User-Agent': 'ALPHA-CRM-CloudSync',
+        'Authorization': 'token ' + GITHUB_TOKEN
+      }
+    }, res => {
+      if (res.statusCode !== 200) {
+        resolve(null);
+        return;
+      }
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => resolve(data || null));
+    });
+    req.on('error', () => resolve(null));
+    req.setTimeout(5000, () => {
+      req.destroy();
+      resolve(null);
+    });
+  });
+}
+
+function githubDownloadFile(remotePath) {
+  return new Promise(async (resolve) => {
+    // 1st attempt: Raw CDN direct GET (fastest and most reliable)
+    const rawData = await fetchRawGitHub(remotePath);
+    if (rawData) {
+      resolve(rawData);
+      return;
+    }
+
+    // 2nd attempt: GitHub Contents API
     const req = https.request('https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/contents/' + remotePath + '?ref=main', {
       method: 'GET',
       headers: {
@@ -126,6 +159,10 @@ function githubDownloadFile(remotePath) {
     });
     req.on('error', (err) => {
       console.error('[GitHub-CloudSync-Download] Network error:', err.message);
+      resolve(null);
+    });
+    req.setTimeout(8000, () => {
+      req.destroy();
       resolve(null);
     });
     req.end();
@@ -416,29 +453,164 @@ function _mergeCrmDataIntoDB(db, cloudData) {
   }
 }
 
-async function syncCloudUpdateManifest(version, downloadUrl, title, notes) {
+function importLegacyLocalDatabases(db) {
   try {
-    const payload = {
-      productionVersion: version,
-      productionTitle: title || ('v' + version + ' 공식 정식 배포 버전'),
-      productionNotes: notes || '안정적인 최신 기능이 포함된 패치입니다.',
-      productionDownloadUrl: downloadUrl,
-      adminTestVersion: version,
-      adminTitle: title || ('v' + version + ' 공식 정식 배포 버전'),
-      adminNotes: notes || '최고 관리자 전용 선행 테스트 버전입니다.',
-      adminDownloadUrl: downloadUrl,
-      latestVersion: version,
-      downloadUrl: downloadUrl,
-      updated_at: new Date().toISOString()
-    };
-    const jsonStr = JSON.stringify(payload, null, 2);
-    githubUploadFile('update_manifest.json', Buffer.from(jsonStr, 'utf8'), 'Auto-sync update_manifest.json v' + version)
-      .then(ok => {
-        if (ok) console.log('[Cloud-Sync] update_manifest.json successfully pushed to GitHub repository.');
-      });
+    const Database = require('better-sqlite3');
+    let userDataPath;
+    try {
+      userDataPath = app.getPath('userData');
+    } catch (err) {
+      userDataPath = path.join(process.env.APPDATA || process.env.HOME, 'offline-crm-app');
+    }
+
+    const candidatePaths = [
+      path.join(userDataPath, 'database.db'),
+      path.join(userDataPath, 'crm.db'),
+      path.join(userDataPath, 'main.db'),
+      path.join(userDataPath, 'offline_crm.db'),
+      path.join(process.env.APPDATA || '', 'offline-crm-app', 'database.db'),
+      path.join(process.env.APPDATA || '', 'offline-crm-app', 'crm.db')
+    ];
+
+    // Also check backup directory for existing older DBs
+    const backupDir = path.join(userDataPath, 'backups');
+    if (fs.existsSync(backupDir)) {
+      try {
+        const files = fs.readdirSync(backupDir);
+        files.forEach(f => {
+          if (f.endsWith('.db') && f !== 'main.db') {
+            candidatePaths.push(path.join(backupDir, f));
+          }
+        });
+      } catch (e) {}
+    }
+
+    const currentMainPath = path.join(backupDir, 'main.db');
+
+    for (const cand of candidatePaths) {
+      if (!fs.existsSync(cand) || path.resolve(cand) === path.resolve(currentMainPath)) continue;
+
+      try {
+        const legacyDb = new Database(cand, { readonly: true });
+        
+        // Check customers
+        let legacyCustomers = [];
+        try {
+          legacyCustomers = legacyDb.prepare('SELECT * FROM customers').all();
+        } catch (e) {}
+
+        if (Array.isArray(legacyCustomers) && legacyCustomers.length > 0) {
+          console.log('[Legacy-DB-Import] Found ' + legacyCustomers.length + ' customers in legacy DB: ' + cand);
+          const insertCust = db.prepare(`
+            INSERT INTO customers (id, user_id, name, phone, email, birth_date, insurance_provider, insurance_details, insurances, referrer_id, company, status, notes, report_pdf_path, report_excel_path, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+              name = excluded.name,
+              phone = excluded.phone,
+              email = excluded.email,
+              birth_date = excluded.birth_date,
+              insurance_provider = excluded.insurance_provider,
+              insurance_details = excluded.insurance_details,
+              insurances = excluded.insurances,
+              company = excluded.company,
+              status = excluded.status,
+              notes = excluded.notes,
+              updated_at = excluded.updated_at
+          `);
+
+          db.transaction((custs) => {
+            for (const c of custs) {
+              insertCust.run(
+                c.id,
+                c.user_id || 1,
+                c.name,
+                c.phone || '',
+                c.email || '',
+                c.birth_date || '',
+                c.insurance_provider || '',
+                c.insurance_details || '',
+                c.insurances || '[]',
+                c.referrer_id || null,
+                c.company || '',
+                c.status || 'Active',
+                c.notes || '',
+                c.report_pdf_path || '',
+                c.report_excel_path || '',
+                c.created_at || new Date().toISOString(),
+                c.updated_at || new Date().toISOString()
+              );
+            }
+          })(legacyCustomers);
+        }
+
+        // Check schedules
+        let legacySchedules = [];
+        try {
+          legacySchedules = legacyDb.prepare('SELECT * FROM schedules').all();
+        } catch (e) {}
+
+        if (Array.isArray(legacySchedules) && legacySchedules.length > 0) {
+          console.log('[Legacy-DB-Import] Found ' + legacySchedules.length + ' schedules in legacy DB: ' + cand);
+          const insertSched = db.prepare(`
+            INSERT INTO schedules (id, user_id, customer_id, title, description, scheduled_at, reminder_offset_minutes, category_type, status, notified, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+              title = excluded.title,
+              description = excluded.description,
+              scheduled_at = excluded.scheduled_at,
+              reminder_offset_minutes = excluded.reminder_offset_minutes,
+              category_type = excluded.category_type,
+              status = excluded.status,
+              updated_at = excluded.updated_at
+          `);
+
+          db.transaction((scheds) => {
+            for (const s of scheds) {
+              insertSched.run(
+                s.id,
+                s.user_id || 1,
+                s.customer_id || null,
+                s.title,
+                s.description || '',
+                s.scheduled_at || (s.date ? (s.date + 'T' + (s.time || '10:00') + ':00') : new Date().toISOString()),
+                s.reminder_offset_minutes || 0,
+                s.category_type || (s.type === 'contract' ? 'InsuranceExpiry' : 'UserSchedule'),
+                s.status || 'Pending',
+                s.notified || 0,
+                s.created_at || new Date().toISOString(),
+                s.updated_at || new Date().toISOString()
+              );
+            }
+          })(legacySchedules);
+        }
+
+        legacyDb.close();
+      } catch (legacyErr) {
+        console.log('[Legacy-DB-Import] Skip candidate ' + cand + ':', legacyErr.message);
+      }
+    }
   } catch (err) {
-    console.error('syncCloudUpdateManifest error:', err);
+    console.error('importLegacyLocalDatabases error:', err);
   }
+}
+
+let syncIntervalId = null;
+
+function startPeriodicCloudSync(db, mainWindow) {
+  if (syncIntervalId) clearInterval(syncIntervalId);
+
+  // Poll cloud data every 60 seconds
+  syncIntervalId = setInterval(async () => {
+    try {
+      await loadCloudAccounts(db);
+      await loadCloudData(db);
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('cloud:synced', { timestamp: new Date().toISOString() });
+      }
+    } catch (e) {
+      console.log('[Periodic-Sync] Background tick error:', e.message);
+    }
+  }, 60000);
 }
 
 module.exports = {
@@ -457,6 +629,8 @@ module.exports = {
   syncCloudData,
   loadCloudData,
   syncCloudUpdateManifest,
+  importLegacyLocalDatabases,
+  startPeriodicCloudSync,
   _mergeAccountsIntoDB,
   _mergeOrganizationsIntoDB,
   _mergeCrmDataIntoDB

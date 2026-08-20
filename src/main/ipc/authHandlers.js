@@ -131,42 +131,21 @@ function registerAuthHandlers(mainWindow, triggerDualBackup) {
         return { success: false, error: '비밀번호가 일치하지 않습니다. 최초 로그인 시 사번을 입력해 주세요.' };
       }
 
-      // Auto data migration for new accounts
+      // Auto data migration for offline / legacy local data to the newly logged-in user
       if (user.role !== 'admin' && user.role !== 'Admin' && user.id !== 1) {
         try {
-          const myCustomers = db.prepare('SELECT COUNT(*) as cnt FROM customers WHERE user_id = ?').get(user.id);
-          if (myCustomers.cnt === 0) {
-            const otherNonAdminUsers = db.prepare(
-              'SELECT COUNT(*) as cnt FROM users WHERE role NOT IN ("admin", "Admin") AND id != 1 AND id != ?'
-            ).get(user.id);
+          const orphanCustomers = db.prepare(
+            'SELECT COUNT(*) as cnt FROM customers WHERE user_id = 1 OR user_id IS NULL'
+          ).get();
 
-            const orphanCustomers = db.prepare(
-              'SELECT COUNT(*) as cnt FROM customers WHERE user_id = 1 OR user_id IS NULL'
-            ).get();
-
-            if (orphanCustomers.cnt > 0) {
-              let shouldMigrate = false;
-              if (otherNonAdminUsers.cnt === 0) {
-                shouldMigrate = true;
-              } else {
-                const anyOtherUserWithCustomers = db.prepare(
-                  'SELECT COUNT(*) as cnt FROM customers WHERE user_id != 1 AND user_id IS NOT NULL AND user_id != ?'
-                ).get(user.id);
-                if (anyOtherUserWithCustomers.cnt === 0) {
-                  shouldMigrate = true;
-                }
-              }
-
-              if (shouldMigrate) {
-                db.transaction(() => {
-                  db.prepare('UPDATE customers SET user_id = ? WHERE user_id = 1 OR user_id IS NULL').run(user.id);
-                  db.prepare('UPDATE schedules SET user_id = ? WHERE user_id = 1 OR user_id IS NULL').run(user.id);
-                })();
-                console.log('[Login-Migration] Auto migrated ' + orphanCustomers.cnt + ' customers to user ' + user.name);
-                try { syncCloudData(db); } catch (e) {}
-                try { triggerDualBackup(); } catch (e) {}
-              }
-            }
+          if (orphanCustomers && orphanCustomers.cnt > 0) {
+            db.transaction(() => {
+              db.prepare('UPDATE customers SET user_id = ? WHERE user_id = 1 OR user_id IS NULL').run(user.id);
+              db.prepare('UPDATE schedules SET user_id = ? WHERE user_id = 1 OR user_id IS NULL').run(user.id);
+            })();
+            console.log('[Login-Migration] Seamlessly assigned ' + orphanCustomers.cnt + ' offline customers to user ' + user.name + ' (' + user.username + ')');
+            try { syncCloudData(db); } catch (e) {}
+            try { triggerDualBackup(); } catch (e) {}
           }
         } catch (migErr) {
           console.error('[Login-Migration] Error during migration:', migErr.message);
@@ -327,8 +306,17 @@ function registerAuthHandlers(mainWindow, triggerDualBackup) {
     }
   });
 
-  ipcMain.handle('users:create', async (event, { username, password, name, phone, role = 'FA', parent_id = null, org_id = null }) => {
+  ipcMain.handle('users:create', async (event, { username, password, name, phone, role = 'FA', parent_id = null, org_id = null, currentUserId = null }) => {
     const db = getDb();
+    
+    // Check Admin permission
+    if (currentUserId) {
+      const actor = db.prepare('SELECT role, username FROM users WHERE id = ?').get(currentUserId);
+      if (!actor || (actor.role !== 'Admin' && actor.role !== 'admin' && actor.username !== 'admin')) {
+        return { success: false, error: '사용자 등록 권한이 없습니다. (최고 관리자 전용)' };
+      }
+    }
+
     if (!username || !name) {
       return { success: false, error: '사번(아이디)과 성명은 필수입니다.' };
     }
@@ -368,10 +356,18 @@ function registerAuthHandlers(mainWindow, triggerDualBackup) {
     }
   });
 
-  ipcMain.handle('users:update', async (event, { id, password, name, phone, role, parent_id, org_id }) => {
+  ipcMain.handle('users:update', async (event, { id, password, name, phone, role, parent_id, org_id, currentUserId = null }) => {
     const db = getDb();
     if (!id || !name) {
       return { success: false, error: '사용자 ID와 성명은 필수입니다.' };
+    }
+
+    // Check Admin permission
+    if (currentUserId) {
+      const actor = db.prepare('SELECT role, username FROM users WHERE id = ?').get(currentUserId);
+      if (!actor || (actor.role !== 'Admin' && actor.role !== 'admin' && actor.username !== 'admin')) {
+        return { success: false, error: '사용자 정보 수정 권한이 없습니다. (최고 관리자 전용)' };
+      }
     }
 
     try {
@@ -422,8 +418,19 @@ function registerAuthHandlers(mainWindow, triggerDualBackup) {
     }
   });
 
-  ipcMain.handle('users:delete', async (event, id) => {
+  ipcMain.handle('users:delete', async (event, params) => {
     const db = getDb();
+    const id = typeof params === 'object' ? params.id : params;
+    const currentUserId = typeof params === 'object' ? params.currentUserId : null;
+
+    // Check Admin permission
+    if (currentUserId) {
+      const actor = db.prepare('SELECT role, username FROM users WHERE id = ?').get(currentUserId);
+      if (!actor || (actor.role !== 'Admin' && actor.role !== 'admin' && actor.username !== 'admin')) {
+        return { success: false, error: '사용자 삭제 권한이 없습니다. (최고 관리자 전용)' };
+      }
+    }
+
     try {
       const user = db.prepare('SELECT username FROM users WHERE id = ?').get(id);
       if (user && (user.username === 'admin' || user.username === 'Admin')) {
