@@ -1,13 +1,11 @@
 {
-  "latestVersion": "1.6.4",
+  "latestVersion": "1.6.3",
   "minRequiredVersion": "1.0.0",
-  "title": "v1.6.4 공식 최신 배포 버전",
+  "title": "v1.6.3 공식 정식 배포 버전",
   "releaseDate": "2026-08-20",
-  "downloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.4/ALPHA_CRM_MicroPatch_v1.6.4.asar",
-  "installerUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.4/ALPHA_CRM_Setup_1.6.4.exe",
-  "latestDownloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/latest/download/ALPHA_CRM_MicroPatch_latest.asar",
-  "latestInstallerUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/latest/download/ALPHA_CRM_Setup_latest.exe",
-  "releaseNotes": "상품전략자료실 서버 파일 공유 시스템 및 하위조직원 조회전용 권한 강화",
+  "downloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.3/ALPHA_CRM_MicroPatch_v1.6.3.asar",
+  "installerUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.3/ALPHA_CRM_Setup_1.6.3.exe",
+  "releaseNotes": "상품전략자료실 공유 게시판 및 읽기전용 권한 강화",
   "forceUpdate": false,
   "targetFile": "resources/app.asar"
 }
