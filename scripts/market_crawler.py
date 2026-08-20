@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import re
 import datetime
 import requests
 from bs4 import BeautifulSoup
@@ -268,27 +269,26 @@ def fetch_overseas_market():
 def fetch_market_news():
     news_items = []
 
-    # 1. Naver Finance News Scraping with robust cp949 decoding
+    # 1. Naver Finance News Scraping with robust regex on cp949/euc-kr
     try:
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         res = requests.get("https://finance.naver.com/news/mainnews.naver", headers=headers, timeout=6)
         if res.status_code == 200:
-            html_text = res.content.decode('cp949', 'ignore')
-            soup = BeautifulSoup(html_text, "html.parser")
-            articles = soup.select(".mainNewsList li")[:6]
-            for art in articles:
-                subj = art.select_one("dd.articleSubject a") or art.select_one("dt.articleSubject a") or art.select_one("a")
-                summ = art.select_one("dd.articleSummary") or art.select_one(".summary")
-                press = art.select_one(".press")
+            html_text = res.content.decode('euc-kr', 'ignore')
+            # Extract each li.block1 block
+            blocks = re.findall(r'<li class="block1">([\s\S]*?)</li>', html_text)
+            for blk in blocks[:6]:
+                subj_match = re.search(r'<dd class="articleSubject">\s*<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)</a>', blk)
+                summ_match = re.search(r'<dd class="articleSummary">([\s\S]*?)(?:<span|\Z)', blk)
+                press_match = re.search(r'<span class="press">([^<]+)</span>', blk)
 
-                if subj:
-                    title = subj.get_text().strip()
-                    href = subj.get('href', '')
-                    url = "https://finance.naver.com" + href if href.startswith('/') else href
-                    press_name = press.get_text().strip() if press else "네이버 금융"
-                    summary = ""
-                    if summ:
-                        summary = summ.get_text().replace(press_name, "").replace("|", "").strip()
+                if subj_match:
+                    url = subj_match.group(1).strip()
+                    if url.startswith('/'):
+                        url = "https://finance.naver.com" + url
+                    title = re.sub(r'<[^>]+>', '', subj_match.group(2)).strip()
+                    summary = re.sub(r'<[^>]+>', '', summ_match.group(1)).strip() if summ_match else ""
+                    press = press_match.group(1).strip() if press_match else "네이버 금융"
 
                     if title:
                         news_items.append({
@@ -296,7 +296,7 @@ def fetch_market_news():
                             "title": title,
                             "summary": summary[:140] + ("..." if len(summary) > 140 else ""),
                             "url": url,
-                            "press": press_name
+                            "press": press
                         })
     except Exception as e:
         print(f"[News] Naver news scrape error: {e}")
