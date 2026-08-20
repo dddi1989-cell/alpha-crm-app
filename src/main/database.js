@@ -93,11 +93,49 @@ function initDatabase(dbPath = null) {
       FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
     );
 
+    CREATE TABLE IF NOT EXISTS posts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER DEFAULT 1,
+      author_name TEXT NOT NULL,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      category TEXT DEFAULT '상품전략',
+      views INTEGER DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS post_attachments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      post_id INTEGER NOT NULL,
+      file_name TEXT NOT NULL,
+      file_size INTEGER NOT NULL,
+      file_type TEXT,
+      file_path TEXT,
+      download_url TEXT,
+      file_data TEXT,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS app_metadata (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
   `);
+
+  // Robust column migration for post_attachments table
+  const postAttachmentColumns = ['file_path', 'download_url', 'file_data'];
+  postAttachmentColumns.forEach(col => {
+    try {
+      const tableInfo = dbInstance.prepare("PRAGMA table_info(post_attachments)").all();
+      const existingColumns = tableInfo.map(c => c.name);
+      if (!existingColumns.includes(col)) {
+        dbInstance.exec(`ALTER TABLE post_attachments ADD COLUMN ${col} TEXT;`);
+      }
+    } catch (colErr) {}
+  });
 
   // Robust column migration for customers table
   const customerColumns = ['user_id', 'insurance_provider', 'insurance_details', 'insurances', 'referrer_id', 'company', 'report_pdf_path', 'report_excel_path', 'birth_date'];

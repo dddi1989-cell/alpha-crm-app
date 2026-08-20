@@ -6,6 +6,7 @@ import ScheduleView from './components/ScheduleView';
 import ReportsView from './components/ReportsView';
 import ClaimsView from './components/ClaimsView';
 import OrganizationManagementView from './components/OrganizationManagementView';
+import ProductStrategyBoardView from './components/ProductStrategyBoardView';
 import SystemView from './components/SystemView';
 import LoginView from './components/LoginView';
 
@@ -173,6 +174,7 @@ export default function App() {
           {activeTab === 'dashboard' && <DashboardView />}
           {activeTab === 'customers' && <CustomerView />}
           {activeTab === 'schedules' && <ScheduleView />}
+          {activeTab === 'board' && <ProductStrategyBoardView />}
           {activeTab === 'org' && <OrganizationManagementView />}
           {activeTab === 'reports' && <ReportsView />}
           {activeTab === 'claims' && <ClaimsView />}

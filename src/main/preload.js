@@ -39,6 +39,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     downloadForm: (company) => ipcRenderer.invoke('claims:download-form', company),
     openPdf: (company) => ipcRenderer.invoke('claims:open-pdf', company)
   },
+  board: {
+    selectFiles: () => ipcRenderer.invoke('board:select-files'),
+    getPosts: (params) => ipcRenderer.invoke('board:get-posts', params),
+    getPostDetail: (postId) => ipcRenderer.invoke('board:get-post-detail', postId),
+    createPost: (data) => ipcRenderer.invoke('board:create-post', data),
+    updatePost: (data) => ipcRenderer.invoke('board:update-post', data),
+    deletePost: (data) => ipcRenderer.invoke('board:delete-post', data),
+    downloadAttachment: (attachmentId) => ipcRenderer.invoke('board:download-attachment', attachmentId),
+    openAttachment: (attachmentId) => ipcRenderer.invoke('board:open-attachment', attachmentId)
+  },
   system: {
     getInfo: () => ipcRenderer.invoke('system:get-info'),
     getAppVersion: () => ipcRenderer.invoke('system:get-app-version'),

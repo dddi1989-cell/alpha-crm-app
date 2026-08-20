@@ -1,6 +1,6 @@
 const { getDb } = require('../database');
 const { performDualBackup } = require('../backupEngine');
-const { loadCloudAccounts, loadCloudData, syncCloudAccounts, syncCloudData, syncCloudUpdateManifest, importLegacyLocalDatabases } = require('../services/cloudSyncService');
+const { loadCloudAccounts, loadCloudData, syncCloudAccounts, syncCloudData, syncCloudUpdateManifest, importLegacyLocalDatabases, startPeriodicCloudSync } = require('../services/cloudSyncService');
 const { autoCheckAndApplyMicroPatch } = require('../services/updaterService');
 
 const { registerAuthHandlers } = require('./authHandlers');
@@ -10,6 +10,7 @@ const { registerOrgHandlers } = require('./orgHandlers');
 const { registerClaimHandlers } = require('./claimHandlers');
 const { registerUpdaterHandlers } = require('./updaterHandlers');
 const { registerSystemHandlers } = require('./systemHandlers');
+const { registerBoardHandlers } = require('./boardHandlers');
 
 function setupIpcHandlers(mainWindow) {
   const triggerDualBackup = () => {
@@ -43,7 +44,7 @@ function setupIpcHandlers(mainWindow) {
       '1.6.3',
       'https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.3/ALPHA_CRM_MicroPatch_v1.6.3.asar',
       'v1.6.3 공식 정식 배포 버전',
-      '하위 조직원 고객 일정 조회 전용(수정/추가 차단) 권한 강화 패치'
+      '상품전략자료실 공유 게시판 및 읽기전용 권한 강화'
     );
   } catch (syncErr) {
     console.error('Initial sync error:', syncErr);
@@ -54,14 +55,15 @@ function setupIpcHandlers(mainWindow) {
     autoCheckAndApplyMicroPatch(mainWindow);
   }, 2000);
 
-  // Register domain handlers
-  registerAuthHandlers(mainWindow, triggerDualBackup);
-  registerCustomerHandlers(mainWindow, triggerDualBackup, broadcastSchedulesUpdated, syncCustomerInsuranceExpirySchedules);
-  registerScheduleHandlers(mainWindow, triggerDualBackup);
-  registerOrgHandlers(mainWindow, triggerDualBackup);
-  registerClaimHandlers(mainWindow);
-  registerUpdaterHandlers(mainWindow, triggerDualBackup);
-  registerSystemHandlers(mainWindow, triggerDualBackup);
+  // Register domain handlers safely
+  try { registerAuthHandlers(mainWindow, triggerDualBackup); } catch (e) { console.error('registerAuthHandlers error:', e); }
+  try { registerCustomerHandlers(mainWindow, triggerDualBackup, broadcastSchedulesUpdated, syncCustomerInsuranceExpirySchedules); } catch (e) { console.error('registerCustomerHandlers error:', e); }
+  try { registerScheduleHandlers(mainWindow, triggerDualBackup); } catch (e) { console.error('registerScheduleHandlers error:', e); }
+  try { registerOrgHandlers(mainWindow, triggerDualBackup); } catch (e) { console.error('registerOrgHandlers error:', e); }
+  try { registerClaimHandlers(mainWindow); } catch (e) { console.error('registerClaimHandlers error:', e); }
+  try { registerUpdaterHandlers(mainWindow, triggerDualBackup); } catch (e) { console.error('registerUpdaterHandlers error:', e); }
+  try { registerSystemHandlers(mainWindow, triggerDualBackup); } catch (e) { console.error('registerSystemHandlers error:', e); }
+  try { registerBoardHandlers(mainWindow, triggerDualBackup); } catch (e) { console.error('registerBoardHandlers error:', e); }
 
   console.log('✅ All modular IPC handlers registered successfully.');
 }

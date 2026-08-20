@@ -337,20 +337,28 @@ async function syncCloudData(db) {
   try {
     const customers = db.prepare('SELECT * FROM customers').all();
     const schedules = db.prepare('SELECT * FROM schedules').all();
+    let posts = [];
+    let attachments = [];
+    try {
+      posts = db.prepare('SELECT * FROM posts').all();
+      attachments = db.prepare('SELECT * FROM post_attachments').all();
+    } catch (e) {}
 
     const payload = {
       version: 1,
       last_synced_at: new Date().toISOString(),
       customers: customers,
-      schedules: schedules
+      schedules: schedules,
+      posts: posts,
+      post_attachments: attachments
     };
 
     const jsonStr = JSON.stringify(payload, null, 2);
     const storePath = getCloudCrmDataStorePath();
     fs.writeFileSync(storePath, jsonStr, 'utf8');
 
-    const ok = await githubUploadFile(GITHUB_CRM_DATA_FILE, Buffer.from(jsonStr, 'utf8'), 'Auto-sync CRM customers and schedules');
-    if (ok) console.log('[Cloud-Sync] Successfully pushed customers and schedules to GitHub cloud store.');
+    const ok = await githubUploadFile(GITHUB_CRM_DATA_FILE, Buffer.from(jsonStr, 'utf8'), 'Auto-sync CRM customers, schedules, and board posts');
+    if (ok) console.log('[Cloud-Sync] Successfully pushed customers, schedules, and board posts to GitHub cloud store.');
     return ok;
   } catch (err) {
     console.error('syncCloudData error:', err);
@@ -465,6 +473,71 @@ function _mergeCrmDataIntoDB(db, cloudData) {
         }
       });
       schedTx(cloudData.schedules);
+    }
+
+    // Merge Posts
+    if (Array.isArray(cloudData.posts) && cloudData.posts.length > 0) {
+      const insertPost = db.prepare(`
+        INSERT INTO posts (id, user_id, author_name, title, content, category, views, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          user_id = excluded.user_id,
+          author_name = excluded.author_name,
+          title = excluded.title,
+          content = excluded.content,
+          category = excluded.category,
+          views = excluded.views,
+          updated_at = excluded.updated_at
+        WHERE excluded.updated_at >= posts.updated_at OR posts.updated_at IS NULL
+      `);
+
+      const postTx = db.transaction((posts) => {
+        for (const p of posts) {
+          insertPost.run(
+            p.id,
+            p.user_id || 1,
+            p.author_name || '최고 관리자 (Admin)',
+            p.title,
+            p.content || '',
+            p.category || '상품전략',
+            p.views || 0,
+            p.created_at || new Date().toISOString(),
+            p.updated_at || new Date().toISOString()
+          );
+        }
+      });
+      postTx(cloudData.posts);
+    }
+
+    // Merge Post Attachments
+    if (Array.isArray(cloudData.post_attachments) && cloudData.post_attachments.length > 0) {
+      const insertAtt = db.prepare(`
+        INSERT INTO post_attachments (id, post_id, file_name, file_size, file_type, download_url, file_data, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          post_id = excluded.post_id,
+          file_name = excluded.file_name,
+          file_size = excluded.file_size,
+          file_type = excluded.file_type,
+          download_url = excluded.download_url,
+          file_data = excluded.file_data
+      `);
+
+      const attTx = db.transaction((atts) => {
+        for (const a of atts) {
+          insertAtt.run(
+            a.id,
+            a.post_id,
+            a.file_name,
+            a.file_size || 0,
+            a.file_type || '',
+            a.download_url || null,
+            a.file_data || '',
+            a.created_at || new Date().toISOString()
+          );
+        }
+      });
+      attTx(cloudData.post_attachments);
     }
   } catch (err) {
     console.error('_mergeCrmDataIntoDB error:', err);

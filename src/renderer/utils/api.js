@@ -36,6 +36,16 @@ export const api = {
     downloadForm: (company) => window.electronAPI.claims.downloadForm(company),
     openPdf: (company) => window.electronAPI.claims.openPdf(company)
   },
+  board: {
+    selectFiles: () => window.electronAPI.board.selectFiles(),
+    getPosts: (params) => window.electronAPI.board.getPosts(params),
+    getPostDetail: (postId) => window.electronAPI.board.getPostDetail(postId),
+    createPost: (data) => window.electronAPI.board.createPost(data),
+    updatePost: (data) => window.electronAPI.board.updatePost(data),
+    deletePost: (data) => window.electronAPI.board.deletePost(data),
+    downloadAttachment: (attachmentId) => window.electronAPI.board.downloadAttachment(attachmentId),
+    openAttachment: (attachmentId) => window.electronAPI.board.openAttachment(attachmentId)
+  },
   system: {
     getInfo: () => window.electronAPI.system.getInfo(),
     getAppVersion: () => window.electronAPI.system.getAppVersion(),

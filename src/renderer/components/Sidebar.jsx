@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Users, Calendar, Database, Wifi, FileText, Monitor, FileCheck, Building2, LogOut, Palette } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, Database, Wifi, FileText, Monitor, FileCheck, Building2, LogOut, Palette, BookOpen } from 'lucide-react';
 import { useCrmStore } from '../store/useCrmStore';
 import { api } from '../utils/api';
 import logoIcon from '../assets/icon.png';
@@ -27,6 +27,7 @@ export default function Sidebar() {
     { id: 'dashboard', label: '대시보드', icon: LayoutDashboard },
     { id: 'customers', label: '고객 관리', icon: Users, badge: customerCount },
     { id: 'schedules', label: '일정 관리', icon: Calendar, badge: pendingSchedulesCount },
+    { id: 'board', label: '상품전략자료실', icon: BookOpen },
     { id: 'org', label: '조직 관리', icon: Building2 },
     { id: 'reports', label: '보장분석', icon: FileCheck },
     { id: 'claims', label: '보험금 청구', icon: FileText },
