@@ -39,13 +39,6 @@ function setupIpcHandlers(mainWindow) {
     }).catch(err => {
       console.error('[Launch-Sync] Background sync error:', err.message);
     });
-
-    syncCloudUpdateManifest(
-      '1.6.3',
-      'https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.3/ALPHA_CRM_MicroPatch_v1.6.3.asar',
-      'v1.6.3 공식 정식 배포 버전',
-      '상품전략자료실 공유 게시판 및 읽기전용 권한 강화'
-    );
   } catch (syncErr) {
     console.error('Initial sync error:', syncErr);
   }
