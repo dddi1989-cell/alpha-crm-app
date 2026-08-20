@@ -539,6 +539,37 @@ function _mergeCrmDataIntoDB(db, cloudData) {
       });
       attTx(cloudData.post_attachments);
     }
+
+    // Merge Market Briefings
+    if (Array.isArray(cloudData.market_briefings) && cloudData.market_briefings.length > 0) {
+      const insertBriefing = db.prepare(`
+        INSERT INTO market_briefings (date, title, updated_at, summary_3lines, domestic_json, overseas_json, news_json, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(date) DO UPDATE SET
+          title = excluded.title,
+          updated_at = excluded.updated_at,
+          summary_3lines = excluded.summary_3lines,
+          domestic_json = excluded.domestic_json,
+          overseas_json = excluded.overseas_json,
+          news_json = excluded.news_json
+      `);
+
+      const briefTx = db.transaction((briefs) => {
+        for (const b of briefs) {
+          insertBriefing.run(
+            b.date,
+            b.title || '',
+            b.updated_at || '',
+            typeof b.summary_3lines === 'string' ? b.summary_3lines : JSON.stringify(b.summary_3lines || []),
+            typeof b.domestic === 'string' ? b.domestic : JSON.stringify(b.domestic || {}),
+            typeof b.overseas === 'string' ? b.overseas : JSON.stringify(b.overseas || {}),
+            typeof b.news === 'string' ? b.news : JSON.stringify(b.news || []),
+            b.created_at || new Date().toISOString()
+          );
+        }
+      });
+      briefTx(cloudData.market_briefings);
+    }
   } catch (err) {
     console.error('_mergeCrmDataIntoDB error:', err);
   }

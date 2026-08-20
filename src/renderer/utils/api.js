@@ -46,6 +46,12 @@ export const api = {
     downloadAttachment: (attachmentId) => window.electronAPI.board.downloadAttachment(attachmentId),
     openAttachment: (attachmentId) => window.electronAPI.board.openAttachment(attachmentId)
   },
+  market: {
+    getLatest: () => window.electronAPI.market.getLatest(),
+    getByDate: (date) => window.electronAPI.market.getByDate(date),
+    getHistoryDates: () => window.electronAPI.market.getHistoryDates(),
+    refresh: () => window.electronAPI.market.refresh()
+  },
   system: {
     getInfo: () => window.electronAPI.system.getInfo(),
     getAppVersion: () => window.electronAPI.system.getAppVersion(),

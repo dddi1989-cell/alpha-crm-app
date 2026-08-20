@@ -49,6 +49,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     downloadAttachment: (attachmentId) => ipcRenderer.invoke('board:download-attachment', attachmentId),
     openAttachment: (attachmentId) => ipcRenderer.invoke('board:open-attachment', attachmentId)
   },
+  market: {
+    getLatest: () => ipcRenderer.invoke('market:get-latest'),
+    getByDate: (date) => ipcRenderer.invoke('market:get-by-date', date),
+    getHistoryDates: () => ipcRenderer.invoke('market:get-history-dates'),
+    refresh: () => ipcRenderer.invoke('market:refresh')
+  },
   system: {
     getInfo: () => ipcRenderer.invoke('system:get-info'),
     getAppVersion: () => ipcRenderer.invoke('system:get-app-version'),

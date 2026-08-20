@@ -119,6 +119,18 @@ function initDatabase(dbPath = null) {
       FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS market_briefings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT UNIQUE NOT NULL,
+      title TEXT,
+      updated_at TEXT,
+      summary_3lines TEXT,
+      domestic_json TEXT,
+      overseas_json TEXT,
+      news_json TEXT,
+      created_at TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS app_metadata (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
