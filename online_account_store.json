@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_synced_at": "2026-08-20T03:54:52.595Z",
+  "last_synced_at": "2026-08-20T03:55:04.017Z",
   "accounts": [
     {
       "id": 1,
@@ -22,11 +22,11 @@
       "name": "김지형",
       "phone": "01084773798",
       "role": "FA",
-      "parent_id": 3,
-      "org_id": 5,
-      "org_name": "Crocodile팀",
+      "parent_id": null,
+      "org_id": null,
+      "org_name": null,
       "created_at": "2026-08-12T08:23:17.459Z",
-      "updated_at": "2026-08-20T03:54:52.595Z"
+      "updated_at": "2026-08-20T03:07:26.984Z"
     },
     {
       "id": 3,
@@ -74,11 +74,11 @@
       "name": "박성도",
       "phone": "01079809130",
       "role": "Agent",
-      "parent_id": 6,
+      "parent_id": 2,
       "org_id": 5,
       "org_name": "Crocodile팀",
       "created_at": "2026-08-18T00:12:11.371Z",
-      "updated_at": "2026-08-19T02:33:35.389Z"
+      "updated_at": "2026-08-20T03:55:04.016Z"
     },
     {
       "id": 8,
