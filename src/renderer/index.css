@@ -1,0 +1,443 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    /* Responsive root font scaling proportional to window size */
+    font-size: clamp(12px, 0.45vw + 8px, 17.5px);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-[#090d16] text-[#f3f4f6] transition-colors duration-300;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.2);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.5);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.8);
+}
+
+/* Glassmorphism base utilities */
+.glass-panel {
+  background: rgba(17, 24, 39, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.glass-card {
+  background: rgba(30, 41, 59, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+/* ==========================================================================
+   THEME PALETTE OVERRIDES & HIGH-CONTRAST TONE-ON-TONE DESIGN
+   ========================================================================== */
+
+/* 1. Midnight Dark (기본 딥 네이비) */
+[data-theme="midnight"] {
+  --theme-bg: #090d16;
+}
+
+/* 2. Dark Zinc Theme (차콜 블랙 / 다크 미니멀) */
+[data-theme="dark-zinc"] body,
+[data-theme="dark-zinc"] .app-main-bg,
+[data-theme="dark-zinc"] .app-workspace-bg,
+[data-theme="dark-zinc"] main {
+  background-color: #0f0f11 !important;
+  color: #f4f4f5 !important;
+}
+[data-theme="dark-zinc"] aside {
+  background-color: #18181b !important;
+  border-color: #3f3f46 !important;
+}
+[data-theme="dark-zinc"] .glass-panel {
+  background: #18181b !important;
+  border-color: #3f3f46 !important;
+}
+[data-theme="dark-zinc"] .glass-card {
+  background: #27272a !important;
+  border-color: #52525b !important;
+}
+
+/* ==========================================================================
+   WHITE & LIGHT THEMES (완전 화이트, 엔터프라이즈, 핑크, 크림, 웜라이트)
+   ========================================================================== */
+
+/* 3. Pure White Theme (완전 순백색 올-화이트 테마) */
+[data-theme="pure-white"] body,
+[data-theme="pure-white"] .app-main-bg,
+[data-theme="pure-white"] .app-workspace-bg,
+[data-theme="pure-white"] main {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+[data-theme="pure-white"] aside {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+/* 4. Enterprise Dual White (다크 네이비 사이드바 + 화이트 대시보드 본문) */
+[data-theme="enterprise-white"] body,
+[data-theme="enterprise-white"] .app-main-bg,
+[data-theme="enterprise-white"] .app-workspace-bg,
+[data-theme="enterprise-white"] main {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+[data-theme="enterprise-white"] aside {
+  background-color: #0c1222 !important;
+  border-color: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+/* 5. Rose Pink Light Theme (화사한 벚꽃 핑크 & 화이트 테마) */
+[data-theme="rose-pink"] body,
+[data-theme="rose-pink"] .app-main-bg,
+[data-theme="rose-pink"] .app-workspace-bg,
+[data-theme="rose-pink"] main {
+  background-color: #fff1f3 !important;
+  color: #4c0519 !important;
+}
+[data-theme="rose-pink"] aside {
+  background-color: #ffe4e8 !important;
+  border-color: #fecdd6 !important;
+  color: #881337 !important;
+}
+
+/* 6. Soft Cream Beige Theme (아이보리 크림 & 화이트 테마) */
+[data-theme="soft-cream"] body,
+[data-theme="soft-cream"] .app-main-bg,
+[data-theme="soft-cream"] .app-workspace-bg,
+[data-theme="soft-cream"] main {
+  background-color: #faf7f2 !important;
+  color: #292524 !important;
+}
+[data-theme="soft-cream"] aside {
+  background-color: #f4eee5 !important;
+  border-color: #d6c7b2 !important;
+  color: #44403c !important;
+}
+
+/* 7. Warm Light Theme (모던 라이트 그레이 테마) */
+[data-theme="warm-light"] body,
+[data-theme="warm-light"] .app-main-bg,
+[data-theme="warm-light"] .app-workspace-bg,
+[data-theme="warm-light"] main {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+[data-theme="warm-light"] aside {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+/* ==========================================================================
+   라이트/화이트 계열 전용 고대비 톤온톤 스타일 (WCAG AAA 가독성 보장)
+   ========================================================================== */
+[data-theme="pure-white"] .glass-panel,
+[data-theme="enterprise-white"] main .glass-panel,
+[data-theme="warm-light"] .glass-panel,
+[data-theme="soft-cream"] .glass-panel {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.06), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
+  color: #0f172a !important;
+}
+
+[data-theme="rose-pink"] .glass-panel {
+  background: #ffffff !important;
+  border: 1px solid #fecdd6 !important;
+  box-shadow: 0 4px 16px -2px rgba(244, 63, 94, 0.08) !important;
+  color: #4c0519 !important;
+}
+
+[data-theme="pure-white"] .glass-card,
+[data-theme="enterprise-white"] main .glass-card,
+[data-theme="warm-light"] .glass-card,
+[data-theme="soft-cream"] .glass-card {
+  background: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+[data-theme="rose-pink"] .glass-card {
+  background: #fff8f9 !important;
+  border: 1px solid #fecdd6 !important;
+  color: #4c0519 !important;
+}
+
+/* 내부 하드코딩된 다크 박스 요소들을 라이트 테마에서 부드러운 서브 카드로 톤온톤 변환 */
+[data-theme="pure-white"] div[class*="bg-slate-900"],
+[data-theme="enterprise-white"] main div[class*="bg-slate-900"],
+[data-theme="warm-light"] main div[class*="bg-slate-900"],
+[data-theme="soft-cream"] main div[class*="bg-slate-900"] {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+[data-theme="rose-pink"] main div[class*="bg-slate-900"] {
+  background-color: #fff5f7 !important;
+  border-color: #fecdd6 !important;
+  color: #4c0519 !important;
+}
+
+/* 버튼 톤온톤 */
+[data-theme="pure-white"] button[class*="bg-slate-900"],
+[data-theme="enterprise-white"] main button[class*="bg-slate-900"],
+[data-theme="warm-light"] main button[class*="bg-slate-900"],
+[data-theme="soft-cream"] main button[class*="bg-slate-900"] {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #1e293b !important;
+}
+
+[data-theme="pure-white"] button[class*="bg-slate-900"]:hover,
+[data-theme="enterprise-white"] main button[class*="bg-slate-900"]:hover,
+[data-theme="warm-light"] main button[class*="bg-slate-900"]:hover,
+[data-theme="soft-cream"] main button[class*="bg-slate-900"]:hover {
+  background-color: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+}
+
+[data-theme="rose-pink"] main button[class*="bg-slate-900"] {
+  background-color: #ffffff !important;
+  border-color: #fecdd6 !important;
+  color: #881337 !important;
+}
+[data-theme="rose-pink"] main button[class*="bg-slate-900"]:hover {
+  background-color: #ffe4e8 !important;
+  border-color: #fb7185 !important;
+  color: #4c0519 !important;
+}
+
+/* 퓨어 화이트 사이드바 하단 버튼 & 카드 톤온톤 */
+[data-theme="pure-white"] aside div[class*="bg-slate-900"],
+[data-theme="pure-white"] aside button[class*="bg-slate-900"] {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #1e293b !important;
+}
+[data-theme="pure-white"] aside button[class*="bg-slate-900"]:hover {
+  background-color: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+}
+
+/* 제목 및 본문 텍스트 시인성 고대비 보장 */
+[data-theme="pure-white"] h1, [data-theme="pure-white"] h2, [data-theme="pure-white"] h3, [data-theme="pure-white"] h4, [data-theme="pure-white"] h5,
+[data-theme="enterprise-white"] main h1, [data-theme="enterprise-white"] main h2, [data-theme="enterprise-white"] main h3, [data-theme="enterprise-white"] main h4,
+[data-theme="warm-light"] h1, [data-theme="warm-light"] h2, [data-theme="warm-light"] h3, [data-theme="warm-light"] h4,
+[data-theme="soft-cream"] h1, [data-theme="soft-cream"] h2, [data-theme="soft-cream"] h3, [data-theme="soft-cream"] h4 {
+  color: #0f172a !important;
+}
+
+[data-theme="rose-pink"] h1, [data-theme="rose-pink"] h2, [data-theme="rose-pink"] h3, [data-theme="rose-pink"] h4 {
+  color: #4c0519 !important;
+}
+
+[data-theme="pure-white"] .text-white,
+[data-theme="enterprise-white"] main .text-white,
+[data-theme="warm-light"] .text-white,
+[data-theme="soft-cream"] .text-white {
+  color: #0f172a !important;
+}
+
+[data-theme="rose-pink"] main .text-white {
+  color: #4c0519 !important;
+}
+
+[data-theme="pure-white"] .text-slate-400,
+[data-theme="enterprise-white"] main .text-slate-400,
+[data-theme="warm-light"] .text-slate-400,
+[data-theme="soft-cream"] .text-slate-400 {
+  color: #475569 !important;
+}
+
+[data-theme="rose-pink"] main .text-slate-400 {
+  color: #881337 !important;
+}
+
+[data-theme="pure-white"] .text-slate-300,
+[data-theme="enterprise-white"] main .text-slate-300,
+[data-theme="warm-light"] .text-slate-300,
+[data-theme="soft-cream"] .text-slate-300 {
+  color: #1e293b !important;
+}
+
+[data-theme="pure-white"] .text-slate-500,
+[data-theme="enterprise-white"] main .text-slate-500,
+[data-theme="warm-light"] .text-slate-500,
+[data-theme="soft-cream"] .text-slate-500 {
+  color: #64748b !important;
+}
+
+/* 인풋, 셀렉트, 텍스트에어리어 톤온톤 & 플레이스홀더 */
+[data-theme="pure-white"] input, [data-theme="pure-white"] select, [data-theme="pure-white"] textarea,
+[data-theme="enterprise-white"] main input, [data-theme="enterprise-white"] main select, [data-theme="enterprise-white"] main textarea,
+[data-theme="warm-light"] input, [data-theme="warm-light"] select, [data-theme="warm-light"] textarea,
+[data-theme="soft-cream"] input, [data-theme="soft-cream"] select, [data-theme="soft-cream"] textarea {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+[data-theme="pure-white"] input::placeholder,
+[data-theme="enterprise-white"] main input::placeholder,
+[data-theme="warm-light"] input::placeholder,
+[data-theme="soft-cream"] input::placeholder {
+  color: #64748b !important;
+}
+
+[data-theme="rose-pink"] input, [data-theme="rose-pink"] select, [data-theme="rose-pink"] textarea {
+  background-color: #ffffff !important;
+  border-color: #fecdd6 !important;
+  color: #4c0519 !important;
+}
+[data-theme="rose-pink"] input::placeholder {
+  color: #9f1239 !important;
+}
+
+/* 셀렉트 드롭다운 옵션 가독성 */
+[data-theme="pure-white"] option,
+[data-theme="enterprise-white"] option,
+[data-theme="warm-light"] option,
+[data-theme="soft-cream"] option,
+[data-theme="rose-pink"] option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* ==========================================================================
+   OTHER DARK & COLOR THEMES (HIGH CONTRAST BORDERS & SHADOWS)
+   ========================================================================== */
+
+/* 8. Cherry Dark Pink Theme (다크 로즈 & 딥 체리 핑크) */
+[data-theme="cherry-dark"] body,
+[data-theme="cherry-dark"] .app-main-bg,
+[data-theme="cherry-dark"] .app-workspace-bg,
+[data-theme="cherry-dark"] main {
+  background-color: #1a0811 !important;
+  color: #fff1f2 !important;
+}
+[data-theme="cherry-dark"] aside {
+  background-color: #260c19 !important;
+  border-color: #611e3f !important;
+}
+[data-theme="cherry-dark"] .glass-panel {
+  background: #260c19 !important;
+  border-color: #702449 !important;
+}
+[data-theme="cherry-dark"] .glass-card {
+  background: #3b1328 !important;
+  border-color: #882c58 !important;
+}
+
+/* 9. Ocean Blue Theme (딥 마린 & 아쿠아 시안) */
+[data-theme="ocean"] body,
+[data-theme="ocean"] .app-main-bg,
+[data-theme="ocean"] .app-workspace-bg,
+[data-theme="ocean"] main {
+  background-color: #071324 !important;
+  color: #f0f9ff !important;
+}
+[data-theme="ocean"] aside {
+  background-color: #0c1e36 !important;
+  border-color: #1e3a5f !important;
+}
+[data-theme="ocean"] .glass-panel {
+  background: #0c1e36 !important;
+  border-color: #1e4a78 !important;
+}
+[data-theme="ocean"] .glass-card {
+  background: #132d4e !important;
+  border-color: #255d94 !important;
+}
+
+/* 10. Emerald Forest Theme (포레스트 딥 그린 & 민트) */
+[data-theme="emerald"] body,
+[data-theme="emerald"] .app-main-bg,
+[data-theme="emerald"] .app-workspace-bg,
+[data-theme="emerald"] main {
+  background-color: #051610 !important;
+  color: #ecfdf5 !important;
+}
+[data-theme="emerald"] aside {
+  background-color: #09241a !important;
+  border-color: #144934 !important;
+}
+[data-theme="emerald"] .glass-panel {
+  background: #09241a !important;
+  border-color: #185a40 !important;
+}
+[data-theme="emerald"] .glass-card {
+  background: #113b2c !important;
+  border-color: #1d7352 !important;
+}
+
+/* 11. Sunset Amber Theme (노을빛 웜 오렌지 & 앰버) */
+[data-theme="sunset-amber"] body,
+[data-theme="sunset-amber"] .app-main-bg,
+[data-theme="sunset-amber"] .app-workspace-bg,
+[data-theme="sunset-amber"] main {
+  background-color: #180d07 !important;
+  color: #fffbeb !important;
+}
+[data-theme="sunset-amber"] aside {
+  background-color: #27140b !important;
+  border-color: #572d19 !important;
+}
+[data-theme="sunset-amber"] .glass-panel {
+  background: #27140b !important;
+  border-color: #6e3920 !important;
+}
+[data-theme="sunset-amber"] .glass-card {
+  background: #3d2012 !important;
+  border-color: #8c4929 !important;
+}
+
+/* 12. Royal Purple Theme (로열 바이올렛 & 라벤더) */
+[data-theme="purple"] body,
+[data-theme="purple"] .app-main-bg,
+[data-theme="purple"] .app-workspace-bg,
+[data-theme="purple"] main {
+  background-color: #11071f !important;
+  color: #faf5ff !important;
+}
+[data-theme="purple"] aside {
+  background-color: #1b0c30 !important;
+  border-color: #421e75 !important;
+}
+[data-theme="purple"] .glass-panel {
+  background: #1b0c30 !important;
+  border-color: #552796 !important;
+}
+[data-theme="purple"] .glass-card {
+  background: #2b134d !important;
+  border-color: #6d32c0 !important;
+}

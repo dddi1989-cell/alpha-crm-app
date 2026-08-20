@@ -1,0 +1,50 @@
+{
+  "appId": "com.alpha.crm.app",
+  "asar": {
+    "smartUnpack": true
+  },
+  "afterPack": "./scripts/disable-asar-integrity.js",
+  "productName": "ALPHA 고객관리Tool",
+  "directories": {
+    "output": "dist-electron",
+    "buildResources": "build"
+  },
+  "files": [
+    "src/main/**/*",
+    "dist/**/*",
+    "claim_forms/**/*",
+    "package.json"
+  ],
+  "extraResources": [
+    {
+      "from": "claim_forms",
+      "to": "claim_forms",
+      "filter": ["**/*"]
+    }
+  ],
+  "asarUnpack": [
+    "**/node_modules/better-sqlite3/**/*"
+  ],
+  "win": {
+    "icon": "build/icon.png",
+    "target": [
+      {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      }
+    ]
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "allowElevation": true,
+    "unicode": true,
+    "createDesktopShortcut": "always",
+    "createStartMenuShortcut": true,
+    "shortcutName": "ALPHA 고객관리Tool",
+    "artifactName": "ALPHA_CRM_Setup_${version}.${ext}"
+  }
+}

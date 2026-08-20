@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Build & Dist
+dist/
+dist-electron/
+release/
+*.asar
+*.exe
+*.blockmap
+
+# Environment & Temp
+scripts/
+.env
+*.tmp
+*.log
+.DS_Store
+Thumbs.db
+
+# Database local testing files
+*.db-journal
+*.db-wal
+*.db-shm
