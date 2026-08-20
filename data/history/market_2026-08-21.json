@@ -1,11 +1,11 @@
 {
   "date": "2026-08-21",
-  "updated_at": "2026-08-21 08:53 KST",
+  "updated_at": "2026-08-21 08:54 KST",
   "title": "[2026-08-21] 오늘의 증시 & 글로벌 금융 시황 모닝 브리핑",
   "summary_3lines": [
     "🇺🇸 뉴욕증시: 나스닥(26,067.17, -1.00%), S&P 500(7,641.16, -0.87%) 마감.",
     "🇰🇷 국내증시: 코스피(6,852.58, -0.00%상승) 출발, 대형 기술주 중심 수급 주목.",
-    "📊 매크로: 원/달러 환율 1,392.4원(+0.22%), WTI 원유 86.30 $/배럴 변동에 따른 금융 시장 모니터링."
+    "📊 매크로: 원/달러 환율 1,392.4원(+0.22%), WTI 원유 86.31 $/배럴 변동에 따른 금융 시장 모니터링."
   ],
   "domestic": {
     "indices": [
@@ -96,8 +96,8 @@
       {
         "symbol": "CL=F",
         "name": "WTI 원유",
-        "value": "86.30 $/배럴",
-        "change_rate": "+0.55%",
+        "value": "86.31 $/배럴",
+        "change_rate": "+0.56%",
         "is_up": true
       },
       {
@@ -150,42 +150,42 @@
     {
       "source_type": "국내증시",
       "title": "AI에 돈 몰리고, 코인 규제 풀리고…美 기술산업 ‘속도전’[MUST KNOW5]",
-      "summary": "머스트노우5입니다. 엔비디아, 中 겨냥 AI 칩 소량 출하 계획…“美 수출규제 충족” 엔비디아가 중국 시장을 겨냥한 새로운 AI 칩을 ..\n\t\t\t\t\t\t\t\t\t\t이데일리 \n|\n2026-08-21 08:41:10",
+      "summary": "머스트노우5입니다. 엔비디아, 中 겨냥 AI 칩 소량 출하 계획…“美 수출규제 충족” 엔비디아가 중국 시장을 겨냥한 새로운 AI 칩을 ..\n\t\t\t\t\t\t\t\t\t\t \n\n2026-08-21 08:41:10",
       "url": "https://finance.naver.com/news/news_read.naver?article_id=0006355431&office_id=018&mode=mainnews&type=&date=2026-08-21&page=1",
       "press": "이데일리"
     },
     {
       "source_type": "국내증시",
       "title": "\"곱버스 탔다\"...삼성·하이닉스 10% 폭등한 날, 레버리지 개미들 936억 차익실현",
-      "summary": "삼성전자와 SK하이닉스 주가가 동반 급등한 20일 단일종목 레버리지 상장지수펀드(ETF) 거래대금이 다시 1조원대로 올라섰다. 그동안 ..\n\t\t\t\t\t\t\t\t\t\t파이낸셜뉴스 \n|\n2026-08-21 08:39:09",
+      "summary": "삼성전자와 SK하이닉스 주가가 동반 급등한 20일 단일종목 레버리지 상장지수펀드(ETF) 거래대금이 다시 1조원대로 올라섰다. 그동안 ..\n\t\t\t\t\t\t\t\t\t\t \n\n2026-08-21 08:39:09",
       "url": "https://finance.naver.com/news/news_read.naver?article_id=0005564470&office_id=014&mode=mainnews&type=&date=2026-08-21&page=1",
       "press": "파이낸셜뉴스"
     },
     {
       "source_type": "국내증시",
       "title": "KB證 “삼성전자 특별배당 100조 원 넘을 수도…30만 원대 안착 가능”[줍줍리포트]",
-      "summary": "삼성전자(005930)가 메모리 공급 부족 장기화에 따른 실적 성장과 대규모 특별배당 기대로 단기간 ‘30만 전자’에 안착할 수 있다는..\n\t\t\t\t\t\t\t\t\t\t서울경제 \n|\n2026-08-21 08:39:08",
+      "summary": "삼성전자(005930)가 메모리 공급 부족 장기화에 따른 실적 성장과 대규모 특별배당 기대로 단기간 ‘30만 전자’에 안착할 수 있다는..\n\t\t\t\t\t\t\t\t\t\t \n\n2026-08-21 08:39:08",
       "url": "https://finance.naver.com/news/news_read.naver?article_id=0004653750&office_id=011&mode=mainnews&type=&date=2026-08-21&page=1",
       "press": "서울경제"
     },
     {
       "source_type": "국내증시",
       "title": "“삼성물산 배당도 주주에게”…삼성證 “KCC 주주환원 더 세져, 목표가 65만원 유지”",
-      "summary": "삼성증권은 KCC가 삼성물산 등 보유 투자자산을 활용한 주주환원 계획을 구체화한 점에 주목해야 한다고 21일 평가했다. KCC를 업종 ..\n\t\t\t\t\t\t\t\t\t\t조선비즈 \n|\n2026-08-21 08:37:08",
+      "summary": "삼성증권은 KCC가 삼성물산 등 보유 투자자산을 활용한 주주환원 계획을 구체화한 점에 주목해야 한다고 21일 평가했다. KCC를 업종 ..\n\t\t\t\t\t\t\t\t\t\t \n\n2026-08-21 08:37:08",
       "url": "https://finance.naver.com/news/news_read.naver?article_id=0001187459&office_id=366&mode=mainnews&type=&date=2026-08-21&page=1",
       "press": "조선비즈"
     },
     {
       "source_type": "국내증시",
       "title": "“반도체는 이미 선반영”…증권가가 눈 돌린 다음 업종은",
-      "summary": "2분기 실적 시즌을 거치며 국내 증시의 이익 모멘텀이 반도체에서 다른 업종으로 확산하고 있다는 분석이 나왔다. 반도체가 이미 높아진 시..\n\t\t\t\t\t\t\t\t\t\t이데일리 \n|\n2026-08-21 08:21:08",
+      "summary": "2분기 실적 시즌을 거치며 국내 증시의 이익 모멘텀이 반도체에서 다른 업종으로 확산하고 있다는 분석이 나왔다. 반도체가 이미 높아진 시..\n\t\t\t\t\t\t\t\t\t\t \n\n2026-08-21 08:21:08",
       "url": "https://finance.naver.com/news/news_read.naver?article_id=0006355416&office_id=018&mode=mainnews&type=&date=2026-08-21&page=1",
       "press": "이데일리"
     },
     {
       "source_type": "국내증시",
       "title": "사상 최고치 찍었는데 전문가들 \"더 오른다\" …AI 타고 치솟는 '이 원자재'",
-      "summary": "구리 가격이 사상 최고치를 경신한 뒤 단기 숨고르기에 들어갔다. 대규모 물량 유입으로 급등세가 잠시 진정되는 모습이지만 구조적 공급 부..\n\t\t\t\t\t\t\t\t\t\t아시아경제 \n|\n2026-08-21 08:17:38",
+      "summary": "구리 가격이 사상 최고치를 경신한 뒤 단기 숨고르기에 들어갔다. 대규모 물량 유입으로 급등세가 잠시 진정되는 모습이지만 구조적 공급 부..\n\t\t\t\t\t\t\t\t\t\t \n\n2026-08-21 08:17:38",
       "url": "https://finance.naver.com/news/news_read.naver?article_id=0005805550&office_id=277&mode=mainnews&type=&date=2026-08-21&page=1",
       "press": "아시아경제"
     },
