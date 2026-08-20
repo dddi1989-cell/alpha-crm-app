@@ -268,18 +268,19 @@ def fetch_overseas_market():
 def fetch_market_news():
     news_items = []
 
+    # 1. Naver Finance News Scraping
     try:
-        headers = {"User-Agent": "Mozilla/5.0"}
-        res = requests.get("https://finance.naver.com/news/mainnews.naver", headers=headers, timeout=5)
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+        res = requests.get("https://finance.naver.com/news/mainnews.naver", headers=headers, timeout=6)
         if res.status_code == 200:
             soup = BeautifulSoup(res.text, "html.parser")
-            articles = soup.select(".mainNewsList .block1")[:5]
+            articles = soup.select(".mainNewsList li")[:6]
             for art in articles:
-                link_elem = art.select_one("a")
-                summary_elem = art.select_one(".summary")
+                link_elem = art.select_one("dd.articleSubject a") or art.select_one("dt.articleSubject a") or art.select_one("a")
+                summary_elem = art.select_one("dd.articleSummary") or art.select_one(".summary")
                 press_elem = art.select_one(".press")
 
-                if link_elem:
+                if link_elem and link_elem.text.strip():
                     title = link_elem.text.strip()
                     url = "https://finance.naver.com" + link_elem['href'] if link_elem['href'].startswith('/') else link_elem['href']
                     summary = summary_elem.text.strip() if summary_elem else ""
@@ -295,18 +296,24 @@ def fetch_market_news():
     except Exception as e:
         print(f"[News] Naver news scrape error: {e}")
 
+    # 2. yfinance Global News
     try:
         import yfinance as yf
         sp500 = yf.Ticker("^GSPC")
         yf_news = getattr(sp500, 'news', []) or []
         for n in yf_news[:4]:
-            news_items.append({
-                "source_type": "글로벌시황",
-                "title": n.get('title', ''),
-                "summary": n.get('publisher', 'Yahoo Finance'),
-                "url": n.get('link', ''),
-                "press": n.get('publisher', 'Yahoo Finance')
-            })
+            content = n.get('content', {}) if isinstance(n.get('content'), dict) else n
+            title = content.get('title') or n.get('title') or ""
+            link = content.get('canonicalUrl', {}).get('url') if isinstance(content.get('canonicalUrl'), dict) else (content.get('link') or n.get('link') or "")
+            summary = content.get('summary') or content.get('provider', {}).get('displayName') or "Yahoo Finance"
+            if title:
+                news_items.append({
+                    "source_type": "글로벌시황",
+                    "title": title,
+                    "summary": summary[:140] if isinstance(summary, str) else "Yahoo Finance",
+                    "url": link,
+                    "press": "Yahoo Finance"
+                })
     except Exception as e:
         print(f"[News] yfinance news error: {e}")
 
