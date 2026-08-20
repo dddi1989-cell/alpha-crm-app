@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_synced_at": "2026-08-20T05:09:51.306Z",
+  "last_synced_at": "2026-08-20T05:22:03.378Z",
   "customers": [
     {
       "id": 1,
@@ -651,5 +651,7 @@
       "user_id": 5,
       "category_type": "UserSchedule"
     }
-  ]
+  ],
+  "posts": [],
+  "post_attachments": []
 }
