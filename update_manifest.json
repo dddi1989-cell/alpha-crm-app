@@ -1,11 +1,11 @@
 {
-  "latestVersion": "1.6.2",
+  "latestVersion": "1.6.3",
   "minRequiredVersion": "1.0.0",
-  "title": "v1.6.2 공식 정식 배포 버전",
+  "title": "v1.6.3 공식 정식 배포 버전",
   "releaseDate": "2026-08-20",
-  "downloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.2/ALPHA_CRM_MicroPatch_v1.6.2.asar",
-  "installerUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.2/ALPHA_CRM_Setup_1.6.2.exe",
-  "releaseNotes": "연속 사용자/조직 수정 시 SHA 충돌 및 롤백 방지 완벽 패치",
+  "downloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.3/ALPHA_CRM_MicroPatch_v1.6.3.asar",
+  "installerUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.3/ALPHA_CRM_Setup_1.6.3.exe",
+  "releaseNotes": "상품전략자료실 공유 게시판 및 읽기전용 권한 강화",
   "forceUpdate": false,
   "targetFile": "resources/app.asar"
 }
