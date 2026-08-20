@@ -27,10 +27,10 @@ function setupIpcHandlers(mainWindow) {
     syncCloudAccounts(db);
     syncCloudData(db);
     syncCloudUpdateManifest(
-      '1.5.7',
-      'https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.5.7/ALPHA_CRM_MicroPatch_v1.5.7.asar',
-      'v1.5.7 공식 정식 배포 버전',
-      '모듈화 구조 개편 및 무인 자동 재구동 안정화 정식 패치'
+      '1.5.8',
+      'https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.5.8/ALPHA_CRM_MicroPatch_v1.5.8.asar',
+      'v1.5.8 공식 정식 배포 버전',
+      '사용자 로그인 인증 및 계정 동기화 안정화 정식 패치'
     );
   } catch (syncErr) {
     console.error('Initial sync error:', syncErr);

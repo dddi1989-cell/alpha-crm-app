@@ -192,6 +192,7 @@ async function loadCloudAccounts(db) {
 
 function _mergeOrganizationsIntoDB(db, cloudOrgs) {
   try {
+    db.pragma('foreign_keys = OFF');
     const insertOrUpdate = db.prepare(`
       INSERT INTO organizations (id, name, type, parent_id, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?)
@@ -204,6 +205,12 @@ function _mergeOrganizationsIntoDB(db, cloudOrgs) {
 
     const updateTx = db.transaction((orgs) => {
       for (const o of orgs) {
+        // Resolve duplicate name with different id
+        const existingByName = db.prepare('SELECT id FROM organizations WHERE LOWER(name) = LOWER(?)').get(o.name);
+        if (existingByName && existingByName.id !== o.id) {
+          db.prepare('DELETE FROM organizations WHERE id = ?').run(existingByName.id);
+        }
+
         insertOrUpdate.run(
           o.id,
           o.name,
@@ -216,13 +223,16 @@ function _mergeOrganizationsIntoDB(db, cloudOrgs) {
     });
 
     updateTx(cloudOrgs);
+    db.pragma('foreign_keys = ON');
   } catch (err) {
     console.error('_mergeOrganizationsIntoDB error:', err);
+    try { db.pragma('foreign_keys = ON'); } catch (e) {}
   }
 }
 
 function _mergeAccountsIntoDB(db, cloudAccounts) {
   try {
+    db.pragma('foreign_keys = OFF');
     const insertOrUpdate = db.prepare(`
       INSERT INTO users (id, username, password_hash, name, phone, role, parent_id, org_id, org_name, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -240,6 +250,12 @@ function _mergeAccountsIntoDB(db, cloudAccounts) {
 
     const updateTx = db.transaction((accounts) => {
       for (const a of accounts) {
+        // Resolve duplicate username with different id
+        const existingByName = db.prepare('SELECT id FROM users WHERE LOWER(username) = LOWER(?)').get(a.username);
+        if (existingByName && existingByName.id !== a.id) {
+          db.prepare('DELETE FROM users WHERE id = ?').run(existingByName.id);
+        }
+
         insertOrUpdate.run(
           a.id,
           a.username,
@@ -257,8 +273,10 @@ function _mergeAccountsIntoDB(db, cloudAccounts) {
     });
 
     updateTx(cloudAccounts);
+    db.pragma('foreign_keys = ON');
   } catch (err) {
     console.error('_mergeAccountsIntoDB error:', err);
+    try { db.pragma('foreign_keys = ON'); } catch (e) {}
   }
 }
 

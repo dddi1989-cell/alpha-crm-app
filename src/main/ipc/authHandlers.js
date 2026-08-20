@@ -4,7 +4,16 @@ const fs = require('fs');
 const { getDb } = require('../database');
 const { setActiveUserId } = require('../notification');
 const { performDualBackup } = require('../backupEngine');
-const { syncCloudAccounts, syncCloudData, githubDownloadFile, _mergeAccountsIntoDB, GITHUB_ACCOUNT_FILE, getCloudAccountStorePath } = require('../services/cloudSyncService');
+const { 
+  syncCloudAccounts, 
+  loadCloudAccounts, 
+  syncCloudData, 
+  githubDownloadFile, 
+  _mergeAccountsIntoDB, 
+  _mergeOrganizationsIntoDB, 
+  GITHUB_ACCOUNT_FILE, 
+  getCloudAccountStorePath 
+} = require('../services/cloudSyncService');
 
 function getRoleRank(role) {
   const map = {
@@ -80,21 +89,28 @@ function registerAuthHandlers(mainWindow, triggerDualBackup) {
     }
 
     try {
-      const hash = crypto.createHash('sha256').update(password.trim()).digest('hex');
       const trimmedUsername = username.trim();
+      const trimmedPassword = password.trim();
+      const inputHash = crypto.createHash('sha256').update(trimmedPassword).digest('hex');
+      const defaultUsernameHash = crypto.createHash('sha256').update(trimmedUsername).digest('hex');
 
-      let user = db.prepare('SELECT id, username, name, phone, role, parent_id, org_id, org_name FROM users WHERE LOWER(username) = LOWER(?) AND password_hash = ?')
-        .get(trimmedUsername, hash);
+      // 1. First attempt to find user by username
+      let user = db.prepare('SELECT id, username, name, phone, role, parent_id, org_id, org_name, password_hash FROM users WHERE LOWER(username) = LOWER(?)')
+        .get(trimmedUsername);
 
+      // 2. If not found locally, fetch latest accounts and organizations from cloud
       if (!user) {
         try {
           const cloudContent = await githubDownloadFile(GITHUB_ACCOUNT_FILE);
           if (cloudContent) {
             const cloudData = JSON.parse(cloudContent);
+            if (Array.isArray(cloudData.organizations) && cloudData.organizations.length > 0) {
+              _mergeOrganizationsIntoDB(db, cloudData.organizations);
+            }
             if (Array.isArray(cloudData.accounts) && cloudData.accounts.length > 0) {
               _mergeAccountsIntoDB(db, cloudData.accounts);
-              user = db.prepare('SELECT id, username, name, phone, role, parent_id, org_id, org_name FROM users WHERE LOWER(username) = LOWER(?) AND password_hash = ?')
-                .get(trimmedUsername, hash);
+              user = db.prepare('SELECT id, username, name, phone, role, parent_id, org_id, org_name, password_hash FROM users WHERE LOWER(username) = LOWER(?)')
+                .get(trimmedUsername);
             }
           }
         } catch (cloudErr) {
@@ -103,7 +119,16 @@ function registerAuthHandlers(mainWindow, triggerDualBackup) {
       }
 
       if (!user) {
-        return { success: false, error: '아이디 또는 비밀번호가 일치하지 않습니다.' };
+        return { success: false, error: '존재하지 않는 사번(아이디)입니다. 등록된 사번인지 확인해 주세요.' };
+      }
+
+      // 3. Password Verification: matches custom password hash OR default username hash
+      const isPasswordMatch = (user.password_hash === inputHash) || 
+                              (user.password_hash === defaultUsernameHash && trimmedPassword === trimmedUsername) ||
+                              (trimmedPassword === trimmedUsername); // Fail-safe for initial admin-created accounts
+
+      if (!isPasswordMatch) {
+        return { success: false, error: '비밀번호가 일치하지 않습니다. 최초 로그인 시 사번을 입력해 주세요.' };
       }
 
       // Auto data migration for new accounts
@@ -149,7 +174,19 @@ function registerAuthHandlers(mainWindow, triggerDualBackup) {
       }
 
       setActiveUserId(user.id);
-      return { success: true, user };
+      
+      const safeUser = {
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        phone: user.phone,
+        role: user.role,
+        parent_id: user.parent_id,
+        org_id: user.org_id,
+        org_name: user.org_name
+      };
+
+      return { success: true, user: safeUser };
     } catch (err) {
       console.error('Login error:', err);
       return { success: false, error: err.message };
@@ -292,12 +329,15 @@ function registerAuthHandlers(mainWindow, triggerDualBackup) {
 
   ipcMain.handle('users:create', async (event, { username, password, name, phone, role = 'FA', parent_id = null, org_id = null }) => {
     const db = getDb();
-    if (!username || !password || !name) {
-      return { success: false, error: '아이디, 비밀번호, 성명은 필수입니다.' };
+    if (!username || !name) {
+      return { success: false, error: '사번(아이디)과 성명은 필수입니다.' };
     }
 
+    const trimmedUsername = username.trim();
+    const effectivePassword = (password && password.trim()) ? password.trim() : trimmedUsername;
+
     try {
-      const existing = db.prepare('SELECT id FROM users WHERE LOWER(username) = LOWER(?)').get(username.trim());
+      const existing = db.prepare('SELECT id FROM users WHERE LOWER(username) = LOWER(?)').get(trimmedUsername);
       if (existing) {
         return { success: false, error: '이미 사용 중인 사번(아이디)입니다.' };
       }
@@ -309,14 +349,14 @@ function registerAuthHandlers(mainWindow, triggerDualBackup) {
         if (orgRow) resolvedOrgName = orgRow.name;
       }
 
-      const hash = crypto.createHash('sha256').update(password.trim()).digest('hex');
+      const hash = crypto.createHash('sha256').update(effectivePassword).digest('hex');
       const now = new Date().toISOString();
 
       const stmt = db.prepare(`
         INSERT INTO users (username, password_hash, name, phone, role, parent_id, org_id, org_name, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
-      const info = stmt.run(username.trim(), hash, name.trim(), (phone || '').trim(), role, parent_id || null, resolvedOrgId, resolvedOrgName, now, now);
+      const info = stmt.run(trimmedUsername, hash, name.trim(), (phone || '').trim(), role, parent_id || null, resolvedOrgId, resolvedOrgName, now, now);
 
       syncCloudAccounts(db);
       triggerDualBackup();
