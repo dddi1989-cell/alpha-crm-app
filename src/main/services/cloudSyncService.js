@@ -31,12 +31,15 @@ function getCloudCrmDataStorePath() {
 
 function githubGetSha(remotePath) {
   return new Promise((resolve) => {
-    const req = https.request('https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/contents/' + remotePath + '?ref=main', {
+    const timestamp = Date.now();
+    const req = https.request('https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/contents/' + remotePath + '?ref=main&_t=' + timestamp, {
       method: 'GET',
       headers: {
         'User-Agent': 'ALPHA-CRM-CloudSync',
         'Authorization': 'token ' + GITHUB_TOKEN,
-        'Accept': 'application/vnd.github.v3+json'
+        'Accept': 'application/vnd.github.v3+json',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
       }
     }, res => {
       let data = '';
@@ -55,56 +58,73 @@ function githubGetSha(remotePath) {
   });
 }
 
+// Sequential upload queue to prevent 409 Conflict race conditions
+let uploadQueuePromise = Promise.resolve();
+
 function githubUploadFile(remotePath, contentBuffer, commitMessage) {
-  return new Promise(async (resolve) => {
-    try {
-      const sha = await githubGetSha(remotePath);
-      const payload = {
-        message: commitMessage || ('Sync ' + remotePath),
-        content: contentBuffer.toString('base64'),
-        branch: 'main'
-      };
-      if (sha) payload.sha = sha;
+  const task = async () => {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const sha = await githubGetSha(remotePath);
+        const payload = {
+          message: commitMessage || ('Sync ' + remotePath),
+          content: contentBuffer.toString('base64'),
+          branch: 'main'
+        };
+        if (sha) payload.sha = sha;
 
-      const body = JSON.stringify(payload);
+        const body = JSON.stringify(payload);
 
-      const req = https.request('https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/contents/' + remotePath, {
-        method: 'PUT',
-        headers: {
-          'User-Agent': 'ALPHA-CRM-CloudSync',
-          'Authorization': 'token ' + GITHUB_TOKEN,
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(body)
-        }
-      }, res => {
-        let respData = '';
-        res.on('data', c => respData += c);
-        res.on('end', () => {
-          const ok = res.statusCode === 200 || res.statusCode === 201;
-          console.log('[GitHub-CloudSync-Upload] ' + remotePath + ' -> Status ' + res.statusCode + ' ' + (ok ? 'OK' : 'FAIL'));
-          resolve(ok);
+        const ok = await new Promise((resolve) => {
+          const req = https.request('https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/contents/' + remotePath, {
+            method: 'PUT',
+            headers: {
+              'User-Agent': 'ALPHA-CRM-CloudSync',
+              'Authorization': 'token ' + GITHUB_TOKEN,
+              'Content-Type': 'application/json',
+              'Content-Length': Buffer.byteLength(body)
+            }
+          }, res => {
+            let respData = '';
+            res.on('data', c => respData += c);
+            res.on('end', () => {
+              const success = res.statusCode === 200 || res.statusCode === 201;
+              console.log(`[GitHub-CloudSync-Upload] ${remotePath} (Attempt ${attempt}) -> Status ${res.statusCode} ${success ? 'OK' : 'FAIL'}`);
+              resolve(success);
+            });
+          });
+          req.on('error', (err) => {
+            console.error('[GitHub-CloudSync-Upload] Network error:', err.message);
+            resolve(false);
+          });
+          req.write(body);
+          req.end();
         });
-      });
-      req.on('error', (err) => {
-        console.error('[GitHub-CloudSync-Upload] Network error:', err.message);
-        resolve(false);
-      });
-      req.write(body);
-      req.end();
-    } catch (err) {
-      console.error('[GitHub-CloudSync-Upload] Error:', err.message);
-      resolve(false);
+
+        if (ok) return true;
+        // Wait before retry
+        await new Promise(r => setTimeout(r, 400 * attempt));
+      } catch (err) {
+        console.error('[GitHub-CloudSync-Upload] Attempt error:', err.message);
+        await new Promise(r => setTimeout(r, 400 * attempt));
+      }
     }
-  });
+    return false;
+  };
+
+  uploadQueuePromise = uploadQueuePromise.then(task, task);
+  return uploadQueuePromise;
 }
 
 function fetchRawGitHub(remotePath) {
   return new Promise((resolve) => {
-    const rawUrl = 'https://raw.githubusercontent.com/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/main/' + remotePath;
+    const rawUrl = 'https://raw.githubusercontent.com/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/main/' + remotePath + '?_t=' + Date.now();
     const req = https.get(rawUrl, {
       headers: {
         'User-Agent': 'ALPHA-CRM-CloudSync',
-        'Authorization': 'token ' + GITHUB_TOKEN
+        'Authorization': 'token ' + GITHUB_TOKEN,
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
       }
     }, res => {
       if (res.statusCode !== 200) {
@@ -133,12 +153,13 @@ function githubDownloadFile(remotePath) {
     }
 
     // 2nd attempt: GitHub Contents API
-    const req = https.request('https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/contents/' + remotePath + '?ref=main', {
+    const req = https.request('https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/contents/' + remotePath + '?ref=main&_t=' + Date.now(), {
       method: 'GET',
       headers: {
         'User-Agent': 'ALPHA-CRM-CloudSync',
         'Authorization': 'token ' + GITHUB_TOKEN,
-        'Accept': 'application/vnd.github.v3+json'
+        'Accept': 'application/vnd.github.v3+json',
+        'Cache-Control': 'no-cache'
       }
     }, res => {
       let data = '';
@@ -238,16 +259,11 @@ function _mergeOrganizationsIntoDB(db, cloudOrgs) {
         type = excluded.type,
         parent_id = excluded.parent_id,
         updated_at = excluded.updated_at
+      WHERE excluded.updated_at >= organizations.updated_at OR organizations.updated_at IS NULL
     `);
 
     const updateTx = db.transaction((orgs) => {
       for (const o of orgs) {
-        // Resolve duplicate name with different id
-        const existingByName = db.prepare('SELECT id FROM organizations WHERE LOWER(name) = LOWER(?)').get(o.name);
-        if (existingByName && existingByName.id !== o.id) {
-          db.prepare('DELETE FROM organizations WHERE id = ?').run(existingByName.id);
-        }
-
         insertOrUpdate.run(
           o.id,
           o.name,
@@ -283,11 +299,11 @@ function _mergeAccountsIntoDB(db, cloudAccounts) {
         org_id = excluded.org_id,
         org_name = excluded.org_name,
         updated_at = excluded.updated_at
+      WHERE excluded.updated_at >= users.updated_at OR users.updated_at IS NULL
     `);
 
     const updateTx = db.transaction((accounts) => {
       for (const a of accounts) {
-        // Resolve duplicate username with different id
         const existingByName = db.prepare('SELECT id FROM users WHERE LOWER(username) = LOWER(?)').get(a.username);
         if (existingByName && existingByName.id !== a.id) {
           db.prepare('DELETE FROM users WHERE id = ?').run(existingByName.id);
@@ -388,6 +404,7 @@ function _mergeCrmDataIntoDB(db, cloudData) {
           insurance_details = excluded.insurance_details,
           insurances = excluded.insurances,
           updated_at = excluded.updated_at
+        WHERE excluded.updated_at >= customers.updated_at OR customers.updated_at IS NULL
       `);
 
       const custTx = db.transaction((custs) => {
@@ -427,6 +444,7 @@ function _mergeCrmDataIntoDB(db, cloudData) {
           status = excluded.status,
           notes = excluded.notes,
           updated_at = excluded.updated_at
+        WHERE excluded.updated_at >= schedules.updated_at OR schedules.updated_at IS NULL
       `);
 
       const schedTx = db.transaction((scheds) => {

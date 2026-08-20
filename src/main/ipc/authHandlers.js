@@ -297,7 +297,6 @@ function registerAuthHandlers(mainWindow, triggerDualBackup) {
   ipcMain.handle('users:get-accessible-subordinates', async (event, currentUserId) => {
     const db = getDb();
     try {
-      loadCloudAccounts(db).catch(() => {});
       const accessibleUsers = getAccessibleUsersForUser(db, currentUserId);
       return { success: true, users: accessibleUsers };
     } catch (err) {
