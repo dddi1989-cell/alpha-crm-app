@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_synced_at": "2026-08-21T00:41:46.461Z",
+  "last_synced_at": "2026-08-21T00:42:20.299Z",
   "customers": [
     {
       "id": 1,
@@ -674,6 +674,17 @@
       "views": 0,
       "created_at": "2026-08-21T00:41:42.896Z",
       "updated_at": "2026-08-21T00:41:42.896Z"
+    },
+    {
+      "id": 3,
+      "user_id": 1,
+      "author_name": "최고 관리자 (Admin)",
+      "title": "2026년 8월 이달의 영업이슈",
+      "content": "2026년 8월 이달의 영업이슈",
+      "category": "상품전략",
+      "views": 0,
+      "created_at": "2026-08-21T00:42:18.125Z",
+      "updated_at": "2026-08-21T00:42:18.125Z"
     }
   ],
   "post_attachments": [
@@ -709,6 +720,17 @@
       "created_at": "2026-08-21T00:41:42.896Z",
       "file_path": "C:\\Users\\dddi1\\AppData\\Roaming\\offline-crm-app\\board_attachments\\2_1787272904667_손보장기_202608_FA시상_취합_최신_v8.pdf",
       "download_url": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/board-assets/board_1787272904709_ca13m______202608_FA_________v8.pdf"
+    },
+    {
+      "id": 4,
+      "post_id": 3,
+      "file_name": "인카_이달의영업이슈_2608_V2.pdf",
+      "file_size": 19601625,
+      "file_type": "pdf",
+      "file_data": null,
+      "created_at": "2026-08-21T00:42:18.125Z",
+      "file_path": "C:\\Users\\dddi1\\AppData\\Roaming\\offline-crm-app\\board_attachments\\3_1787272938125_인카_이달의영업이슈_2608_V2.pdf",
+      "download_url": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/board-assets/board_1787272938143_myjcg____________2608_V2.pdf"
     }
   ]
 }
