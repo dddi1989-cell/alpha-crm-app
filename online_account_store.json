@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_synced_at": "2026-08-21T02:23:30.760Z",
+  "last_synced_at": "2026-08-21T02:23:46.958Z",
   "accounts": [
     {
       "id": 1,
@@ -87,11 +87,11 @@
       "name": "이재성",
       "phone": "01076797880",
       "role": "BM",
-      "parent_id": 1,
+      "parent_id": 9,
       "org_id": 3,
       "org_name": "ALPHA지점",
       "created_at": "2026-08-20T03:52:56.049Z",
-      "updated_at": "2026-08-20T03:53:33.369Z"
+      "updated_at": "2026-08-21T02:23:46.958Z"
     },
     {
       "id": 9,
