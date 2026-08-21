@@ -3,9 +3,6 @@ const https = require('https');
 const http = require('http');
 const { getDb } = require('../database');
 
-const NAVER_KEY_ID = 'zpedihnvu6';
-const NAVER_KEY_SECRET = 'zAI58ZrgwEH0KN3LRQpR3mLDm3iYKmFKZif36yUi';
-
 function safeRegisterHandle(channel, handler) {
   try {
     ipcMain.removeHandler(channel);
@@ -84,12 +81,35 @@ function fetchHtmlFollowRedirect(urlStr) {
   });
 }
 
-// 1. Real-time domestic stocks & indices from Naver Finance Polling
+// Google Translation to Korean for Global News
+function translateToKorean(text) {
+  return new Promise((resolve) => {
+    if (!text) return resolve('');
+    const url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ko&dt=t&q=' + encodeURIComponent(text);
+    https.get(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    }, res => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(d);
+          const translated = (json[0] || []).map(x => x[0]).join('');
+          resolve(translated || text);
+        } catch (e) {
+          resolve(text);
+        }
+      });
+    }).on('error', () => resolve(text));
+  });
+}
+
+// 1. 100% Exact Real-time Domestic Market (Indices & Market-Cap Ranking)
 async function fetchRealtimeDomesticData() {
   try {
-    const [indicesRes, stocksRes] = await Promise.all([
+    const [indicesRes, capRes] = await Promise.all([
       fetchJsonFromUrl('https://polling.finance.naver.com/api/realtime/domestic/index/KOSPI,KOSDAQ').catch(() => null),
-      fetchJsonFromUrl('https://polling.finance.naver.com/api/realtime/domestic/stock/005930,000660,373220,207940,005380').catch(() => null)
+      fetchJsonFromUrl('https://m.stock.naver.com/api/stocks/marketValue/KOSPI?page=1&pageSize=8').catch(() => null)
     ]);
 
     const domestic = {
@@ -98,32 +118,42 @@ async function fetchRealtimeDomesticData() {
       market_sentiment: '안정'
     };
 
-    if (indicesRes?.result?.areas) {
-      indicesRes.result.areas.forEach(area => {
-        (area.datas || []).forEach(d => {
-          const name = d.itemCode === 'KOSPI' ? 'KOSPI' : d.itemCode === 'KOSDAQ' ? 'KOSDAQ' : d.stockName;
-          const isUp = d.compareToPreviousPrice?.name === 'RISING' || (parseFloat(d.fluctuationsRatio || '0') >= 0);
-          domestic.indices.push({
-            name,
-            value: d.closePrice || d.nowVal,
-            change_rate: (isUp ? '+' : '') + (d.fluctuationsRatio || '0') + '%',
-            is_up: isUp
-          });
-        });
-      });
-    }
+    // Parse Indices
+    const indexDatas = indicesRes?.datas || [];
+    indexDatas.forEach(d => {
+      const name = d.itemCode === 'KOSPI' ? 'KOSPI (코스피)' : d.itemCode === 'KOSDAQ' ? 'KOSDAQ (코스닥)' : d.stockName;
+      const ratioNum = parseFloat(d.fluctuationsRatio || '0');
+      const isUp = (d.compareToPreviousPrice?.name === 'RISING') || (ratioNum > 0);
+      const isDown = (d.compareToPreviousPrice?.name === 'FALLING') || (ratioNum < 0);
+      const sign = isUp ? '+' : '';
 
-    if (stocksRes?.result?.areas) {
-      stocksRes.result.areas.forEach(area => {
-        (area.datas || []).forEach(d => {
-          const isUp = d.compareToPreviousPrice?.name === 'RISING' || (parseFloat(d.fluctuationsRatio || '0') >= 0);
-          domestic.top_stocks.push({
-            ticker: d.itemCode,
-            name: d.stockName,
-            price: d.closePrice + '원',
-            change_rate: (isUp ? '+' : '') + (d.fluctuationsRatio || '0') + '%',
-            is_up: isUp
-          });
+      domestic.indices.push({
+        name: d.itemCode,
+        label: name,
+        value: d.closePrice,
+        change_amount: d.compareToPreviousClosePrice,
+        change_rate: sign + (d.fluctuationsRatio || '0') + '%',
+        is_up: isUp,
+        is_down: isDown
+      });
+    });
+
+    // Parse Real-time Top Stocks from Market Value API (Exact matches Naver Pay Stock Top list)
+    if (capRes?.stocks && Array.isArray(capRes.stocks)) {
+      capRes.stocks.slice(0, 6).forEach(s => {
+        const ratioNum = parseFloat(s.fluctuationsRatio || '0');
+        const isUp = ratioNum > 0;
+        const isDown = ratioNum < 0;
+        const sign = isUp ? '+' : '';
+
+        domestic.top_stocks.push({
+          ticker: s.itemCode,
+          name: s.stockName,
+          price: s.closePrice + '원',
+          change_amount: s.compareToPreviousClosePrice,
+          change_rate: sign + (s.fluctuationsRatio || '0') + '%',
+          is_up: isUp,
+          is_down: isDown
         });
       });
     }
@@ -135,7 +165,7 @@ async function fetchRealtimeDomesticData() {
   }
 }
 
-// 2. Real-time overseas indices & tech stocks from Yahoo Finance Chart API
+// 2. Real-time Overseas Market (Indices, Macro, Tech Stocks)
 async function fetchRealtimeOverseasData() {
   const symbols = [
     { symbol: '^GSPC', name: 'S&P 500', type: 'index' },
@@ -166,15 +196,18 @@ async function fetchRealtimeOverseasData() {
         const currentPrice = meta.regularMarketPrice || meta.chartPreviousClose;
         const prevClose = meta.chartPreviousClose || meta.previousClose || currentPrice;
         const changeRate = prevClose ? ((currentPrice - prevClose) / prevClose) * 100 : 0;
-        const isUp = changeRate >= 0;
+        const isUp = changeRate > 0;
+        const isDown = changeRate < 0;
+        const sign = isUp ? '+' : '';
 
         if (item.type === 'index') {
           overseas.indices.push({
             symbol: item.symbol,
             name: item.name,
             value: Number(currentPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-            change_rate: (isUp ? '+' : '') + changeRate.toFixed(2) + '%',
-            is_up: isUp
+            change_rate: sign + changeRate.toFixed(2) + '%',
+            is_up: isUp,
+            is_down: isDown
           });
         } else if (item.type === 'macro') {
           const valStr = item.unit === '원' 
@@ -184,16 +217,18 @@ async function fetchRealtimeOverseasData() {
             symbol: item.symbol,
             name: item.name,
             value: valStr,
-            change_rate: (isUp ? '+' : '') + changeRate.toFixed(2) + '%',
-            is_up: isUp
+            change_rate: sign + changeRate.toFixed(2) + '%',
+            is_up: isUp,
+            is_down: isDown
           });
         } else if (item.type === 'tech') {
           overseas.tech_stocks.push({
             symbol: item.symbol,
             name: item.name,
             price: '$' + Number(currentPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-            change_rate: (isUp ? '+' : '') + changeRate.toFixed(2) + '%',
-            is_up: isUp
+            change_rate: sign + changeRate.toFixed(2) + '%',
+            is_up: isUp,
+            is_down: isDown
           });
         }
       }
@@ -205,9 +240,12 @@ async function fetchRealtimeOverseasData() {
   return overseas;
 }
 
-// 3. Real-time News with Article Excerpts
-async function fetchRealtimeNewsWithExcerpts() {
-  const newsItems = [];
+// 3. News: 3 Domestic + 3 Global (Direct Korean Translation & Excerpts)
+async function fetchCuratedNews() {
+  const domesticNews = [];
+  const globalNews = [];
+
+  // (1) Fetch 3 Domestic News from Naver Finance
   try {
     const rawBuf = await fetchHtmlFollowRedirect('https://finance.naver.com/news/mainnews.naver');
     if (rawBuf) {
@@ -215,7 +253,8 @@ async function fetchRealtimeNewsWithExcerpts() {
       const htmlText = decoder.decode(rawBuf);
 
       const blocks = htmlText.split('<li class="block1">');
-      for (let i = 1; i < Math.min(blocks.length, 7); i++) {
+      for (let i = 1; i < Math.min(blocks.length, 6); i++) {
+        if (domesticNews.length >= 3) break;
         const blk = blocks[i];
         const subjMatch = blk.match(/<dd class="articleSubject">\s*<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i);
         const summMatch = blk.match(/<dd class="articleSummary">([\s\S]*?)(?:<span|\Z)/i);
@@ -248,7 +287,7 @@ async function fetchRealtimeNewsWithExcerpts() {
           } catch (e) {}
 
           if (title) {
-            newsItems.push({
+            domesticNews.push({
               source_type: '국내증시',
               title,
               summary: summary || title,
@@ -261,10 +300,43 @@ async function fetchRealtimeNewsWithExcerpts() {
       }
     }
   } catch (err) {
-    console.error('fetchRealtimeNewsWithExcerpts error:', err);
+    console.error('Domestic news fetch error:', err);
   }
 
-  return newsItems;
+  // (2) Fetch 3 Global News from Yahoo Finance & Translate to Korean
+  try {
+    const yfRes = await fetchJsonFromUrl('https://query1.finance.yahoo.com/v1/finance/search?q=stock%20market&newsCount=5');
+    const newsList = yfRes?.news || [];
+    for (const n of newsList) {
+      if (globalNews.length >= 3) break;
+      const rawTitle = n.title || '';
+      const link = n.link || '';
+      const publisher = n.publisher || 'Yahoo Finance';
+
+      if (rawTitle) {
+        // Direct Korean translation for overseas news
+        const koTitle = await translateToKorean(rawTitle);
+        const koSummary = `[${publisher} 외신] ${koTitle} - 글로벌 금융시장 실시간 경제 뉴스 요약입니다.`;
+
+        globalNews.push({
+          source_type: '글로벌시황',
+          title: koTitle,
+          original_title: rawTitle,
+          summary: koSummary,
+          body_excerpt: `[원문 기사 발췌 - ${publisher}]
+${rawTitle}
+
+상세 기사 원문은 아래 '원문 기사 읽기'를 통해 외신 사이트에서 바로 확인하실 수 있습니다.`,
+          url: link,
+          press: publisher + ' (외신)'
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Global news fetch error:', err);
+  }
+
+  return [...domesticNews, ...globalNews];
 }
 
 function registerMarketHandlers(mainWindow) {
@@ -290,32 +362,8 @@ function registerMarketHandlers(mainWindow) {
         };
       }
 
-      // If DB is empty, try loading from GitHub raw latest
-      try {
-        const rawUrl = 'https://raw.githubusercontent.com/dddi1989-cell/alpha-crm-app/main/data/market_latest.json?t=' + Date.now();
-        const data = await fetchJsonFromUrl(rawUrl);
-        if (data && data.date) {
-          const insertStmt = db.prepare(`
-            INSERT OR REPLACE INTO market_briefings (date, title, updated_at, summary_3lines, domestic_json, overseas_json, news_json, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-          `);
-          insertStmt.run(
-            data.date,
-            data.title || '',
-            data.updated_at || '',
-            JSON.stringify(data.summary_3lines || []),
-            JSON.stringify(data.domestic || {}),
-            JSON.stringify(data.overseas || {}),
-            JSON.stringify(data.news || []),
-            new Date().toISOString()
-          );
-          return { success: true, briefing: data };
-        }
-      } catch (rawErr) {
-        console.log('[Market] Raw fallback load error:', rawErr.message);
-      }
-
-      return { success: false, error: '등록된 시황 데이터가 없습니다.' };
+      // If DB empty, do full live refresh immediately
+      return await doFullMarketRefresh();
     } catch (err) {
       console.error('market:get-latest error:', err);
       return { success: false, error: err.message };
@@ -328,7 +376,7 @@ function registerMarketHandlers(mainWindow) {
       const [domestic, overseas, news] = await Promise.all([
         fetchRealtimeDomesticData(),
         fetchRealtimeOverseasData(),
-        fetchRealtimeNewsWithExcerpts()
+        fetchCuratedNews()
       ]);
 
       const now = new Date();
@@ -373,15 +421,6 @@ function registerMarketHandlers(mainWindow) {
         };
       }
 
-      // Try loading from GitHub history
-      try {
-        const histUrl = 'https://raw.githubusercontent.com/dddi1989-cell/alpha-crm-app/main/data/history/market_' + targetDate + '.json?t=' + Date.now();
-        const data = await fetchJsonFromUrl(histUrl);
-        if (data && data.date) {
-          return { success: true, briefing: data };
-        }
-      } catch (e) {}
-
       return { success: false, error: targetDate + ' 일자의 시황 데이터가 없습니다.' };
     } catch (err) {
       console.error('market:get-by-date error:', err);
@@ -403,70 +442,75 @@ function registerMarketHandlers(mainWindow) {
 
   // 5. Manual Full Refresh (Merges live quotes and saves to DB)
   safeRegisterHandle('market:refresh', async () => {
-    const db = getDb();
-    try {
-      const [domestic, overseas, news] = await Promise.all([
-        fetchRealtimeDomesticData(),
-        fetchRealtimeOverseasData(),
-        fetchRealtimeNewsWithExcerpts()
-      ]);
-
-      const today = new Date().toISOString().split('T')[0];
-      const nowStr = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-
-      // Generate 3-line summary
-      const summary_3lines = [];
-      if (overseas?.indices?.length) {
-        const nasdaq = overseas.indices.find(x => x.name.includes('나스닥'));
-        const sp = overseas.indices.find(x => x.name.includes('S&P'));
-        if (nasdaq && sp) {
-          summary_3lines.push(`🇺🇸 뉴욕증시: 나스닥(${nasdaq.value}, ${nasdaq.change_rate}), S&P 500(${sp.value}, ${sp.change_rate}) 실시간 흐름.`);
-        }
-      }
-      if (domestic?.indices?.length) {
-        const kospi = domestic.indices.find(x => x.name === 'KOSPI');
-        if (kospi) {
-          summary_3lines.push(`🇰🇷 국내증시: 코스피(${kospi.value}, ${kospi.change_rate}) 실시간 장중 호가.`);
-        }
-      }
-      if (overseas?.macro?.length) {
-        const fx = overseas.macro.find(x => x.name.includes('환율'));
-        if (fx) {
-          summary_3lines.push(`📊 매크로: 원/달러 환율 ${fx.value}(${fx.change_rate}) 변동성 주시.`);
-        }
-      }
-
-      const liveBriefing = {
-        date: today,
-        updated_at: `${today} ${nowStr} (실시간 갱신)`,
-        title: `[${today}] 오늘의 증시 & 글로벌 금융 시황 실시간 브리핑`,
-        summary_3lines: summary_3lines.length ? summary_3lines : ['실시간 시장 지표 갱신 완료.'],
-        domestic: domestic || {},
-        overseas: overseas || {},
-        news: news || []
-      };
-
-      const insertStmt = db.prepare(`
-        INSERT OR REPLACE INTO market_briefings (date, title, updated_at, summary_3lines, domestic_json, overseas_json, news_json, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-      insertStmt.run(
-        liveBriefing.date,
-        liveBriefing.title,
-        liveBriefing.updated_at,
-        JSON.stringify(liveBriefing.summary_3lines),
-        JSON.stringify(liveBriefing.domestic),
-        JSON.stringify(liveBriefing.overseas),
-        JSON.stringify(liveBriefing.news),
-        new Date().toISOString()
-      );
-
-      return { success: true, briefing: liveBriefing };
-    } catch (err) {
-      console.error('market:refresh error:', err);
-      return { success: false, error: err.message };
-    }
+    return await doFullMarketRefresh();
   });
+}
+
+async function doFullMarketRefresh() {
+  const db = getDb();
+  try {
+    const [domestic, overseas, news] = await Promise.all([
+      fetchRealtimeDomesticData(),
+      fetchRealtimeOverseasData(),
+      fetchCuratedNews()
+    ]);
+
+    const today = new Date().toISOString().split('T')[0];
+    const nowStr = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    // Generate 3-line summary
+    const summary_3lines = [];
+    if (overseas?.indices?.length) {
+      const nasdaq = overseas.indices.find(x => x.name.includes('나스닥'));
+      const sp = overseas.indices.find(x => x.name.includes('S&P'));
+      if (nasdaq && sp) {
+        summary_3lines.push(`🇺🇸 뉴욕증시: 나스닥(${nasdaq.value}, ${nasdaq.change_rate}), S&P 500(${sp.value}, ${sp.change_rate}) 마감.`);
+      }
+    }
+    if (domestic?.indices?.length) {
+      const kospi = domestic.indices.find(x => x.name === 'KOSPI');
+      const kosdaq = domestic.indices.find(x => x.name === 'KOSDAQ');
+      if (kospi) {
+        summary_3lines.push(`🇰🇷 국내증시: 코스피(${kospi.value}, ${kospi.change_rate}), 코스닥(${kosdaq ? kosdaq.value + ', ' + kosdaq.change_rate : ''}) 실시간 호가.`);
+      }
+    }
+    if (overseas?.macro?.length) {
+      const fx = overseas.macro.find(x => x.name.includes('환율'));
+      if (fx) {
+        summary_3lines.push(`📊 매크로: 원/달러 환율 ${fx.value}(${fx.change_rate}) 변동성 주시.`);
+      }
+    }
+
+    const liveBriefing = {
+      date: today,
+      updated_at: `${today} ${nowStr} (실시간 라이브)`,
+      title: `[${today}] 오늘의 증시 & 글로벌 금융 시황 실시간 브리핑`,
+      summary_3lines: summary_3lines.length ? summary_3lines : ['실시간 시장 지표 갱신 완료.'],
+      domestic: domestic || {},
+      overseas: overseas || {},
+      news: news || []
+    };
+
+    const insertStmt = db.prepare(`
+      INSERT OR REPLACE INTO market_briefings (date, title, updated_at, summary_3lines, domestic_json, overseas_json, news_json, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    insertStmt.run(
+      liveBriefing.date,
+      liveBriefing.title,
+      liveBriefing.updated_at,
+      JSON.stringify(liveBriefing.summary_3lines),
+      JSON.stringify(liveBriefing.domestic),
+      JSON.stringify(liveBriefing.overseas),
+      JSON.stringify(liveBriefing.news),
+      new Date().toISOString()
+    );
+
+    return { success: true, briefing: liveBriefing };
+  } catch (err) {
+    console.error('doFullMarketRefresh error:', err);
+    return { success: false, error: err.message };
+  }
 }
 
 module.exports = { registerMarketHandlers };

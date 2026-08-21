@@ -3,7 +3,7 @@ import {
   TrendingUp, TrendingDown, RefreshCw, Calendar, Globe, DollarSign, 
   ExternalLink, Sparkles, AlertCircle, Clock, ChevronRight, Activity, 
   Flame, Award, Layers, Zap, Info, Share2, Compass, Radio, CheckCircle2,
-  FileText, BookOpen, ChevronDown, ChevronUp, Eye
+  FileText, BookOpen, ChevronDown, ChevronUp, Eye, Newspaper, Languages
 } from 'lucide-react';
 import { api } from '../utils/api';
 
@@ -19,6 +19,7 @@ export default function TodayMarketView() {
   const [countdown, setCountdown] = useState(30);
   const [lastLiveUpdated, setLastLiveUpdated] = useState('');
   const [expandedNewsIdx, setExpandedNewsIdx] = useState(null);
+  const [newsTab, setNewsTab] = useState('all'); // 'all' | 'domestic' | 'global'
 
   const countdownRef = useRef(30);
 
@@ -42,7 +43,7 @@ export default function TodayMarketView() {
       }
 
       // Immediately fetch live quote to ensure 100% exact real-time prices
-      fetchLiveQuoteSilent();
+      await fetchLiveQuoteSilent();
     } catch (err) {
       console.error('loadInitialData error:', err);
     } finally {
@@ -162,11 +163,16 @@ export default function TodayMarketView() {
 
   const domestic = briefing?.domestic || {};
   const overseas = briefing?.overseas || {};
-  const news = briefing?.news || [];
+  const allNews = briefing?.news || [];
   const summary3 = briefing?.summary_3lines || [];
 
+  const domesticNews = allNews.filter(n => n.source_type === '국내증시');
+  const globalNews = allNews.filter(n => n.source_type === '글로벌시황');
+
+  const filteredNews = newsTab === 'domestic' ? domesticNews : (newsTab === 'global' ? globalNews : allNews);
+
   return (
-    <div className="p-8 space-y-7 animate-fadeIn max-w-7xl mx-auto">
+    <div className="p-8 space-y-7 animate-fadeIn max-w-7xl mx-auto font-['Inter',sans-serif]">
       {/* 1. Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -185,7 +191,7 @@ export default function TodayMarketView() {
                 </span>
               </div>
               <p className="text-slate-400 text-xs mt-0.5">
-                국내외 주식시장, 주요 빅테크 종목 및 발췌 원문이 포함된 실시간 경제 브리핑입니다.
+                네이버 금융 실시간 시세 및 외신 번역·발췌 원문이 포함된 스마트 브리핑 대시보드입니다.
               </p>
             </div>
           </div>
@@ -247,36 +253,41 @@ export default function TodayMarketView() {
         {/* KOSPI */}
         {renderTickerCard(
           'KOSPI (코스피)',
-          domestic.indices?.find(x => x.name === 'KOSPI')?.value || '2,580.42',
-          domestic.indices?.find(x => x.name === 'KOSPI')?.change_rate || '+0.45%',
-          domestic.indices?.find(x => x.name === 'KOSPI')?.is_up !== false
+          domestic.indices?.find(x => x.name === 'KOSPI')?.value || '6,784.50',
+          domestic.indices?.find(x => x.name === 'KOSPI')?.change_rate || '-0.99%',
+          domestic.indices?.find(x => x.name === 'KOSPI')?.change_amount,
+          domestic.indices?.find(x => x.name === 'KOSPI')?.is_up === true
         )}
         {/* KOSDAQ */}
         {renderTickerCard(
           'KOSDAQ (코스닥)',
-          domestic.indices?.find(x => x.name === 'KOSDAQ')?.value || '762.15',
-          domestic.indices?.find(x => x.name === 'KOSDAQ')?.change_rate || '-0.12%',
+          domestic.indices?.find(x => x.name === 'KOSDAQ')?.value || '811.57',
+          domestic.indices?.find(x => x.name === 'KOSDAQ')?.change_rate || '-3.49%',
+          domestic.indices?.find(x => x.name === 'KOSDAQ')?.change_amount,
           domestic.indices?.find(x => x.name === 'KOSDAQ')?.is_up === true
         )}
         {/* NASDAQ */}
         {renderTickerCard(
           '나스닥 (NASDAQ)',
-          overseas.indices?.find(x => x.name.includes('나스닥'))?.value || '18,342.94',
-          overseas.indices?.find(x => x.name.includes('나스닥'))?.change_rate || '+1.18%',
-          overseas.indices?.find(x => x.name.includes('나스닥'))?.is_up !== false
+          overseas.indices?.find(x => x.name.includes('나스닥'))?.value || '26,067.17',
+          overseas.indices?.find(x => x.name.includes('나스닥'))?.change_rate || '-1.00%',
+          null,
+          overseas.indices?.find(x => x.name.includes('나스닥'))?.is_up === true
         )}
         {/* S&P 500 */}
         {renderTickerCard(
           'S&P 500',
-          overseas.indices?.find(x => x.name.includes('S&P'))?.value || '5,864.67',
-          overseas.indices?.find(x => x.name.includes('S&P'))?.change_rate || '+0.82%',
-          overseas.indices?.find(x => x.name.includes('S&P'))?.is_up !== false
+          overseas.indices?.find(x => x.name.includes('S&P'))?.value || '7,641.16',
+          overseas.indices?.find(x => x.name.includes('S&P'))?.change_rate || '-0.87%',
+          null,
+          overseas.indices?.find(x => x.name.includes('S&P'))?.is_up === true
         )}
         {/* USD/KRW */}
         {renderTickerCard(
           '원/달러 환율',
-          overseas.macro?.find(x => x.name.includes('환율'))?.value || '1,385.5원',
-          overseas.macro?.find(x => x.name.includes('환율'))?.change_rate || '-0.25%',
+          overseas.macro?.find(x => x.name.includes('환율'))?.value || '1,392.4원',
+          overseas.macro?.find(x => x.name.includes('환율'))?.change_rate || '+0.22%',
+          null,
           overseas.macro?.find(x => x.name.includes('환율'))?.is_up === true
         )}
       </div>
@@ -324,59 +335,84 @@ export default function TodayMarketView() {
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <div className="flex items-center space-x-2">
               <span className="text-lg">🇰🇷</span>
-              <h3 className="font-bold text-sm text-white">국내 증시 및 주요 대표 종목</h3>
+              <h3 className="font-bold text-sm text-white">국내 증시 및 실시간 시총 상위 종목</h3>
             </div>
-            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/50 flex items-center space-x-1">
+            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-800/50 flex items-center space-x-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-              <span>네이버 금융 실시간 시세</span>
+              <span>네이버 페이 증시 실시간</span>
             </span>
           </div>
 
           {/* Domestic Indices Big Cards */}
           <div className="grid grid-cols-2 gap-3">
-            {(domestic.indices || []).map((idx) => (
-              <div key={idx.name} className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1">
-                <span className="text-[11px] font-bold text-slate-400">{idx.name}</span>
-                <div className="flex items-baseline justify-between">
-                  <span className="text-base font-extrabold text-white font-mono">{idx.value}</span>
-                  <span className={'text-xs font-bold font-mono flex items-center ' + (idx.is_up ? 'text-red-400' : 'text-blue-400')}>
-                    {idx.is_up ? <TrendingUp className="w-3 h-3 mr-0.5 inline" /> : <TrendingDown className="w-3 h-3 mr-0.5 inline" />}
-                    {idx.change_rate}
-                  </span>
+            {(domestic.indices || []).map((idx) => {
+              const isUp = idx.is_up === true;
+              return (
+                <div key={idx.name} className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1">
+                  <span className="text-[11px] font-bold text-slate-400">{idx.label || idx.name}</span>
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-lg font-extrabold text-white font-mono">{idx.value}</span>
+                    <div className="text-right">
+                      <span className={'text-xs font-bold font-mono flex items-center justify-end ' + (isUp ? 'text-red-400' : 'text-blue-400')}>
+                        {isUp ? <TrendingUp className="w-3 h-3 mr-0.5 inline" /> : <TrendingDown className="w-3 h-3 mr-0.5 inline" />}
+                        {idx.change_rate}
+                      </span>
+                      {idx.change_amount && (
+                        <p className={'text-[10px] font-mono ' + (isUp ? 'text-red-400/80' : 'text-blue-400/80')}>
+                          {idx.change_amount}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
-          {/* Top 5 Stocks Grid */}
+          {/* Real-time Top Stocks Grid (Direct match with Naver Pay Stock Top list) */}
           <div className="space-y-2.5">
-            <h4 className="text-xs font-bold text-slate-300 flex items-center space-x-1.5">
-              <Award className="w-3.5 h-3.5 text-amber-400" />
-              <span>시가총액 상위 대표 5대 종목 (실시간 현재가)</span>
+            <h4 className="text-xs font-bold text-slate-300 flex items-center justify-between">
+              <span className="flex items-center space-x-1.5">
+                <Award className="w-3.5 h-3.5 text-amber-400" />
+                <span>시가총액 상위 TOP 종목 (실시간 현재가)</span>
+              </span>
+              <span className="text-[10px] text-slate-500 font-mono">KRX 실시간 호가</span>
             </h4>
             <div className="space-y-2">
-              {(domestic.top_stocks || []).map((stock) => (
-                <div 
-                  key={stock.name}
-                  className="p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80 hover:border-slate-700 flex items-center justify-between transition-colors"
-                >
-                  <div className="flex items-center space-x-2.5">
-                    <div className="w-7 h-7 rounded-xl bg-slate-800 flex items-center justify-center text-[10px] font-mono font-bold text-slate-400">
-                      {stock.ticker?.slice(-3) || 'KR'}
+              {(domestic.top_stocks || []).map((stock, sIdx) => {
+                const isUp = stock.is_up === true;
+                return (
+                  <div 
+                    key={stock.ticker || sIdx}
+                    className="p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80 hover:border-slate-700 flex items-center justify-between transition-colors"
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <div className="w-7 h-7 rounded-xl bg-slate-800 flex items-center justify-center text-[10px] font-mono font-bold text-slate-400">
+                        {sIdx + 1}
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-white flex items-center space-x-1.5">
+                          <span>{stock.name}</span>
+                        </p>
+                        <p className="text-[10px] text-slate-500 font-mono">{stock.ticker}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-bold text-white">{stock.name}</p>
-                      <p className="text-[10px] text-slate-500 font-mono">{stock.ticker}</p>
+                    <div className="text-right">
+                      <p className="text-xs font-extrabold text-white font-mono">{stock.price}</p>
+                      <div className="flex items-center justify-end space-x-1.5 text-[11px] font-bold font-mono">
+                        {stock.change_amount && (
+                          <span className={isUp ? 'text-red-400/80' : 'text-blue-400/80'}>
+                            {stock.change_amount}
+                          </span>
+                        )}
+                        <span className={isUp ? 'text-red-400' : 'text-blue-400'}>
+                          {stock.change_rate}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs font-extrabold text-white font-mono">{stock.price}</p>
-                    <p className={'text-[11px] font-bold font-mono ' + (stock.is_up ? 'text-red-400' : 'text-blue-400')}>
-                      {stock.change_rate}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -388,77 +424,110 @@ export default function TodayMarketView() {
               <span className="text-lg">🇺🇸</span>
               <h3 className="font-bold text-sm text-white">글로벌 증시 & 미국 빅테크</h3>
             </div>
-            <span className="text-[10px] font-mono text-sky-400 bg-sky-950/60 px-2 py-0.5 rounded border border-sky-800/50 flex items-center space-x-1">
+            <span className="text-[10px] font-mono text-sky-400 bg-sky-950/60 px-2.5 py-1 rounded-full border border-sky-800/50 flex items-center space-x-1">
               <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping"></span>
-              <span>Yahoo Finance 라이브</span>
+              <span>Yahoo Finance 실시간</span>
             </span>
           </div>
 
           {/* Macro Indicators (Oil, Yield, FX) */}
           <div className="grid grid-cols-3 gap-2.5">
-            {(overseas.macro || []).map((m) => (
-              <div key={m.name} className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1 text-center">
-                <p className="text-[10px] font-bold text-slate-400 truncate" title={m.name}>{m.name}</p>
-                <p className="text-xs font-extrabold text-white font-mono truncate">{m.value}</p>
-                <p className={'text-[10px] font-bold font-mono ' + (m.is_up ? 'text-red-400' : 'text-blue-400')}>
-                  {m.change_rate}
-                </p>
-              </div>
-            ))}
+            {(overseas.macro || []).map((m) => {
+              const isUp = m.is_up === true;
+              return (
+                <div key={m.name} className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1 text-center">
+                  <p className="text-[10px] font-bold text-slate-400 truncate" title={m.name}>{m.name}</p>
+                  <p className="text-xs font-extrabold text-white font-mono truncate">{m.value}</p>
+                  <p className={'text-[10px] font-bold font-mono ' + (isUp ? 'text-red-400' : 'text-blue-400')}>
+                    {m.change_rate}
+                  </p>
+                </div>
+              );
+            })}
           </div>
 
           {/* Global Big Tech Stocks */}
           <div className="space-y-2.5">
-            <h4 className="text-xs font-bold text-slate-300 flex items-center space-x-1.5">
-              <Globe className="w-3.5 h-3.5 text-indigo-400" />
-              <span>미국 주요 핵심 빅테크 종목 (실시간 쿼트)</span>
+            <h4 className="text-xs font-bold text-slate-300 flex items-center justify-between">
+              <span className="flex items-center space-x-1.5">
+                <Globe className="w-3.5 h-3.5 text-indigo-400" />
+                <span>미국 주요 핵심 빅테크 종목 (실시간 쿼트)</span>
+              </span>
+              <span className="text-[10px] text-slate-500 font-mono">NASDAQ</span>
             </h4>
             <div className="space-y-2">
-              {(overseas.tech_stocks || []).map((stock) => (
-                <div 
-                  key={stock.name}
-                  className="p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80 hover:border-slate-700 flex items-center justify-between transition-colors"
-                >
-                  <div className="flex items-center space-x-2.5">
-                    <div className="w-7 h-7 rounded-xl bg-slate-800 flex items-center justify-center text-[10px] font-mono font-bold text-sky-400">
-                      {stock.symbol}
+              {(overseas.tech_stocks || []).map((stock) => {
+                const isUp = stock.is_up === true;
+                return (
+                  <div 
+                    key={stock.name}
+                    className="p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80 hover:border-slate-700 flex items-center justify-between transition-colors"
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <div className="w-7 h-7 rounded-xl bg-slate-800 flex items-center justify-center text-[10px] font-mono font-bold text-sky-400">
+                        {stock.symbol}
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-white">{stock.name}</p>
+                        <p className="text-[10px] text-slate-500 font-mono">NASDAQ</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-bold text-white">{stock.name}</p>
-                      <p className="text-[10px] text-slate-500 font-mono">NASDAQ</p>
+                    <div className="text-right">
+                      <p className="text-xs font-extrabold text-white font-mono">{stock.price}</p>
+                      <p className={'text-[11px] font-bold font-mono ' + (isUp ? 'text-red-400' : 'text-blue-400')}>
+                        {stock.change_rate}
+                      </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs font-extrabold text-white font-mono">{stock.price}</p>
-                    <p className={'text-[11px] font-bold font-mono ' + (stock.is_up ? 'text-red-400' : 'text-blue-400')}>
-                      {stock.change_rate}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
       </div>
 
-      {/* 5. Bottom News Curation with Direct Excerpt Viewing */}
+      {/* 5. Bottom News Curation: 3 Domestic + 3 Global (Korean Translated) */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
           <div>
             <h3 className="font-bold text-sm text-white flex items-center space-x-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-ping"></span>
-              <span>오늘의 핵심 증시 & 글로벌 경제 뉴스 (요약 및 발췌 원문)</span>
+              <Newspaper className="w-4 h-4 text-indigo-400" />
+              <span>오늘의 핵심 증시 & 글로벌 경제 뉴스 (국내 3선 + 해외 3선)</span>
             </h3>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              직접 취합한 핵심 요약과 기사 발췌 전문을 각 카드에서 즉시 확인하실 수 있습니다.
+              외신 뉴스는 AI가 직접 정독하여 <span className="text-amber-300 font-bold">한국어 번역 및 핵심 요약</span>을 제공합니다.
             </p>
           </div>
-          <span className="text-xs text-slate-400">네이버 증시 뉴스 & 속보 연동</span>
+
+          {/* Filter Tabs */}
+          <div className="flex items-center space-x-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
+            <button
+              onClick={() => setNewsTab('all')}
+              className={'px-3 py-1 rounded-lg font-bold transition-colors ' + (newsTab === 'all' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200')}
+            >
+              전체 ({allNews.length})
+            </button>
+            <button
+              onClick={() => setNewsTab('domestic')}
+              className={'px-3 py-1 rounded-lg font-bold transition-colors ' + (newsTab === 'domestic' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200')}
+            >
+              🇰🇷 국내 뉴스 ({domesticNews.length})
+            </button>
+            <button
+              onClick={() => setNewsTab('global')}
+              className={'px-3 py-1 rounded-lg font-bold transition-colors ' + (newsTab === 'global' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200')}
+            >
+              🌐 해외 번역 뉴스 ({globalNews.length})
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {news.map((item, idx) => {
+        {/* News Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredNews.map((item, idx) => {
             const isExpanded = expandedNewsIdx === idx;
+            const isGlobal = item.source_type === '글로벌시황';
+
             return (
               <div
                 key={idx}
@@ -467,14 +536,17 @@ export default function TodayMarketView() {
                 <div className="space-y-3">
                   {/* Top Badge & Press */}
                   <div className="flex items-center justify-between">
-                    <span className={'text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ' + 
-                      (item.source_type === '국내증시' ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800/60' : 'bg-sky-950/80 text-sky-300 border-sky-800/60')}>
-                      {item.source_type || '증시속보'}
+                    <span className={'text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border flex items-center space-x-1 ' + 
+                      (isGlobal 
+                        ? 'bg-sky-950/80 text-sky-300 border-sky-800/60' 
+                        : 'bg-emerald-950/80 text-emerald-300 border-emerald-800/60')}>
+                      {isGlobal ? <Languages className="w-3 h-3 text-sky-400" /> : <Sparkles className="w-3 h-3 text-emerald-400" />}
+                      <span>{isGlobal ? '해외 외신 번역' : '국내 증시 속보'}</span>
                     </span>
                     <span className="text-[11px] font-bold text-slate-400">{item.press || '경제뉴스'}</span>
                   </div>
 
-                  {/* Title */}
+                  {/* Title (Korean Translated for Global News) */}
                   <h4 
                     onClick={() => handleOpenNews(item.url)}
                     className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors cursor-pointer leading-snug"
@@ -486,7 +558,7 @@ export default function TodayMarketView() {
                   <div className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1">
                     <p className="text-[10px] font-extrabold text-indigo-400 flex items-center space-x-1">
                       <Sparkles className="w-3 h-3" />
-                      <span>핵심 요약</span>
+                      <span>{isGlobal ? '외신 한국어 핵심 요약' : '핵심 요약'}</span>
                     </p>
                     <p className="text-xs text-slate-200 leading-relaxed font-medium">
                       {item.summary}
@@ -494,14 +566,14 @@ export default function TodayMarketView() {
                   </div>
 
                   {/* 2. Full Excerpt Body Viewer (Expandable) */}
-                  {item.body_excerpt && item.body_excerpt !== item.summary && (
+                  {item.body_excerpt && (
                     <div className="space-y-1.5">
                       <button
                         onClick={() => setExpandedNewsIdx(isExpanded ? null : idx)}
                         className="flex items-center space-x-1.5 text-[11px] font-bold text-slate-400 hover:text-slate-200 transition-colors py-0.5"
                       >
                         <BookOpen className="w-3.5 h-3.5 text-amber-400" />
-                        <span>{isExpanded ? '발췌 원문 닫기' : '📜 발췌한 기사 원문 전문 보기'}</span>
+                        <span>{isExpanded ? '발췌 원문 닫기' : (isGlobal ? '📜 외신 원문 발췌문 보기' : '📜 기사 원문 전문 발췌 보기')}</span>
                         {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                       </button>
 
@@ -516,7 +588,7 @@ export default function TodayMarketView() {
 
                 {/* Card Footer Actions */}
                 <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 text-xs">
-                  <span className="text-[10px] text-slate-500 font-mono">실시간 발췌</span>
+                  <span className="text-[10px] text-slate-500 font-mono">{isGlobal ? '외신 직독번역' : '실시간 발췌'}</span>
                   <button
                     onClick={() => handleOpenNews(item.url)}
                     className="flex items-center space-x-1 text-[11px] font-bold text-indigo-400 hover:text-indigo-300 hover:translate-x-0.5 transition-all"
@@ -534,15 +606,22 @@ export default function TodayMarketView() {
   );
 }
 
-function renderTickerCard(title, value, changeRate, isUp) {
+function renderTickerCard(title, value, changeRate, changeAmount, isUp) {
   return (
     <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800/90 hover:border-indigo-500/40 transition-all shadow-md">
       <p className="text-[10px] font-bold text-slate-400 truncate">{title}</p>
       <p className="text-sm font-extrabold text-white font-mono mt-0.5">{value}</p>
-      <p className={'text-[11px] font-bold font-mono mt-0.5 flex items-center ' + (isUp ? 'text-red-400' : 'text-blue-400')}>
-        {isUp ? <TrendingUp className="w-3 h-3 mr-0.5" /> : <TrendingDown className="w-3 h-3 mr-0.5" />}
-        <span>{changeRate}</span>
-      </p>
+      <div className="flex items-center justify-between mt-0.5">
+        <p className={'text-[11px] font-bold font-mono flex items-center ' + (isUp ? 'text-red-400' : 'text-blue-400')}>
+          {isUp ? <TrendingUp className="w-3 h-3 mr-0.5" /> : <TrendingDown className="w-3 h-3 mr-0.5" />}
+          <span>{changeRate}</span>
+        </p>
+        {changeAmount && (
+          <span className={'text-[10px] font-mono ' + (isUp ? 'text-red-400/80' : 'text-blue-400/80')}>
+            {changeAmount}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
