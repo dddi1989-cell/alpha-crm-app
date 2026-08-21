@@ -3,7 +3,8 @@ import {
   TrendingUp, TrendingDown, RefreshCw, Calendar, Globe, DollarSign, 
   ExternalLink, Sparkles, AlertCircle, Clock, ChevronRight, Activity, 
   Flame, Award, Layers, Zap, Info, Share2, Compass, Radio, CheckCircle2,
-  FileText, BookOpen, ChevronDown, ChevronUp, Eye, Newspaper, Languages
+  FileText, BookOpen, ChevronDown, ChevronUp, Eye, Newspaper, Languages,
+  X, ArrowUpRight, Copy, Check
 } from 'lucide-react';
 import { api } from '../utils/api';
 
@@ -18,8 +19,10 @@ export default function TodayMarketView() {
   const [isLiveAutoRefresh, setIsLiveAutoRefresh] = useState(true);
   const [countdown, setCountdown] = useState(30);
   const [lastLiveUpdated, setLastLiveUpdated] = useState('');
-  const [expandedNewsIdx, setExpandedNewsIdx] = useState(null);
   const [newsTab, setNewsTab] = useState('all'); // 'all' | 'domestic' | 'global'
+
+  // Selected news modal for detailed Korean reading & translation
+  const [selectedNewsForModal, setSelectedNewsForModal] = useState(null);
 
   const countdownRef = useRef(30);
 
@@ -137,7 +140,7 @@ export default function TodayMarketView() {
     }
   };
 
-  const handleOpenNews = (url) => {
+  const handleOpenUrl = (url) => {
     if (!url) return;
     try {
       if (api.system && api.system.openUrl) {
@@ -191,7 +194,7 @@ export default function TodayMarketView() {
                 </span>
               </div>
               <p className="text-slate-400 text-xs mt-0.5">
-                네이버 금융 실시간 시세 및 외신 번역·발췌 원문이 포함된 스마트 브리핑 대시보드입니다.
+                네이버 금융 실시간 시세 및 외신 한국어 번역 리포트가 포함된 스마트 대시보드입니다.
               </p>
             </div>
           </div>
@@ -492,10 +495,10 @@ export default function TodayMarketView() {
           <div>
             <h3 className="font-bold text-sm text-white flex items-center space-x-2">
               <Newspaper className="w-4 h-4 text-indigo-400" />
-              <span>오늘의 핵심 증시 & 글로벌 경제 뉴스 (국내 3선 + 해외 3선)</span>
+              <span>오늘의 핵심 증시 & 글로벌 경제 뉴스 (국내 3선 + 해외 번역 3선)</span>
             </h3>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              외신 뉴스는 AI가 직접 정독하여 <span className="text-amber-300 font-bold">한국어 번역 및 핵심 요약</span>을 제공합니다.
+              카드를 클릭하면 <span className="text-amber-300 font-bold">한국어 번역문 및 원문 발췌 리포트</span>를 바로 열람하실 수 있습니다.
             </p>
           </div>
 
@@ -525,13 +528,13 @@ export default function TodayMarketView() {
         {/* News Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredNews.map((item, idx) => {
-            const isExpanded = expandedNewsIdx === idx;
             const isGlobal = item.source_type === '글로벌시황';
 
             return (
               <div
                 key={idx}
-                className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800/90 hover:border-indigo-500/50 transition-all flex flex-col justify-between space-y-3.5 shadow-lg group"
+                onClick={() => setSelectedNewsForModal(item)}
+                className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800/90 hover:border-indigo-500/60 hover:bg-slate-850/60 transition-all cursor-pointer flex flex-col justify-between space-y-3.5 shadow-lg group relative"
               >
                 <div className="space-y-3">
                   {/* Top Badge & Press */}
@@ -541,65 +544,168 @@ export default function TodayMarketView() {
                         ? 'bg-sky-950/80 text-sky-300 border-sky-800/60' 
                         : 'bg-emerald-950/80 text-emerald-300 border-emerald-800/60')}>
                       {isGlobal ? <Languages className="w-3 h-3 text-sky-400" /> : <Sparkles className="w-3 h-3 text-emerald-400" />}
-                      <span>{isGlobal ? '해외 외신 번역' : '국내 증시 속보'}</span>
+                      <span>{isGlobal ? '해외 외신 한국어 번역' : '국내 증시 속보'}</span>
                     </span>
                     <span className="text-[11px] font-bold text-slate-400">{item.press || '경제뉴스'}</span>
                   </div>
 
                   {/* Title (Korean Translated for Global News) */}
-                  <h4 
-                    onClick={() => handleOpenNews(item.url)}
-                    className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors cursor-pointer leading-snug"
-                  >
+                  <h4 className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors leading-snug">
                     {item.title}
                   </h4>
 
-                  {/* 1. Summary Box */}
+                  {/* Summary Box */}
                   <div className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1">
                     <p className="text-[10px] font-extrabold text-indigo-400 flex items-center space-x-1">
                       <Sparkles className="w-3 h-3" />
                       <span>{isGlobal ? '외신 한국어 핵심 요약' : '핵심 요약'}</span>
                     </p>
-                    <p className="text-xs text-slate-200 leading-relaxed font-medium">
+                    <p className="text-xs text-slate-200 leading-relaxed font-medium line-clamp-3">
                       {item.summary}
                     </p>
                   </div>
-
-                  {/* 2. Full Excerpt Body Viewer (Expandable) */}
-                  {item.body_excerpt && (
-                    <div className="space-y-1.5">
-                      <button
-                        onClick={() => setExpandedNewsIdx(isExpanded ? null : idx)}
-                        className="flex items-center space-x-1.5 text-[11px] font-bold text-slate-400 hover:text-slate-200 transition-colors py-0.5"
-                      >
-                        <BookOpen className="w-3.5 h-3.5 text-amber-400" />
-                        <span>{isExpanded ? '발췌 원문 닫기' : (isGlobal ? '📜 외신 원문 발췌문 보기' : '📜 기사 원문 전문 발췌 보기')}</span>
-                        {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                      </button>
-
-                      {isExpanded && (
-                        <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 text-[11px] text-slate-300 max-h-48 overflow-y-auto custom-scrollbar leading-relaxed font-normal whitespace-pre-wrap animate-fadeIn">
-                          {item.body_excerpt}
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
 
                 {/* Card Footer Actions */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 text-xs">
-                  <span className="text-[10px] text-slate-500 font-mono">{isGlobal ? '외신 직독번역' : '실시간 발췌'}</span>
-                  <button
-                    onClick={() => handleOpenNews(item.url)}
-                    className="flex items-center space-x-1 text-[11px] font-bold text-indigo-400 hover:text-indigo-300 hover:translate-x-0.5 transition-all"
-                  >
-                    <span>원문 기사 읽기</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </button>
+                <div className="flex items-center justify-between pt-2.5 border-t border-slate-800/60 text-xs">
+                  <span className="text-[11px] font-bold text-amber-400 flex items-center space-x-1">
+                    <BookOpen className="w-3.5 h-3.5" />
+                    <span>{isGlobal ? '번역 리포트 보기' : '원문 발췌 보기'}</span>
+                  </span>
+                  <div className="flex items-center space-x-1 text-[11px] font-bold text-indigo-400 group-hover:translate-x-0.5 transition-all">
+                    <span>상세 읽기</span>
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  </div>
                 </div>
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* 6. Interactive News Detail & Translation Reader Modal */}
+      {selectedNewsForModal && (
+        <NewsDetailModal 
+          news={selectedNewsForModal} 
+          onClose={() => setSelectedNewsForModal(null)} 
+          onOpenExternal={() => handleOpenUrl(selectedNewsForModal.url)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Interactive News Reader Modal Component
+function NewsDetailModal({ news, onClose, onOpenExternal }) {
+  const isGlobal = news.source_type === '글로벌시황';
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    const textToCopy = `[${news.title}]
+
+요약: ${news.summary}
+
+본문/발췌:
+${news.body_excerpt || ''}
+
+출처: ${news.press} (${news.url})`;
+    navigator.clipboard.writeText(textToCopy);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+      <div className="relative w-full max-w-2xl bg-slate-900 border border-indigo-500/40 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-scaleUp">
+        {/* Modal Header */}
+        <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
+          <div className="flex items-center space-x-2.5">
+            <div className={'w-9 h-9 rounded-2xl flex items-center justify-center ' + 
+              (isGlobal ? 'bg-sky-950 border border-sky-600/40 text-sky-300' : 'bg-emerald-950 border border-emerald-600/40 text-emerald-300')}>
+              {isGlobal ? <Languages className="w-5 h-5" /> : <Newspaper className="w-5 h-5" />}
+            </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className={'text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ' + 
+                  (isGlobal ? 'bg-sky-950/80 text-sky-300 border-sky-800/60' : 'bg-emerald-950/80 text-emerald-300 border-emerald-800/60')}>
+                  {isGlobal ? '🌐 외신 한국어 번역 리포트' : '🇰🇷 국내 증시 뉴스'}
+                </span>
+                <span className="text-xs font-bold text-slate-400">{news.press}</span>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Modal Scrollable Content */}
+        <div className="p-6 overflow-y-auto custom-scrollbar space-y-5">
+          {/* Main Title */}
+          <div>
+            <h3 className="text-lg font-extrabold text-white leading-snug">
+              {news.title}
+            </h3>
+            {news.original_title && (
+              <p className="text-xs text-slate-400 font-mono mt-1 italic">
+                (원문: {news.original_title})
+              </p>
+            )}
+          </div>
+
+          {/* 1. Core Summary Box */}
+          <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 space-y-2">
+            <p className="text-xs font-extrabold text-indigo-400 flex items-center space-x-1.5">
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <span>{isGlobal ? 'AI 외신 핵심 요약 및 시사점' : '핵심 요약'}</span>
+            </p>
+            <p className="text-xs text-slate-100 leading-relaxed font-medium">
+              {news.summary}
+            </p>
+          </div>
+
+          {/* 2. Full Body Excerpt / Translation Text */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-slate-300 flex items-center space-x-1.5">
+                <BookOpen className="w-4 h-4 text-amber-400" />
+                <span>{isGlobal ? '📜 외신 기사 원문 및 상세 내용' : '📜 기사 원문 전문 발췌'}</span>
+              </h4>
+              <button
+                onClick={handleCopy}
+                className="flex items-center space-x-1 text-[11px] font-bold text-slate-400 hover:text-indigo-300 transition-colors"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copied ? '복사됨!' : '내용 복사'}</span>
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800/90 text-xs text-slate-200 leading-relaxed whitespace-pre-wrap font-normal max-h-64 overflow-y-auto custom-scrollbar">
+              {news.body_excerpt || news.summary || '상세 내용이 없습니다.'}
+            </div>
+          </div>
+        </div>
+
+        {/* Modal Footer Actions */}
+        <div className="p-5 border-t border-slate-800 flex items-center justify-between bg-slate-950/60">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all"
+          >
+            닫기
+          </button>
+
+          <button
+            onClick={onOpenExternal}
+            className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-600/30 hover:scale-105 active:scale-95"
+          >
+            <span>원문 언론사 기사 열기</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
     </div>
