@@ -257,7 +257,19 @@ function registerBoardHandlers(mainWindow, triggerDualBackup) {
   safeRegisterHandle('board:get-posts', async (event, { search = '', category = '상품전략' } = {}) => {
     const db = getDb();
     try {
-      let query = 'SELECT p.id, p.user_id, p.author_name, p.title, p.category, p.views, p.created_at, p.updated_at, COUNT(a.id) AS attachment_count FROM posts p LEFT JOIN post_attachments a ON p.id = a.post_id WHERE 1=1';
+      let query = `
+        SELECT 
+          p.id, p.user_id, p.author_name, p.title, p.category, p.views, p.created_at, p.updated_at,
+          COUNT(a.id) AS attachment_count,
+          (SELECT id FROM post_attachments WHERE post_id = p.id ORDER BY id ASC LIMIT 1) AS first_attachment_id,
+          (SELECT file_name FROM post_attachments WHERE post_id = p.id ORDER BY id ASC LIMIT 1) AS first_file_name,
+          (SELECT file_type FROM post_attachments WHERE post_id = p.id ORDER BY id ASC LIMIT 1) AS first_file_type,
+          (SELECT file_path FROM post_attachments WHERE post_id = p.id ORDER BY id ASC LIMIT 1) AS first_file_path,
+          (SELECT download_url FROM post_attachments WHERE post_id = p.id ORDER BY id ASC LIMIT 1) AS first_download_url
+        FROM posts p 
+        LEFT JOIN post_attachments a ON p.id = a.post_id 
+        WHERE 1=1
+      `;
       const params = [];
 
       if (category) {
