@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_synced_at": "2026-08-21T02:21:20.275Z",
+  "last_synced_at": "2026-08-21T02:22:09.247Z",
   "accounts": [
     {
       "id": 1,
@@ -92,6 +92,19 @@
       "org_name": "ALPHA지점",
       "created_at": "2026-08-20T03:52:56.049Z",
       "updated_at": "2026-08-20T03:53:33.369Z"
+    },
+    {
+      "id": 9,
+      "username": "1731690",
+      "password_hash": "48c7682b87e3912ce858d686d58b754a560af0ccfa2d7bd6e9e2d10839516ad3",
+      "name": "김인섭",
+      "phone": "01087432303",
+      "role": "FA",
+      "parent_id": null,
+      "org_id": null,
+      "org_name": null,
+      "created_at": "2026-08-21T02:22:09.247Z",
+      "updated_at": "2026-08-21T02:22:09.247Z"
     }
   ],
   "organizations": [
