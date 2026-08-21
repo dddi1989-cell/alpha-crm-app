@@ -1,6 +1,6 @@
 {
   "name": "offline-crm-app",
-  "version": "1.6.4",
+  "version": "1.6.5",
   "description": "100% Offline Standalone Windows Desktop CRM Application",
   "main": "src/main/index.js",
   "scripts": {
@@ -16,6 +16,7 @@
     "adm-zip": "^0.6.0",
     "better-sqlite3": "^11.8.1",
     "lucide-react": "^0.475.0",
+    "pdfjs-dist": "^3.11.174",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "xlsx": "^0.18.5",
