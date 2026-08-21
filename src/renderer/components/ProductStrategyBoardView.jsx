@@ -3,7 +3,8 @@ import {
   FileText, Search, Plus, Download, Eye, Paperclip, Calendar, User, 
   Trash2, Edit, X, File, FileSpreadsheet, Image, AlertCircle, CheckCircle2, 
   ExternalLink, RefreshCw, Loader2, CloudUpload, LayoutGrid, List, 
-  FileCheck, Sparkles, FolderDown, ArrowUpRight, BookOpen, Layers, Check
+  FileCheck, Sparkles, FolderDown, ArrowUpRight, BookOpen, Layers, Check,
+  Maximize2
 } from 'lucide-react';
 import { useCrmStore } from '../store/useCrmStore';
 import { api } from '../utils/api';
@@ -289,11 +290,11 @@ export default function ProductStrategyBoardView() {
                 </h2>
                 <span className="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 shadow-sm flex items-center space-x-1">
                   <Sparkles className="w-3 h-3 text-amber-400" />
-                  <span>PDF 문서 갤러리</span>
+                  <span>PDF 실물 첫 장 갤러리</span>
                 </span>
               </div>
               <p className="text-slate-400 text-xs mt-0.5">
-                본사 및 관리자가 등록한 상품 비교 분석표, 제안서 양식, 상품 브리핑 자료를 첫 장 미리보기로 열람할 수 있습니다.
+                본사 및 관리자가 등록한 상품 비교 분석표, 제안서 양식, 상품 브리핑 자료의 실제 1페이지를 미리보기로 열람할 수 있습니다.
               </p>
             </div>
           </div>
@@ -307,7 +308,7 @@ export default function ProductStrategyBoardView() {
               onClick={() => setViewMode('gallery')}
               className={'flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-bold transition-all ' + 
                 (viewMode === 'gallery' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200')}
-              title="PDF 첫 장 썸네일 카드 갤러리 뷰"
+              title="PDF 실물 첫 장 썸네일 카드 갤러리 뷰"
             >
               <LayoutGrid className="w-3.5 h-3.5" />
               <span>문서 갤러리</span>
@@ -364,7 +365,7 @@ export default function ProductStrategyBoardView() {
       {/* 3. MAIN CONTENT: Gallery Card View (Default) vs Table List View */}
       {viewMode === 'gallery' ? (
         /* ========================================================================= */
-        /* GALLERY / PDF THUMBNAIL CARD VIEW */
+        /* GALLERY / PDF REAL 1ST PAGE THUMBNAIL CARD VIEW */
         /* ========================================================================= */
         <div>
           {loading && posts.length === 0 ? (
@@ -393,48 +394,15 @@ export default function ProductStrategyBoardView() {
                     onClick={() => handleOpenDetail(post)}
                     className="group bg-slate-900/90 hover:bg-slate-850/90 border border-slate-800/90 hover:border-indigo-500/60 rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 flex flex-col cursor-pointer hover:-translate-y-1 relative"
                   >
-                    {/* TOP PREVIEW / PDF FIRST PAGE THUMBNAIL AREA */}
-                    <div className="relative aspect-[3/4] bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 p-5 flex flex-col justify-between overflow-hidden border-b border-slate-800/80 select-none">
-                      {/* Document Paper Texture & Background Graphic */}
-                      <div className="absolute inset-2 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900/90 to-indigo-950/40 border border-slate-700/40 shadow-inner flex flex-col justify-between p-4 overflow-hidden">
-                        {/* Document Header Emblem */}
-                        <div className="flex items-center justify-between">
-                          <span className="text-[9px] font-black tracking-wider px-2 py-0.5 rounded-full bg-rose-950/80 text-rose-300 border border-rose-800/60 flex items-center space-x-1">
-                            <FileText className="w-2.5 h-2.5" />
-                            <span>PDF 1st PAGE</span>
-                          </span>
-                          <span className="text-[9px] font-mono font-bold text-slate-500">
-                            {post.category || '상품전략'}
-                          </span>
-                        </div>
-
-                        {/* Center Cover Preview Content */}
-                        <div className="space-y-3 my-auto py-2 text-center">
-                          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-rose-500/20 via-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300 mx-auto shadow-md group-hover:scale-110 transition-transform">
-                            {getFileFormatIcon(fileName, 'w-6 h-6')}
-                          </div>
-                          <div className="space-y-1 px-1">
-                            <p className="text-[11px] font-black text-white line-clamp-2 leading-snug tracking-tight">
-                              {post.title}
-                            </p>
-                            <p className="text-[9px] text-slate-400 font-mono truncate">
-                              {fileName}
-                            </p>
-                          </div>
-                          {/* Fake Page Lines to mimic real document */}
-                          <div className="space-y-1 opacity-40 px-3">
-                            <div className="h-1 bg-slate-600 rounded-full w-full"></div>
-                            <div className="h-1 bg-slate-600 rounded-full w-4/5 mx-auto"></div>
-                            <div className="h-1 bg-slate-600 rounded-full w-2/3 mx-auto"></div>
-                          </div>
-                        </div>
-
-                        {/* Document Footer Bar */}
-                        <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between text-[9px] text-slate-500 font-mono">
-                          <span>ALPHA STRATEGY</span>
-                          <span>PAGE 1</span>
-                        </div>
-                      </div>
+                    {/* TOP PREVIEW / PDF REAL FIRST PAGE THUMBNAIL AREA */}
+                    <div className="relative aspect-[3/4] bg-slate-950 flex flex-col justify-between overflow-hidden border-b border-slate-800/80 select-none">
+                      {/* Real PDF 1st Page Image Thumbnail Component */}
+                      <PdfFirstPagePreview 
+                        attachmentId={post.first_attachment_id} 
+                        fileName={fileName}
+                        postTitle={post.title}
+                        category={post.category}
+                      />
 
                       {/* HOVER QUICK ACTION OVERLAY */}
                       <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center p-4 space-y-2.5 z-10">
@@ -741,7 +709,7 @@ export default function ProductStrategyBoardView() {
                               disabled={isDownloading}
                               className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
                             >
-                              {isDownloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                              {isDownloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5 text-emerald-400" />}
                               <span>{isDownloading ? '저장 중...' : '다운로드'}</span>
                             </button>
                           </div>
@@ -953,6 +921,106 @@ export default function ProductStrategyBoardView() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// REAL PDF FIRST PAGE PREVIEW COMPONENT
+function PdfFirstPagePreview({ attachmentId, fileName, postTitle, category }) {
+  const [thumbUrl, setThumbUrl] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!attachmentId) {
+      setLoading(false);
+      return;
+    }
+
+    const loadThumb = async () => {
+      try {
+        if (api.board && api.board.getPdfThumbnail) {
+          const res = await api.board.getPdfThumbnail(attachmentId);
+          if (isMounted && res?.success && res.dataUrl) {
+            setThumbUrl(res.dataUrl);
+          }
+        }
+      } catch (err) {
+        console.log('Thumbnail load error:', err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    loadThumb();
+    return () => { isMounted = false; };
+  }, [attachmentId]);
+
+  if (loading) {
+    return (
+      <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950 p-4 space-y-2">
+        <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
+        <span className="text-[10px] text-slate-500 font-mono">1페이지 렌더링 중...</span>
+      </div>
+    );
+  }
+
+  // If real thumbnail rendered successfully -> Show Actual PDF First Page Image
+  if (thumbUrl) {
+    return (
+      <div className="absolute inset-0 bg-slate-950 flex items-center justify-center overflow-hidden">
+        <img 
+          src={thumbUrl} 
+          alt={postTitle} 
+          className="w-full h-full object-cover object-top filter brightness-95 group-hover:brightness-105 group-hover:scale-105 transition-all duration-300"
+        />
+        {/* Subtle Page Badge on top-left */}
+        <div className="absolute top-3 left-3 z-10">
+          <span className="text-[9px] font-black tracking-wider px-2 py-0.5 rounded-md bg-rose-600/90 text-white shadow-md flex items-center space-x-1">
+            <FileText className="w-2.5 h-2.5" />
+            <span>PDF 1P</span>
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback Clean Graphic Document Cover
+  return (
+    <div className="absolute inset-2 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900/90 to-indigo-950/40 border border-slate-700/40 shadow-inner flex flex-col justify-between p-4 overflow-hidden">
+      <div className="flex items-center justify-between">
+        <span className="text-[9px] font-black tracking-wider px-2 py-0.5 rounded-full bg-rose-950/80 text-rose-300 border border-rose-800/60 flex items-center space-x-1">
+          <FileText className="w-2.5 h-2.5" />
+          <span>PDF 1st PAGE</span>
+        </span>
+        <span className="text-[9px] font-mono font-bold text-slate-500">
+          {category || '상품전략'}
+        </span>
+      </div>
+
+      <div className="space-y-3 my-auto py-2 text-center">
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-rose-500/20 via-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300 mx-auto shadow-md group-hover:scale-110 transition-transform">
+          {getFileFormatIcon(fileName, 'w-6 h-6')}
+        </div>
+        <div className="space-y-1 px-1">
+          <p className="text-[11px] font-black text-white line-clamp-2 leading-snug tracking-tight">
+            {postTitle}
+          </p>
+          <p className="text-[9px] text-slate-400 font-mono truncate">
+            {fileName}
+          </p>
+        </div>
+        <div className="space-y-1 opacity-40 px-3">
+          <div className="h-1 bg-slate-600 rounded-full w-full"></div>
+          <div className="h-1 bg-slate-600 rounded-full w-4/5 mx-auto"></div>
+          <div className="h-1 bg-slate-600 rounded-full w-2/3 mx-auto"></div>
+        </div>
+      </div>
+
+      <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between text-[9px] text-slate-500 font-mono">
+        <span>ALPHA STRATEGY</span>
+        <span>PAGE 1</span>
+      </div>
     </div>
   );
 }

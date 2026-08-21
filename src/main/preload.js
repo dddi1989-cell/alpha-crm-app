@@ -47,7 +47,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     updatePost: (data) => ipcRenderer.invoke('board:update-post', data),
     deletePost: (data) => ipcRenderer.invoke('board:delete-post', data),
     downloadAttachment: (attachmentId) => ipcRenderer.invoke('board:download-attachment', attachmentId),
-    openAttachment: (attachmentId) => ipcRenderer.invoke('board:open-attachment', attachmentId)
+    openAttachment: (attachmentId) => ipcRenderer.invoke('board:open-attachment', attachmentId),
+    getPdfThumbnail: (attachmentId) => ipcRenderer.invoke('board:get-pdf-thumbnail', attachmentId)
   },
   market: {
     getLatest: () => ipcRenderer.invoke('market:get-latest'),

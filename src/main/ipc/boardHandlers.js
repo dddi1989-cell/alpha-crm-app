@@ -589,7 +589,135 @@ function registerBoardHandlers(mainWindow, triggerDualBackup) {
     }
   });
 
+  // 8. Get PDF first page thumbnail (Real 1st Page Image)
+  safeRegisterHandle('board:get-pdf-thumbnail', async (event, attachmentId) => {
+    const db = getDb();
+    try {
+      const att = db.prepare('SELECT id, file_name, file_type, file_path, download_url FROM post_attachments WHERE id = ?').get(attachmentId);
+      if (!att) return { success: false, error: '첨부파일 정보를 찾을 수 없습니다.' };
+
+      const thumbDir = getThumbnailsDir();
+      const thumbFile = path.join(thumbDir, 'thumb_' + attachmentId + '.png');
+
+      if (fs.existsSync(thumbFile)) {
+        const buf = fs.readFileSync(thumbFile);
+        return {
+          success: true,
+          dataUrl: 'data:image/png;base64,' + buf.toString('base64')
+        };
+      }
+
+      // Find local file
+      let localPath = att.file_path;
+      if (!localPath || !fs.existsSync(localPath)) {
+        if (att.download_url) {
+          const storageDir = getAttachmentsStorageDir();
+          const ext = path.extname(att.file_name) || '.pdf';
+          const cachedPath = path.join(storageDir, 'cache_' + attachmentId + '_' + path.basename(att.file_name, ext) + ext);
+          await downloadFileFromUrl(att.download_url, cachedPath);
+          localPath = cachedPath;
+          try {
+            db.prepare('UPDATE post_attachments SET file_path = ? WHERE id = ?').run(cachedPath, attachmentId);
+          } catch (e) {}
+        }
+      }
+
+      if (localPath && fs.existsSync(localPath)) {
+        const ext = path.extname(att.file_name).toLowerCase();
+        if (ext === '.pdf') {
+          const pngBuf = await generatePdfThumbnail(localPath, thumbFile);
+          if (pngBuf) {
+            return {
+              success: true,
+              dataUrl: 'data:image/png;base64,' + pngBuf.toString('base64')
+            };
+          }
+        } else if (['.png', '.jpg', '.jpeg', '.webp'].includes(ext)) {
+          const imgBuf = fs.readFileSync(localPath);
+          return {
+            success: true,
+            dataUrl: 'data:image/png;base64,' + imgBuf.toString('base64')
+          };
+        }
+      }
+
+      return { success: false, error: '썸네일을 생성할 수 없습니다.' };
+    } catch (err) {
+      console.error('board:get-pdf-thumbnail error:', err);
+      return { success: false, error: err.message };
+    }
+  });
+
   console.log('✅ Board IPC Handlers registered successfully.');
+}
+
+function getThumbnailsDir() {
+  let userDataPath;
+  try {
+    const { app } = require('electron');
+    userDataPath = app.getPath('userData');
+  } catch (err) {
+    userDataPath = path.join(process.env.APPDATA || process.env.HOME, 'offline-crm-app');
+  }
+  const dir = path.join(userDataPath, 'pdf_thumbnails');
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  return dir;
+}
+
+// Generate PDF first page thumbnail via Electron Offscreen BrowserWindow
+async function generatePdfThumbnail(filePath, targetThumbPath) {
+  return new Promise((resolve) => {
+    try {
+      const win = new BrowserWindow({
+        width: 595,
+        height: 842,
+        show: false,
+        frame: false,
+        webPreferences: {
+          offscreen: true,
+          plugins: true,
+          sandbox: false
+        }
+      });
+
+      let timeoutId = setTimeout(() => {
+        try { win.destroy(); } catch (e) {}
+        resolve(null);
+      }, 6000);
+
+      win.webContents.on('did-finish-load', () => {
+        setTimeout(async () => {
+          try {
+            const nativeImage = await win.webContents.capturePage({ x: 0, y: 0, width: 595, height: 842 });
+            const pngBuf = nativeImage.toPNG();
+            if (pngBuf && pngBuf.length > 500) {
+              fs.writeFileSync(targetThumbPath, pngBuf);
+              clearTimeout(timeoutId);
+              win.destroy();
+              return resolve(pngBuf);
+            }
+          } catch (e) {
+            console.error('capturePage error:', e);
+          }
+          clearTimeout(timeoutId);
+          try { win.destroy(); } catch (e) {}
+          resolve(null);
+        }, 800);
+      });
+
+      const fileUrl = 'file:///' + filePath.replace(/\\/g, '/');
+      win.loadURL(fileUrl).catch(() => {
+        clearTimeout(timeoutId);
+        try { win.destroy(); } catch (e) {}
+        resolve(null);
+      });
+    } catch (err) {
+      console.error('generatePdfThumbnail error:', err);
+      resolve(null);
+    }
+  });
 }
 
 function appGetDownloadDir() {

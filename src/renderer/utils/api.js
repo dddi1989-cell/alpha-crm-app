@@ -44,7 +44,8 @@ export const api = {
     updatePost: (data) => window.electronAPI.board.updatePost(data),
     deletePost: (data) => window.electronAPI.board.deletePost(data),
     downloadAttachment: (attachmentId) => window.electronAPI.board.downloadAttachment(attachmentId),
-    openAttachment: (attachmentId) => window.electronAPI.board.openAttachment(attachmentId)
+    openAttachment: (attachmentId) => window.electronAPI.board.openAttachment(attachmentId),
+    getPdfThumbnail: (attachmentId) => window.electronAPI.board.getPdfThumbnail(attachmentId)
   },
   market: {
     getLatest: () => window.electronAPI.market.getLatest(),
