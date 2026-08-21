@@ -3,6 +3,9 @@ const https = require('https');
 const http = require('http');
 const { getDb } = require('../database');
 
+const NAVER_KEY_ID = 'zpedihnvu6';
+const NAVER_KEY_SECRET = 'zAI58ZrgwEH0KN3LRQpR3mLDm3iYKmFKZif36yUi';
+
 function safeRegisterHandle(channel, handler) {
   try {
     ipcMain.removeHandler(channel);
@@ -15,14 +18,22 @@ function safeRegisterHandle(channel, handler) {
   }
 }
 
-function fetchJsonFromUrl(urlStr) {
+function fetchJsonFromUrl(urlStr, customHeaders = {}) {
   return new Promise((resolve, reject) => {
     const client = urlStr.startsWith('https://') ? https : http;
     const req = client.get(urlStr, {
-      headers: { 'User-Agent': 'ALPHA-CRM-MarketService' }
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        ...customHeaders
+      }
     }, res => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        return fetchJsonFromUrl(res.headers.location).then(resolve).catch(reject);
+        let loc = res.headers.location;
+        if (loc.startsWith('/')) {
+          const u = new URL(urlStr);
+          loc = u.origin + loc;
+        }
+        return fetchJsonFromUrl(loc, customHeaders).then(resolve).catch(reject);
       }
       if (res.statusCode !== 200) {
         return reject(new Error('HTTP Status ' + res.statusCode));
@@ -40,6 +51,220 @@ function fetchJsonFromUrl(urlStr) {
       reject(new Error('Timeout'));
     });
   });
+}
+
+function fetchHtmlFollowRedirect(urlStr) {
+  return new Promise((resolve) => {
+    const client = urlStr.startsWith('https://') ? https : http;
+    const req = client.get(urlStr, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    }, res => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        let loc = res.headers.location;
+        if (loc.startsWith('/')) {
+          const u = new URL(urlStr);
+          loc = u.origin + loc;
+        }
+        return fetchHtmlFollowRedirect(loc).then(resolve);
+      }
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => {
+        const buf = Buffer.concat(chunks);
+        resolve(buf);
+      });
+    });
+    req.on('error', () => resolve(null));
+    req.setTimeout(5000, () => {
+      req.destroy();
+      resolve(null);
+    });
+  });
+}
+
+// 1. Real-time domestic stocks & indices from Naver Finance Polling
+async function fetchRealtimeDomesticData() {
+  try {
+    const [indicesRes, stocksRes] = await Promise.all([
+      fetchJsonFromUrl('https://polling.finance.naver.com/api/realtime/domestic/index/KOSPI,KOSDAQ').catch(() => null),
+      fetchJsonFromUrl('https://polling.finance.naver.com/api/realtime/domestic/stock/005930,000660,373220,207940,005380').catch(() => null)
+    ]);
+
+    const domestic = {
+      indices: [],
+      top_stocks: [],
+      market_sentiment: '안정'
+    };
+
+    if (indicesRes?.result?.areas) {
+      indicesRes.result.areas.forEach(area => {
+        (area.datas || []).forEach(d => {
+          const name = d.itemCode === 'KOSPI' ? 'KOSPI' : d.itemCode === 'KOSDAQ' ? 'KOSDAQ' : d.stockName;
+          const isUp = d.compareToPreviousPrice?.name === 'RISING' || (parseFloat(d.fluctuationsRatio || '0') >= 0);
+          domestic.indices.push({
+            name,
+            value: d.closePrice || d.nowVal,
+            change_rate: (isUp ? '+' : '') + (d.fluctuationsRatio || '0') + '%',
+            is_up: isUp
+          });
+        });
+      });
+    }
+
+    if (stocksRes?.result?.areas) {
+      stocksRes.result.areas.forEach(area => {
+        (area.datas || []).forEach(d => {
+          const isUp = d.compareToPreviousPrice?.name === 'RISING' || (parseFloat(d.fluctuationsRatio || '0') >= 0);
+          domestic.top_stocks.push({
+            ticker: d.itemCode,
+            name: d.stockName,
+            price: d.closePrice + '원',
+            change_rate: (isUp ? '+' : '') + (d.fluctuationsRatio || '0') + '%',
+            is_up: isUp
+          });
+        });
+      });
+    }
+
+    return domestic;
+  } catch (err) {
+    console.error('fetchRealtimeDomesticData error:', err);
+    return null;
+  }
+}
+
+// 2. Real-time overseas indices & tech stocks from Yahoo Finance Chart API
+async function fetchRealtimeOverseasData() {
+  const symbols = [
+    { symbol: '^GSPC', name: 'S&P 500', type: 'index' },
+    { symbol: '^IXIC', name: '나스닥 (NASDAQ)', type: 'index' },
+    { symbol: '^DJI', name: '다우존스 (Dow Jones)', type: 'index' },
+    { symbol: 'USDKRW=X', name: '원/달러 환율', type: 'macro', unit: '원' },
+    { symbol: 'CL=F', name: 'WTI 원유', type: 'macro', unit: '$/배럴' },
+    { symbol: '^TNX', name: '미국 10년물 국채금리', type: 'macro', unit: '%' },
+    { symbol: 'NVDA', name: '엔비디아 (NVIDIA)', type: 'tech' },
+    { symbol: 'AAPL', name: '애플 (Apple)', type: 'tech' },
+    { symbol: 'MSFT', name: '마이크로소프트 (Microsoft)', type: 'tech' },
+    { symbol: 'TSLA', name: '테슬라 (Tesla)', type: 'tech' },
+    { symbol: 'GOOGL', name: '알파벳/구글 (Google)', type: 'tech' }
+  ];
+
+  const overseas = {
+    indices: [],
+    macro: [],
+    tech_stocks: []
+  };
+
+  await Promise.all(symbols.map(async (item) => {
+    try {
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(item.symbol)}?interval=1d&range=2d`;
+      const res = await fetchJsonFromUrl(url);
+      const meta = res?.chart?.result?.[0]?.meta;
+      if (meta) {
+        const currentPrice = meta.regularMarketPrice || meta.chartPreviousClose;
+        const prevClose = meta.chartPreviousClose || meta.previousClose || currentPrice;
+        const changeRate = prevClose ? ((currentPrice - prevClose) / prevClose) * 100 : 0;
+        const isUp = changeRate >= 0;
+
+        if (item.type === 'index') {
+          overseas.indices.push({
+            symbol: item.symbol,
+            name: item.name,
+            value: Number(currentPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+            change_rate: (isUp ? '+' : '') + changeRate.toFixed(2) + '%',
+            is_up: isUp
+          });
+        } else if (item.type === 'macro') {
+          const valStr = item.unit === '원' 
+            ? Number(currentPrice).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '원'
+            : Number(currentPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + item.unit;
+          overseas.macro.push({
+            symbol: item.symbol,
+            name: item.name,
+            value: valStr,
+            change_rate: (isUp ? '+' : '') + changeRate.toFixed(2) + '%',
+            is_up: isUp
+          });
+        } else if (item.type === 'tech') {
+          overseas.tech_stocks.push({
+            symbol: item.symbol,
+            name: item.name,
+            price: '$' + Number(currentPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+            change_rate: (isUp ? '+' : '') + changeRate.toFixed(2) + '%',
+            is_up: isUp
+          });
+        }
+      }
+    } catch (e) {
+      console.log(`[Yahoo-Live] Error fetching ${item.name}:`, e.message);
+    }
+  }));
+
+  return overseas;
+}
+
+// 3. Real-time News with Article Excerpts
+async function fetchRealtimeNewsWithExcerpts() {
+  const newsItems = [];
+  try {
+    const rawBuf = await fetchHtmlFollowRedirect('https://finance.naver.com/news/mainnews.naver');
+    if (rawBuf) {
+      const decoder = new TextDecoder('euc-kr');
+      const htmlText = decoder.decode(rawBuf);
+
+      const blocks = htmlText.split('<li class="block1">');
+      for (let i = 1; i < Math.min(blocks.length, 7); i++) {
+        const blk = blocks[i];
+        const subjMatch = blk.match(/<dd class="articleSubject">\s*<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i);
+        const summMatch = blk.match(/<dd class="articleSummary">([\s\S]*?)(?:<span|\Z)/i);
+        const pressMatch = blk.match(/<span class="press">([^<]+)<\/span>/i);
+
+        if (subjMatch) {
+          let url = subjMatch[1].trim();
+          if (url.startsWith('/')) url = 'https://finance.naver.com' + url;
+          const title = subjMatch[2].replace(/<[^>]+>/g, '').trim();
+          const summary = summMatch ? summMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+          const press = pressMatch ? pressMatch[1].trim() : '네이버 금융';
+
+          // Fetch full article body excerpt
+          let bodyExcerpt = '';
+          try {
+            const artBuf = await fetchHtmlFollowRedirect(url);
+            if (artBuf) {
+              const artHtml = artBuf.toString('utf8');
+              const bodyMatch = artHtml.match(/<article[^>]*id=["'](?:dic_area|articleBodyContents)["'][^>]*>([\s\S]*?)<\/article>/i) ||
+                                artHtml.match(/<div[^>]*id=["'](?:dic_area|articleBodyContents|articleCont)["'][^>]*>([\s\S]*?)<\/div>/i);
+              if (bodyMatch) {
+                bodyExcerpt = bodyMatch[1]
+                  .replace(/<script[\s\S]*?<\/script>/gi, '')
+                  .replace(/<style[\s\S]*?<\/style>/gi, '')
+                  .replace(/<[^>]+>/g, ' ')
+                  .replace(/\s+/g, ' ')
+                  .trim();
+              }
+            }
+          } catch (e) {}
+
+          if (title) {
+            newsItems.push({
+              source_type: '국내증시',
+              title,
+              summary: summary || title,
+              body_excerpt: bodyExcerpt || summary || title,
+              url,
+              press
+            });
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('fetchRealtimeNewsWithExcerpts error:', err);
+  }
+
+  return newsItems;
 }
 
 function registerMarketHandlers(mainWindow) {
@@ -97,7 +322,36 @@ function registerMarketHandlers(mainWindow) {
     }
   });
 
-  // 2. Get market briefing by specific date
+  // 2. Real-time Live Quotes & Breaking News (For live auto-polling every 30s)
+  safeRegisterHandle('market:get-live-quote', async () => {
+    try {
+      const [domestic, overseas, news] = await Promise.all([
+        fetchRealtimeDomesticData(),
+        fetchRealtimeOverseasData(),
+        fetchRealtimeNewsWithExcerpts()
+      ]);
+
+      const now = new Date();
+      const kstTime = new Intl.DateTimeFormat('ko-KR', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+      }).format(now);
+
+      return {
+        success: true,
+        updated_at: kstTime + ' (실시간 라이브)',
+        domestic: domestic?.indices?.length ? domestic : undefined,
+        overseas: overseas?.indices?.length ? overseas : undefined,
+        news: news?.length ? news : undefined
+      };
+    } catch (err) {
+      console.error('market:get-live-quote error:', err);
+      return { success: false, error: err.message };
+    }
+  });
+
+  // 3. Get market briefing by specific date
   safeRegisterHandle('market:get-by-date', async (event, targetDate) => {
     const db = getDb();
     try {
@@ -135,7 +389,7 @@ function registerMarketHandlers(mainWindow) {
     }
   });
 
-  // 3. Get history date list
+  // 4. Get history date list
   safeRegisterHandle('market:get-history-dates', async () => {
     const db = getDb();
     try {
@@ -147,30 +401,67 @@ function registerMarketHandlers(mainWindow) {
     }
   });
 
-  // 4. Manual Refresh from GitHub
+  // 5. Manual Full Refresh (Merges live quotes and saves to DB)
   safeRegisterHandle('market:refresh', async () => {
     const db = getDb();
     try {
-      const rawUrl = 'https://raw.githubusercontent.com/dddi1989-cell/alpha-crm-app/main/data/market_latest.json?t=' + Date.now();
-      const data = await fetchJsonFromUrl(rawUrl);
-      if (data && data.date) {
-        const insertStmt = db.prepare(`
-          INSERT OR REPLACE INTO market_briefings (date, title, updated_at, summary_3lines, domestic_json, overseas_json, news_json, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `);
-        insertStmt.run(
-          data.date,
-          data.title || '',
-          data.updated_at || '',
-          JSON.stringify(data.summary_3lines || []),
-          JSON.stringify(data.domestic || {}),
-          JSON.stringify(data.overseas || {}),
-          JSON.stringify(data.news || []),
-          new Date().toISOString()
-        );
-        return { success: true, briefing: data };
+      const [domestic, overseas, news] = await Promise.all([
+        fetchRealtimeDomesticData(),
+        fetchRealtimeOverseasData(),
+        fetchRealtimeNewsWithExcerpts()
+      ]);
+
+      const today = new Date().toISOString().split('T')[0];
+      const nowStr = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+
+      // Generate 3-line summary
+      const summary_3lines = [];
+      if (overseas?.indices?.length) {
+        const nasdaq = overseas.indices.find(x => x.name.includes('나스닥'));
+        const sp = overseas.indices.find(x => x.name.includes('S&P'));
+        if (nasdaq && sp) {
+          summary_3lines.push(`🇺🇸 뉴욕증시: 나스닥(${nasdaq.value}, ${nasdaq.change_rate}), S&P 500(${sp.value}, ${sp.change_rate}) 실시간 흐름.`);
+        }
       }
-      return { success: false, error: '최신 시황 데이터를 불러올 수 없습니다.' };
+      if (domestic?.indices?.length) {
+        const kospi = domestic.indices.find(x => x.name === 'KOSPI');
+        if (kospi) {
+          summary_3lines.push(`🇰🇷 국내증시: 코스피(${kospi.value}, ${kospi.change_rate}) 실시간 장중 호가.`);
+        }
+      }
+      if (overseas?.macro?.length) {
+        const fx = overseas.macro.find(x => x.name.includes('환율'));
+        if (fx) {
+          summary_3lines.push(`📊 매크로: 원/달러 환율 ${fx.value}(${fx.change_rate}) 변동성 주시.`);
+        }
+      }
+
+      const liveBriefing = {
+        date: today,
+        updated_at: `${today} ${nowStr} (실시간 갱신)`,
+        title: `[${today}] 오늘의 증시 & 글로벌 금융 시황 실시간 브리핑`,
+        summary_3lines: summary_3lines.length ? summary_3lines : ['실시간 시장 지표 갱신 완료.'],
+        domestic: domestic || {},
+        overseas: overseas || {},
+        news: news || []
+      };
+
+      const insertStmt = db.prepare(`
+        INSERT OR REPLACE INTO market_briefings (date, title, updated_at, summary_3lines, domestic_json, overseas_json, news_json, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      insertStmt.run(
+        liveBriefing.date,
+        liveBriefing.title,
+        liveBriefing.updated_at,
+        JSON.stringify(liveBriefing.summary_3lines),
+        JSON.stringify(liveBriefing.domestic),
+        JSON.stringify(liveBriefing.overseas),
+        JSON.stringify(liveBriefing.news),
+        new Date().toISOString()
+      );
+
+      return { success: true, briefing: liveBriefing };
     } catch (err) {
       console.error('market:refresh error:', err);
       return { success: false, error: err.message };

@@ -51,6 +51,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   market: {
     getLatest: () => ipcRenderer.invoke('market:get-latest'),
+    getLiveQuote: () => ipcRenderer.invoke('market:get-live-quote'),
     getByDate: (date) => ipcRenderer.invoke('market:get-by-date', date),
     getHistoryDates: () => ipcRenderer.invoke('market:get-history-dates'),
     refresh: () => ipcRenderer.invoke('market:refresh')

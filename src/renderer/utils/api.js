@@ -48,6 +48,7 @@ export const api = {
   },
   market: {
     getLatest: () => window.electronAPI.market.getLatest(),
+    getLiveQuote: () => window.electronAPI.market.getLiveQuote(),
     getByDate: (date) => window.electronAPI.market.getByDate(date),
     getHistoryDates: () => window.electronAPI.market.getHistoryDates(),
     refresh: () => window.electronAPI.market.refresh()

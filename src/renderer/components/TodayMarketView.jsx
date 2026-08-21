@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   TrendingUp, TrendingDown, RefreshCw, Calendar, Globe, DollarSign, 
   ExternalLink, Sparkles, AlertCircle, Clock, ChevronRight, Activity, 
-  Flame, Award, Layers, Zap, Info, Share2, Compass
+  Flame, Award, Layers, Zap, Info, Share2, Compass, Radio, CheckCircle2,
+  FileText, BookOpen, ChevronDown, ChevronUp, Eye
 } from 'lucide-react';
 import { api } from '../utils/api';
 
@@ -12,12 +13,18 @@ export default function TodayMarketView() {
   const [refreshing, setRefreshing] = useState(false);
   const [historyDates, setHistoryDates] = useState([]);
   const [selectedDate, setSelectedDate] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
+  
+  // Real-time live polling state (30s)
+  const [isLiveAutoRefresh, setIsLiveAutoRefresh] = useState(true);
+  const [countdown, setCountdown] = useState(30);
+  const [lastLiveUpdated, setLastLiveUpdated] = useState('');
+  const [expandedNewsIdx, setExpandedNewsIdx] = useState(null);
 
-  // Initial load: Fetch latest and history list
+  const countdownRef = useRef(30);
+
+  // Initial load: Fetch latest briefing and history dates
   const loadInitialData = async () => {
     setLoading(true);
-    setErrorMsg('');
     try {
       const [latestRes, historyRes] = await Promise.all([
         api.market.getLatest(),
@@ -27,19 +34,41 @@ export default function TodayMarketView() {
       if (latestRes?.success && latestRes.briefing) {
         setBriefing(latestRes.briefing);
         setSelectedDate(latestRes.briefing.date);
-      } else {
-        // Fallback default sample briefing if first run before 9 AM
-        setBriefing(getDefaultFallbackBriefing());
+        setLastLiveUpdated(latestRes.briefing.updated_at || '');
       }
 
       if (historyRes?.success && Array.isArray(historyRes.history)) {
         setHistoryDates(historyRes.history);
       }
+
+      // Immediately fetch live quote to ensure 100% exact real-time prices
+      fetchLiveQuoteSilent();
     } catch (err) {
       console.error('loadInitialData error:', err);
-      setBriefing(getDefaultFallbackBriefing());
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Silent Live Quote Fetch (No full-page loading flicker)
+  const fetchLiveQuoteSilent = async () => {
+    try {
+      const res = await api.market.getLiveQuote();
+      if (res?.success) {
+        setBriefing(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            updated_at: res.updated_at || prev.updated_at,
+            domestic: res.domestic || prev.domestic,
+            overseas: res.overseas || prev.overseas,
+            news: res.news && res.news.length ? res.news : prev.news
+          };
+        });
+        setLastLiveUpdated(res.updated_at || '');
+      }
+    } catch (err) {
+      console.log('Silent live quote error:', err.message);
     }
   };
 
@@ -47,7 +76,28 @@ export default function TodayMarketView() {
     loadInitialData();
   }, []);
 
-  // Change Date
+  // 30-Second Real-time Auto Polling Timer
+  useEffect(() => {
+    if (!isLiveAutoRefresh) return;
+
+    countdownRef.current = 30;
+    setCountdown(30);
+
+    const interval = setInterval(() => {
+      countdownRef.current -= 1;
+      setCountdown(countdownRef.current);
+
+      if (countdownRef.current <= 0) {
+        countdownRef.current = 30;
+        setCountdown(30);
+        fetchLiveQuoteSilent();
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isLiveAutoRefresh]);
+
+  // Change Date (for viewing history)
   const handleDateChange = async (date) => {
     setSelectedDate(date);
     setLoading(true);
@@ -65,17 +115,20 @@ export default function TodayMarketView() {
     }
   };
 
-  // Manual Refresh
-  const handleRefresh = async () => {
+  // Manual Full Refresh Button
+  const handleManualRefresh = async () => {
     setRefreshing(true);
     try {
       const res = await api.market.refresh();
       if (res?.success && res.briefing) {
         setBriefing(res.briefing);
         setSelectedDate(res.briefing.date);
+        setLastLiveUpdated(res.briefing.updated_at || '');
       } else {
-        await loadInitialData();
+        await fetchLiveQuoteSilent();
       }
+      countdownRef.current = 30;
+      setCountdown(30);
     } catch (err) {
       console.error('Refresh error:', err);
     } finally {
@@ -102,7 +155,7 @@ export default function TodayMarketView() {
         <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 animate-spin">
           <RefreshCw className="w-6 h-6" />
         </div>
-        <p className="text-slate-400 text-sm font-semibold">오늘의 증시 & 시황 카드뉴스를 불러오는 중입니다...</p>
+        <p className="text-slate-400 text-sm font-semibold">실시간 증시 & 시황 카드뉴스를 불러오는 중입니다...</p>
       </div>
     );
   }
@@ -128,18 +181,37 @@ export default function TodayMarketView() {
                 </h2>
                 <span className="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-gradient-to-r from-indigo-950 to-purple-950 text-indigo-300 border border-indigo-700/60 shadow-sm flex items-center space-x-1">
                   <Sparkles className="w-3 h-3 text-amber-400 animate-pulse" />
-                  <span>모닝 카드뉴스</span>
+                  <span>실시간 라이브 카드뉴스</span>
                 </span>
               </div>
               <p className="text-slate-400 text-xs mt-0.5">
-                매일 아침 09:00 정각에 갱신되는 국내외 주식시장, 주요 빅테크 종목 및 핵심 경제 브리핑입니다.
+                국내외 주식시장, 주요 빅테크 종목 및 발췌 원문이 포함된 실시간 경제 브리핑입니다.
               </p>
             </div>
           </div>
         </div>
 
-        {/* Date Selector & Refresh */}
-        <div className="flex items-center space-x-2.5">
+        {/* Live Status, Date Selector & Refresh Controls */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Live Auto-Refresh Indicator */}
+          <div 
+            onClick={() => setIsLiveAutoRefresh(!isLiveAutoRefresh)}
+            className={'flex items-center space-x-2 px-3 py-1.5 rounded-xl border transition-all cursor-pointer select-none text-xs font-bold shadow ' + 
+              (isLiveAutoRefresh 
+                ? 'bg-emerald-950/70 border-emerald-600/50 text-emerald-300 hover:bg-emerald-900/60' 
+                : 'bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-800')}
+            title="클릭하여 30초 자동 실시간 갱신 ON/OFF"
+          >
+            <span className="relative flex h-2 w-2">
+              {isLiveAutoRefresh && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              )}
+              <span className={'relative inline-flex rounded-full h-2 w-2 ' + (isLiveAutoRefresh ? 'bg-emerald-400' : 'bg-slate-500')}></span>
+            </span>
+            <span>{isLiveAutoRefresh ? `실시간 갱신 (${countdown}s)` : '자동 갱신 일시정지'}</span>
+          </div>
+
+          {/* History Date Picker */}
           {historyDates.length > 0 && (
             <div className="flex items-center space-x-1.5 bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-300">
               <Calendar className="w-3.5 h-3.5 text-indigo-400" />
@@ -157,14 +229,15 @@ export default function TodayMarketView() {
             </div>
           )}
 
+          {/* Refresh Button */}
           <button
-            onClick={handleRefresh}
+            onClick={handleManualRefresh}
             disabled={refreshing}
             className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 text-xs font-bold shadow"
-            title="최신 시황 새로고침"
+            title="즉시 새로고침"
           >
             <RefreshCw className={'w-3.5 h-3.5 ' + (refreshing ? 'animate-spin text-indigo-400' : '')} />
-            <span>{refreshing ? '갱신 중...' : '시황 갱신'}</span>
+            <span>{refreshing ? '갱신 중...' : '새로고침'}</span>
           </button>
         </div>
       </div>
@@ -218,13 +291,13 @@ export default function TodayMarketView() {
             <div>
               <h3 className="text-sm font-extrabold text-white flex items-center space-x-2">
                 <span>오늘의 모닝 시황 3줄 핵심 요약</span>
-                <span className="text-[10px] text-slate-400 font-mono">({briefing?.updated_at || '09:00 KST'})</span>
+                <span className="text-[10px] text-slate-400 font-mono">({lastLiveUpdated || briefing?.updated_at || '09:00 KST'})</span>
               </h3>
             </div>
           </div>
           <span className="text-[11px] font-bold text-indigo-400 bg-indigo-950/80 px-2.5 py-1 rounded-full border border-indigo-800/60 flex items-center space-x-1">
             <Clock className="w-3 h-3" />
-            <span>매일 09:00 자동 발행</span>
+            <span>실시간 호가 연동</span>
           </span>
         </div>
 
@@ -253,8 +326,9 @@ export default function TodayMarketView() {
               <span className="text-lg">🇰🇷</span>
               <h3 className="font-bold text-sm text-white">국내 증시 및 주요 대표 종목</h3>
             </div>
-            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/50">
-              pykrx 라이브
+            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/50 flex items-center space-x-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+              <span>네이버 금융 실시간 시세</span>
             </span>
           </div>
 
@@ -278,7 +352,7 @@ export default function TodayMarketView() {
           <div className="space-y-2.5">
             <h4 className="text-xs font-bold text-slate-300 flex items-center space-x-1.5">
               <Award className="w-3.5 h-3.5 text-amber-400" />
-              <span>시가총액 상위 대표 5대 종목</span>
+              <span>시가총액 상위 대표 5대 종목 (실시간 현재가)</span>
             </h4>
             <div className="space-y-2">
               {(domestic.top_stocks || []).map((stock) => (
@@ -314,8 +388,9 @@ export default function TodayMarketView() {
               <span className="text-lg">🇺🇸</span>
               <h3 className="font-bold text-sm text-white">글로벌 증시 & 미국 빅테크</h3>
             </div>
-            <span className="text-[10px] font-mono text-sky-400 bg-sky-950/60 px-2 py-0.5 rounded border border-sky-800/50">
-              yfinance 라이브
+            <span className="text-[10px] font-mono text-sky-400 bg-sky-950/60 px-2 py-0.5 rounded border border-sky-800/50 flex items-center space-x-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping"></span>
+              <span>Yahoo Finance 라이브</span>
             </span>
           </div>
 
@@ -336,7 +411,7 @@ export default function TodayMarketView() {
           <div className="space-y-2.5">
             <h4 className="text-xs font-bold text-slate-300 flex items-center space-x-1.5">
               <Globe className="w-3.5 h-3.5 text-indigo-400" />
-              <span>미국 주요 핵심 빅테크 종목</span>
+              <span>미국 주요 핵심 빅테크 종목 (실시간 쿼트)</span>
             </h4>
             <div className="space-y-2">
               {(overseas.tech_stocks || []).map((stock) => (
@@ -366,47 +441,93 @@ export default function TodayMarketView() {
         </div>
       </div>
 
-      {/* 5. Bottom News Curation Grid */}
+      {/* 5. Bottom News Curation with Direct Excerpt Viewing */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-sm text-white flex items-center space-x-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-ping"></span>
-            <span>오늘의 핵심 증시 & 글로벌 경제 뉴스</span>
-          </h3>
-          <span className="text-xs text-slate-400">네이버 증시 뉴스 & Yahoo Finance 연동</span>
+          <div>
+            <h3 className="font-bold text-sm text-white flex items-center space-x-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-ping"></span>
+              <span>오늘의 핵심 증시 & 글로벌 경제 뉴스 (요약 및 발췌 원문)</span>
+            </h3>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              직접 취합한 핵심 요약과 기사 발췌 전문을 각 카드에서 즉시 확인하실 수 있습니다.
+            </p>
+          </div>
+          <span className="text-xs text-slate-400">네이버 증시 뉴스 & 속보 연동</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {news.map((item, idx) => (
-            <div
-              key={idx}
-              onClick={() => handleOpenNews(item.url)}
-              className="p-5 rounded-3xl bg-slate-900/80 border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-800/40 transition-all cursor-pointer flex flex-col justify-between space-y-3 group shadow-lg"
-            >
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className={'text-[10px] font-extrabold px-2 py-0.5 rounded-full border ' + 
-                    (item.source_type === '국내증시' ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800/60' : 'bg-sky-950/80 text-sky-300 border-sky-800/60')}>
-                    {item.source_type || '증시뉴스'}
-                  </span>
-                  <span className="text-[10px] font-medium text-slate-500">{item.press || '경제뉴스'}</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {news.map((item, idx) => {
+            const isExpanded = expandedNewsIdx === idx;
+            return (
+              <div
+                key={idx}
+                className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800/90 hover:border-indigo-500/50 transition-all flex flex-col justify-between space-y-3.5 shadow-lg group"
+              >
+                <div className="space-y-3">
+                  {/* Top Badge & Press */}
+                  <div className="flex items-center justify-between">
+                    <span className={'text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ' + 
+                      (item.source_type === '국내증시' ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800/60' : 'bg-sky-950/80 text-sky-300 border-sky-800/60')}>
+                      {item.source_type || '증시속보'}
+                    </span>
+                    <span className="text-[11px] font-bold text-slate-400">{item.press || '경제뉴스'}</span>
+                  </div>
+
+                  {/* Title */}
+                  <h4 
+                    onClick={() => handleOpenNews(item.url)}
+                    className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors cursor-pointer leading-snug"
+                  >
+                    {item.title}
+                  </h4>
+
+                  {/* 1. Summary Box */}
+                  <div className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1">
+                    <p className="text-[10px] font-extrabold text-indigo-400 flex items-center space-x-1">
+                      <Sparkles className="w-3 h-3" />
+                      <span>핵심 요약</span>
+                    </p>
+                    <p className="text-xs text-slate-200 leading-relaxed font-medium">
+                      {item.summary}
+                    </p>
+                  </div>
+
+                  {/* 2. Full Excerpt Body Viewer (Expandable) */}
+                  {item.body_excerpt && item.body_excerpt !== item.summary && (
+                    <div className="space-y-1.5">
+                      <button
+                        onClick={() => setExpandedNewsIdx(isExpanded ? null : idx)}
+                        className="flex items-center space-x-1.5 text-[11px] font-bold text-slate-400 hover:text-slate-200 transition-colors py-0.5"
+                      >
+                        <BookOpen className="w-3.5 h-3.5 text-amber-400" />
+                        <span>{isExpanded ? '발췌 원문 닫기' : '📜 발췌한 기사 원문 전문 보기'}</span>
+                        {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      </button>
+
+                      {isExpanded && (
+                        <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 text-[11px] text-slate-300 max-h-48 overflow-y-auto custom-scrollbar leading-relaxed font-normal whitespace-pre-wrap animate-fadeIn">
+                          {item.body_excerpt}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                <h4 className="text-xs font-bold text-white group-hover:text-indigo-400 transition-colors line-clamp-2 leading-snug">
-                  {item.title}
-                </h4>
-
-                <p className="text-[11px] text-slate-400 line-clamp-3 leading-relaxed font-normal">
-                  {item.summary}
-                </p>
+                {/* Card Footer Actions */}
+                <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 text-xs">
+                  <span className="text-[10px] text-slate-500 font-mono">실시간 발췌</span>
+                  <button
+                    onClick={() => handleOpenNews(item.url)}
+                    className="flex items-center space-x-1 text-[11px] font-bold text-indigo-400 hover:text-indigo-300 hover:translate-x-0.5 transition-all"
+                  >
+                    <span>원문 기사 읽기</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
-
-              <div className="flex items-center justify-end text-[11px] font-bold text-indigo-400 group-hover:translate-x-1 transition-transform space-x-1 pt-1 border-t border-slate-800/60">
-                <span>원문 기사 읽기</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
@@ -424,73 +545,4 @@ function renderTickerCard(title, value, changeRate, isUp) {
       </p>
     </div>
   );
-}
-
-function getDefaultFallbackBriefing() {
-  const today = new Date().toISOString().split('T')[0];
-  return {
-    date: today,
-    updated_at: today + ' 09:00 KST',
-    title: '[' + today + '] 오늘의 증시 & 글로벌 금융 시황 모닝 브리핑',
-    summary_3lines: [
-      '🇺🇸 뉴욕증시: 기술주 실적 기대감 속 나스닥 및 S&P 500 견조한 상승 마감.',
-      '🇰🇷 국내증시: 코스피 2,580선 회복 시도, 반도체 및 대형 2차전지주 외국인 매수세 유입.',
-      '📊 매크로: 원/달러 환율 1,380원대 안정화, 국제 유가 소폭 하락에 따른 인플레이션 우려 완화.'
-    ],
-    domestic: {
-      indices: [
-        { name: 'KOSPI', value: '2,584.20', change_rate: '+0.52%', is_up: true },
-        { name: 'KOSDAQ', value: '765.40', change_rate: '+0.28%', is_up: true }
-      ],
-      top_stocks: [
-        { ticker: '005930', name: '삼성전자', price: '72,400원', change_rate: '+1.12%', is_up: true },
-        { ticker: '000660', name: 'SK하이닉스', price: '188,500원', change_rate: '+2.45%', is_up: true },
-        { ticker: '373220', name: 'LG에너지솔루션', price: '382,000원', change_rate: '+0.39%', is_up: true },
-        { ticker: '207940', name: '삼성바이오로직스', price: '998,000원', change_rate: '-0.20%', is_up: false },
-        { ticker: '005380', name: '현대차', price: '235,500원', change_rate: '+1.51%', is_up: true }
-      ]
-    },
-    overseas: {
-      indices: [
-        { name: 'S&P 500', value: '5,864.67', change_rate: '+0.82%', is_up: true },
-        { name: '나스닥 (NASDAQ)', value: '18,342.94', change_rate: '+1.18%', is_up: true },
-        { name: '다우존스 (Dow Jones)', value: '42,924.88', change_rate: '+0.37%', is_up: true }
-      ],
-      macro: [
-        { name: '원/달러 환율', value: '1,385.5원', change_rate: '-0.25%', is_up: true },
-        { name: 'WTI 원유', value: '70.85 $/배럴', change_rate: '-1.15%', is_up: false },
-        { name: '미국 10년물 국채금리', value: '4.18 %', change_rate: '-0.02%', is_up: false }
-      ],
-      tech_stocks: [
-        { symbol: 'NVDA', name: '엔비디아 (NVIDIA)', price: '$140.25', change_rate: '+3.14%', is_up: true },
-        { symbol: 'AAPL', name: '애플 (Apple)', price: '$232.10', change_rate: '+0.85%', is_up: true },
-        { symbol: 'MSFT', name: '마이크로소프트 (Microsoft)', price: '$428.50', change_rate: '+1.20%', is_up: true },
-        { symbol: 'TSLA', name: '테슬라 (Tesla)', price: '$220.70', change_rate: '+2.05%', is_up: true },
-        { symbol: 'GOOGL', name: '알파벳/구글 (Google)', price: '$168.40', change_rate: '+0.60%', is_up: true }
-      ]
-    },
-    news: [
-      {
-        source_type: '국내증시',
-        title: '반도체 훈풍에 코스피 상승 출발... 외국인·기관 동반 순매수',
-        summary: '뉴욕 증시의 AI 반도체 랠리에 힘입어 삼성전자와 SK하이닉스가 강세를 보이며 지수 상승을 견인하고 있습니다.',
-        url: 'https://finance.naver.com',
-        press: '네이버 금융'
-      },
-      {
-        source_type: '글로벌시황',
-        title: 'Wall Street gains on strong tech earnings outlook',
-        summary: 'Major U.S. stock indices rallied led by semiconductor and cloud computing giants amid optimistic guidance.',
-        url: 'https://finance.yahoo.com',
-        press: 'Yahoo Finance'
-      },
-      {
-        source_type: '국내증시',
-        title: '원/달러 환율 1380원대 초반 안정세... 수출 기업 실적 기대감',
-        summary: '글로벌 달러화 강세가 한풀 꺾이면서 환율이 안정세를 찾고 있으며 외인 수급 여건이 개선되고 있습니다.',
-        url: 'https://finance.naver.com',
-        press: '네이버 금융'
-      }
-    ]
-  };
 }
