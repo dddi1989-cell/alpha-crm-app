@@ -90,7 +90,7 @@ function fetchJson(url, authHeader = null) {
 
 async function fetchServerUpdateInfo(userInfo = null) {
   const ghConfig = getGitHubConfig();
-  const currentVersion = require('../../../package.json').version || '1.5.6';
+  const currentVersion = require('../../../package.json').version || '1.6.5';
   const isAdmin = userInfo && (userInfo.role === 'admin' || userInfo.role === 'Admin' || userInfo.username === 'admin');
 
   // 1. Try Configured GitHub Raw manifest
@@ -98,16 +98,16 @@ async function fetchServerUpdateInfo(userInfo = null) {
     const manifestUrl = 'https://raw.githubusercontent.com/' + ghConfig.owner + '/' + ghConfig.repo + '/' + ghConfig.branch + '/update_manifest.json?t=' + Date.now();
     const manifest = await fetchJson(manifestUrl);
     if (manifest) {
-      let targetVersion = manifest.productionVersion || manifest.latestVersion || '1.5.6';
-      let targetTitle = manifest.productionTitle || manifest.releaseTitle || ('v' + targetVersion + ' 정식 안정 버전');
-      let targetNotes = manifest.productionNotes || manifest.releaseNotes || '최신 기능이 포함된 안정 버전입니다.';
-      let targetDownloadUrl = manifest.productionDownloadUrl || manifest.downloadUrl || ('https://github.com/' + ghConfig.owner + '/' + ghConfig.repo + '/releases/download/v' + targetVersion + '/ALPHA_CRM_MicroPatch_v' + targetVersion + '.asar');
+      let targetVersion = manifest.productionVersion || manifest.latestVersion || manifest.version || '1.6.5';
+      let targetTitle = manifest.productionTitle || manifest.releaseTitle || manifest.title || ('v' + targetVersion + ' 정식 안정 버전');
+      let targetNotes = manifest.productionNotes || manifest.releaseNotes || manifest.notes || '최신 기능이 포함된 안정 버전입니다.';
+      let targetDownloadUrl = manifest.productionDownloadUrl || manifest.downloadUrl || manifest.installerUrl || ('https://github.com/' + ghConfig.owner + '/' + ghConfig.repo + '/releases/download/v' + targetVersion + '/ALPHA_CRM_Setup_' + targetVersion + '.exe');
 
       if (isAdmin && manifest.adminTestVersion) {
         targetVersion = manifest.adminTestVersion;
         targetTitle = manifest.adminTitle || ('v' + targetVersion + ' [어드민 테스트] 선행 패치');
         targetNotes = manifest.adminNotes || '최고 관리자(Admin) 전용 선행 테스트 버전입니다.';
-        targetDownloadUrl = manifest.adminDownloadUrl || ('https://github.com/' + ghConfig.owner + '/' + ghConfig.repo + '/releases/download/v' + targetVersion + '/ALPHA_CRM_MicroPatch_v' + targetVersion + '.asar');
+        targetDownloadUrl = manifest.adminDownloadUrl || targetDownloadUrl;
       }
 
       const latV = targetVersion.replace(/^v/, '').trim();
