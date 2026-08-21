@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_synced_at": "2026-08-21T00:39:22.675Z",
+  "last_synced_at": "2026-08-21T00:41:46.461Z",
   "customers": [
     {
       "id": 1,
@@ -663,6 +663,17 @@
       "views": 5,
       "created_at": "2026-08-20T06:25:30.996Z",
       "updated_at": "2026-08-20T06:27:47.665Z"
+    },
+    {
+      "id": 2,
+      "user_id": 1,
+      "author_name": "최고 관리자 (Admin)",
+      "title": "8월 생/손보 시책",
+      "content": "26년 8월 생/손보 시책 공유입니다.\n감사합니다.",
+      "category": "상품전략",
+      "views": 0,
+      "created_at": "2026-08-21T00:41:42.896Z",
+      "updated_at": "2026-08-21T00:41:42.896Z"
     }
   ],
   "post_attachments": [
@@ -676,6 +687,28 @@
       "created_at": "2026-08-20T06:25:42.517Z",
       "file_path": "C:\\Users\\dddi1\\AppData\\Roaming\\offline-crm-app\\board_attachments\\1_1787207142517_2608_인카_NEW상품의정석_v2.pdf",
       "download_url": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/board-assets/board_1787207143815_04km9_2608____NEW______v2.pdf"
+    },
+    {
+      "id": 2,
+      "post_id": 2,
+      "file_name": "9＃2026년 8월 생명보험 시상(포스터)_20260819_삼성.pdf",
+      "file_size": 10962100,
+      "file_type": "pdf",
+      "file_data": null,
+      "created_at": "2026-08-21T00:41:42.896Z",
+      "file_path": "C:\\Users\\dddi1\\AppData\\Roaming\\offline-crm-app\\board_attachments\\2_1787272902898_9＃2026년 8월 생명보험 시상(포스터)_20260819_삼성.pdf",
+      "download_url": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/board-assets/board_1787272903264_k6rcw_9_2026__8_______________20260819___.pdf"
+    },
+    {
+      "id": 3,
+      "post_id": 2,
+      "file_name": "손보장기_202608_FA시상_취합_최신_v8.pdf",
+      "file_size": 13394638,
+      "file_type": "pdf",
+      "file_data": null,
+      "created_at": "2026-08-21T00:41:42.896Z",
+      "file_path": "C:\\Users\\dddi1\\AppData\\Roaming\\offline-crm-app\\board_attachments\\2_1787272904667_손보장기_202608_FA시상_취합_최신_v8.pdf",
+      "download_url": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/board-assets/board_1787272904709_ca13m______202608_FA_________v8.pdf"
     }
   ]
 }
