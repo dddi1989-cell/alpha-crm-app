@@ -1,16 +1,11 @@
 {
-  "version": "1.6.5",
-  "latestVersion": "1.6.5",
-  "productionVersion": "1.6.5",
-  "adminTestVersion": "1.6.5",
-  "releaseDate": "2026-08-21T01:48:08.796Z",
-  "releaseTitle": "v1.6.5 정식 안정 버전",
-  "releaseNotes": "오늘의 증시/시황 실시간 지수·호가 연동, 해외 뉴스 한국어 번역 리더 모달, 상품전략자료실 PDF 실물 첫 장 갤러리 뷰 추가",
-  "notes": "오늘의 증시/시황 실시간 지수·호가 연동, 해외 뉴스 한국어 번역 리더 모달, 상품전략자료실 PDF 실물 첫 장 갤러리 뷰 추가",
-  "installerUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.5/ALPHA_CRM_Setup_1.6.5.exe",
-  "downloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.5/ALPHA_CRM_Setup_1.6.5.exe",
-  "productionDownloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.5/ALPHA_CRM_Setup_1.6.5.exe",
-  "installerName": "ALPHA_CRM_Setup_1.6.5.exe",
-  "size": 184551405,
-  "sha512": "ivko/m721FI9yN6KT3Mh3boOpcZoAahk7FmJnmcNftSkUdi22St/Y3JDrTQD3C88REgKYqs8MJM35sxDBitaQg=="
+  "latestVersion": "1.6.3",
+  "minRequiredVersion": "1.0.0",
+  "title": "v1.6.3 공식 정식 배포 버전",
+  "releaseDate": "2026-08-22",
+  "downloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.3/ALPHA_CRM_MicroPatch_v1.6.3.asar",
+  "installerUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.3/ALPHA_CRM_Setup_1.6.3.exe",
+  "releaseNotes": "상품전략자료실 공유 게시판 및 읽기전용 권한 강화",
+  "forceUpdate": false,
+  "targetFile": "resources/app.asar"
 }
