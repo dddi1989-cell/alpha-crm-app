@@ -19,6 +19,7 @@ function calculateElapsedMonths(startDateStr) {
 export default function CustomerModal() {
   const isOpen = useCrmStore((state) => state.isCustomerModalOpen);
   const editingCustomer = useCrmStore((state) => state.editingCustomer);
+  const isPoolCustomerModal = useCrmStore((state) => state.isPoolCustomerModal);
   const customers = useCrmStore((state) => state.customers);
   const closeCustomerModal = useCrmStore((state) => state.closeCustomerModal);
   const saveCustomer = useCrmStore((state) => state.saveCustomer);
@@ -28,14 +29,18 @@ export default function CustomerModal() {
   const isOwner = !editingCustomer || editingCustomer.user_id == null || Number(editingCustomer.user_id) === myId;
 
   const [isParsingPdf, setIsParsingPdf] = useState(false);
+  const [customRelationship, setCustomRelationship] = useState('');
 
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     birth_date: '',
+    relationship: '지인',
+    pool_group: 'A',
+    is_pool: 0,
     referrer_id: '',
     insurances: [{ id: 1, provider: '', details: '', startDate: '', endDate: '' }],
-    status: 'Active',
+    status: 'Lead',
     notes: '',
     report_pdf_path: '',
     report_excel_path: ''
@@ -69,10 +74,17 @@ export default function CustomerModal() {
         initialInsurances = [{ id: Date.now(), provider: '', details: '', startDate: '', endDate: '' }];
       }
 
+      const rel = editingCustomer.relationship || '지인';
+      const standardRels = ['지인', '가족', '소개', '개척', '직장동료', '동호회'];
+      const isCustomRel = rel && !standardRels.includes(rel);
+
       setFormData({
         name: editingCustomer.name || '',
         phone: editingCustomer.phone || '',
         birth_date: editingCustomer.birth_date || '',
+        relationship: isCustomRel ? '기타' : rel,
+        pool_group: editingCustomer.pool_group || 'A',
+        is_pool: editingCustomer.is_pool ? 1 : 0,
         referrer_id: editingCustomer.referrer_id || '',
         insurances: initialInsurances,
         status: editingCustomer.status || 'Active',
@@ -80,6 +92,9 @@ export default function CustomerModal() {
         report_pdf_path: editingCustomer.report_pdf_path || '',
         report_excel_path: editingCustomer.report_excel_path || ''
       });
+      if (isCustomRel) setCustomRelationship(rel);
+      else setCustomRelationship('');
+
       setReferrerSearch(editingCustomer.referrer_name || '');
 
       // Auto-parse report on modal open if attached but no insurances filled in
@@ -100,19 +115,23 @@ export default function CustomerModal() {
     } else {
       setFormData({
         name: '',
-        email: '',
         phone: '',
+        birth_date: '',
+        relationship: '지인',
+        pool_group: 'A',
+        is_pool: isPoolCustomerModal ? 1 : 0,
         referrer_id: '',
         insurances: [{ id: Date.now(), provider: '', details: '', startDate: '', endDate: '' }],
-        status: 'Active',
+        status: isPoolCustomerModal ? 'Lead' : 'Active',
         notes: '',
         report_pdf_path: '',
         report_excel_path: ''
       });
+      setCustomRelationship('');
     }
     setReferrerSearch('');
     setIsReferrerOpen(false);
-  }, [editingCustomer, isOpen]);
+  }, [editingCustomer, isPoolCustomerModal, isOpen]);
 
   // Click outside to close referrer dropdown
   useEffect(() => {
@@ -238,14 +257,21 @@ export default function CustomerModal() {
       }))
       .filter(item => item.provider !== '' || item.details !== '' || item.startDate !== '' || item.endDate !== '');
 
+    const resolvedRelationship = formData.relationship === '기타' 
+      ? (customRelationship.trim() || '기타') 
+      : (formData.relationship || '지인');
+
     saveCustomer({
       name: (formData.name || '').trim(),
       email: (formData.email || '').trim(),
       phone: (formData.phone || '').trim(),
       birth_date: (formData.birth_date || '').trim(),
+      relationship: resolvedRelationship,
+      pool_group: formData.pool_group || 'A',
+      is_pool: isPoolCustomerModal ? 1 : (formData.is_pool ? 1 : 0),
       referrer_id: formData.referrer_id ? Number(formData.referrer_id) : null,
       insurances: validInsurances,
-      status: formData.status || 'Active',
+      status: formData.status || (isPoolCustomerModal ? 'Lead' : 'Active'),
       notes: (formData.notes || '').trim(),
       report_pdf_path: formData.report_pdf_path || '',
       report_excel_path: formData.report_excel_path || ''
@@ -258,9 +284,11 @@ export default function CustomerModal() {
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between shrink-0">
           <div className="flex items-center space-x-2.5">
-            <UserPlus className="w-5 h-5 text-blue-400" />
+            <UserPlus className={`w-5 h-5 ${isPoolCustomerModal ? 'text-amber-400' : 'text-blue-400'}`} />
             <h3 className="font-semibold text-lg text-white">
-              {editingCustomer ? '고객 정보 수정' : '새 고객 등록'}
+              {editingCustomer 
+                ? (isPoolCustomerModal ? '📋 POOL LIST 고객 수정' : '고객 정보 수정')
+                : (isPoolCustomerModal ? '📋 POOL LIST 가망고객 등록' : '새 고객 등록')}
             </h3>
             {!isOwner && (
               <span className="text-xs px-2.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold flex items-center space-x-1">
@@ -279,11 +307,24 @@ export default function CustomerModal() {
 
         {/* Modal Form (Scrollable) */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+          {/* POOL LIST Guide Banner */}
+          {isPoolCustomerModal && !editingCustomer && (
+            <div className="p-3 bg-amber-950/40 border border-amber-800/60 rounded-xl text-xs text-amber-300 flex items-start space-x-2">
+              <span className="text-base leading-none">💡</span>
+              <div>
+                <strong className="font-bold">POOL LIST 자동 분류 안내:</strong>
+                <p className="text-[11px] text-amber-200/80 mt-0.5">
+                  등록 시 기본으로 <strong>[가망고객]</strong>으로 자동 분류되며, 추후 보장분석/증권 입력 시 <strong>[보유고객]</strong>으로 자동 승격됩니다.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Basic Info */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                고객 이름 <span className="text-red-400">*</span>
+                성명 (이름) <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
@@ -297,17 +338,78 @@ export default function CustomerModal() {
 
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                고객 상태
+                연락처 (전화번호)
               </label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              >
-                <option value="Lead">리드 (Lead)</option>
-                <option value="Active">활성 (Active)</option>
-                <option value="Inactive">비활성 (Inactive)</option>
-              </select>
+              <input
+                type="text"
+                placeholder="010-0000-0000"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-mono"
+              />
+            </div>
+          </div>
+
+          {/* Relationship & Pool Group Selection */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                관계 (Relationship)
+              </label>
+              <div className="space-y-1.5">
+                <select
+                  value={formData.relationship}
+                  onChange={(e) => setFormData({ ...formData, relationship: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 font-medium"
+                >
+                  <option value="지인">지인</option>
+                  <option value="가족">가족 / 친척</option>
+                  <option value="소개">소개 고객</option>
+                  <option value="개척">개척 (DB/온라인/필드)</option>
+                  <option value="직장동료">직장 동료 / 선후배</option>
+                  <option value="동호회">동호회 / 모임</option>
+                  <option value="기타">기타 (직접 입력)</option>
+                </select>
+
+                {formData.relationship === '기타' && (
+                  <input
+                    type="text"
+                    placeholder="관계 직접 입력 (예: 동창, 이웃)"
+                    value={customRelationship}
+                    onChange={(e) => setCustomRelationship(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  />
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                그룹 선택 (Group Tier)
+              </label>
+              <div className="grid grid-cols-4 gap-1.5">
+                {[
+                  { key: 'A', label: 'A그룹', desc: '최우선 집중', color: 'border-rose-500 text-rose-300 bg-rose-950/60' },
+                  { key: 'B', label: 'B그룹', desc: '정기 관리', color: 'border-amber-500 text-amber-300 bg-amber-950/60' },
+                  { key: 'C', label: 'C그룹', desc: '잠재 가능', color: 'border-emerald-500 text-emerald-300 bg-emerald-950/60' },
+                  { key: 'D', label: 'D그룹', desc: '일반 관찰', color: 'border-blue-500 text-blue-300 bg-blue-950/60' }
+                ].map(grp => (
+                  <button
+                    key={grp.key}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, pool_group: grp.key })}
+                    className={`py-2 px-1 rounded-xl text-center border font-bold text-xs transition-all ${
+                      formData.pool_group === grp.key
+                        ? `${grp.color} ring-2 ring-indigo-400 scale-[1.02] shadow-md`
+                        : 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                    }`}
+                    title={grp.desc}
+                  >
+                    <div>{grp.key}</div>
+                    <div className="text-[9px] font-normal opacity-80">{grp.desc}</div>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -327,28 +429,15 @@ export default function CustomerModal() {
 
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                전화번호
-              </label>
-              <input
-                type="text"
-                placeholder="010-0000-0000"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">
                 고객 상태 분류
               </label>
               <select
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 font-bold"
               >
-                <option value="Active">보유고객 (Active)</option>
                 <option value="Lead">가망고객 (Lead)</option>
+                <option value="Active">보유고객 (Active)</option>
                 <option value="Inactive">장기미터치고객 (Inactive)</option>
               </select>
             </div>

@@ -161,8 +161,14 @@ function registerScheduleHandlers(mainWindow, triggerDualBackup) {
 
     let customerName = null;
     if (scheduleData.customer_id) {
-      const cust = db.prepare('SELECT name FROM customers WHERE id = ?').get(scheduleData.customer_id);
-      if (cust) customerName = cust.name;
+      const cust = db.prepare('SELECT id, name, status FROM customers WHERE id = ?').get(scheduleData.customer_id);
+      if (cust) {
+        customerName = cust.name;
+        // Auto-Transition Rule 4: If customer had Inactive status (장기미터치), restore to 'Active' (보유고객) on new schedule
+        if (cust.status === 'Inactive') {
+          db.prepare('UPDATE customers SET status = "Active", updated_at = ? WHERE id = ?').run(now, cust.id);
+        }
+      }
     }
 
     const newSchedule = {

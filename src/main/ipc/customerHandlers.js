@@ -301,10 +301,24 @@ function registerCustomerHandlers(mainWindow, triggerDualBackup, broadcastSchedu
     const reportPdfPath = customerData.report_pdf_path ? copyReportToInternalStorage(customerData.report_pdf_path) : '';
     const reportExcelPath = customerData.report_excel_path ? copyReportToInternalStorage(customerData.report_excel_path) : '';
 
+    const isPool = customerData.is_pool ? 1 : 0;
+    const relationship = customerData.relationship || null;
+    const poolGroup = customerData.pool_group || (isPool ? 'A' : null);
+
+    // Auto-Transition Rule 1:
+    // If insurance contracts exist or report attached -> Active (보유고객)
+    // If POOL LIST registration -> Lead (가망고객)
+    // Otherwise fallback to customerData.status or 'Active'
+    let resolvedStatus = customerData.status || (isPool ? 'Lead' : 'Active');
+    const hasInsuranceData = (customerData.insurances && customerData.insurances.length > 0) || reportPdfPath || reportExcelPath;
+    if (hasInsuranceData) {
+      resolvedStatus = 'Active';
+    }
+
     const executeInsert = () => {
       const stmt = db.prepare(`
-        INSERT INTO customers (user_id, name, email, phone, birth_date, insurance_provider, insurance_details, insurances, referrer_id, status, notes, report_pdf_path, report_excel_path, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO customers (user_id, name, email, phone, birth_date, insurance_provider, insurance_details, insurances, referrer_id, status, notes, report_pdf_path, report_excel_path, relationship, pool_group, is_pool, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       return stmt.run(
@@ -317,10 +331,13 @@ function registerCustomerHandlers(mainWindow, triggerDualBackup, broadcastSchedu
         primaryDetails,
         insurancesJson,
         referrerId,
-        customerData.status || 'Active',
+        resolvedStatus,
         customerData.notes || '',
         reportPdfPath,
         reportExcelPath,
+        relationship,
+        poolGroup,
+        isPool,
         now,
         now
       );
@@ -359,6 +376,10 @@ function registerCustomerHandlers(mainWindow, triggerDualBackup, broadcastSchedu
       id: info.lastInsertRowid,
       user_id: ownerUserId,
       ...customerData,
+      status: resolvedStatus,
+      relationship,
+      pool_group: poolGroup,
+      is_pool: isPool,
       referrer_id: referrerId,
       referrer_name: referrerName,
       insurance_provider: primaryProvider,
@@ -394,10 +415,21 @@ function registerCustomerHandlers(mainWindow, triggerDualBackup, broadcastSchedu
     const reportPdfPath = customerData.report_pdf_path ? copyReportToInternalStorage(customerData.report_pdf_path) : (existing.report_pdf_path || '');
     const reportExcelPath = customerData.report_excel_path ? copyReportToInternalStorage(customerData.report_excel_path) : (existing.report_excel_path || '');
 
+    const isPool = customerData.is_pool !== undefined ? (customerData.is_pool ? 1 : 0) : (existing.is_pool || 0);
+    const relationship = customerData.relationship !== undefined ? customerData.relationship : existing.relationship;
+    const poolGroup = customerData.pool_group !== undefined ? customerData.pool_group : existing.pool_group;
+
+    // Auto-Transition Rule: If insurance / analysis report is entered, promote status to 'Active' (보유고객)
+    let resolvedStatus = customerData.status || existing.status || 'Active';
+    const hasInsuranceData = (customerData.insurances && customerData.insurances.length > 0) || reportPdfPath || reportExcelPath;
+    if (hasInsuranceData && resolvedStatus === 'Lead') {
+      resolvedStatus = 'Active'; // Automatically promote from Lead to Active
+    }
+
     const executeUpdate = () => {
       const stmt = db.prepare(`
         UPDATE customers 
-        SET user_id = ?, name = ?, email = ?, phone = ?, birth_date = ?, insurance_provider = ?, insurance_details = ?, insurances = ?, referrer_id = ?, status = ?, notes = ?, report_pdf_path = ?, report_excel_path = ?, updated_at = ?
+        SET user_id = ?, name = ?, email = ?, phone = ?, birth_date = ?, insurance_provider = ?, insurance_details = ?, insurances = ?, referrer_id = ?, status = ?, notes = ?, report_pdf_path = ?, report_excel_path = ?, relationship = ?, pool_group = ?, is_pool = ?, updated_at = ?
         WHERE id = ?
       `);
 
@@ -411,10 +443,13 @@ function registerCustomerHandlers(mainWindow, triggerDualBackup, broadcastSchedu
         primaryDetails || existing.insurance_details,
         insurancesJson,
         referrerId !== undefined ? referrerId : existing.referrer_id,
-        customerData.status || existing.status || 'Active',
+        resolvedStatus,
         customerData.notes !== undefined ? customerData.notes : existing.notes,
         reportPdfPath,
         reportExcelPath,
+        relationship,
+        poolGroup,
+        isPool,
         now,
         id
       );

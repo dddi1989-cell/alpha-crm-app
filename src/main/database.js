@@ -150,13 +150,19 @@ function initDatabase(dbPath = null) {
   });
 
   // Robust column migration for customers table
-  const customerColumns = ['user_id', 'insurance_provider', 'insurance_details', 'insurances', 'referrer_id', 'company', 'report_pdf_path', 'report_excel_path', 'birth_date'];
+  const customerColumns = [
+    'user_id', 'insurance_provider', 'insurance_details', 'insurances', 'referrer_id', 
+    'company', 'report_pdf_path', 'report_excel_path', 'birth_date',
+    'relationship', 'pool_group', 'is_pool'
+  ];
   customerColumns.forEach(col => {
     try {
       const tableInfo = dbInstance.prepare("PRAGMA table_info(customers)").all();
       const existingColumns = tableInfo.map(c => c.name);
       if (!existingColumns.includes(col)) {
-        const type = (col === 'referrer_id' || col === 'user_id') ? 'INTEGER DEFAULT 1' : 'TEXT';
+        let type = 'TEXT';
+        if (col === 'referrer_id' || col === 'user_id') type = 'INTEGER DEFAULT 1';
+        if (col === 'is_pool') type = 'INTEGER DEFAULT 0';
         dbInstance.exec(`ALTER TABLE customers ADD COLUMN ${col} ${type};`);
       }
     } catch (colErr) {}

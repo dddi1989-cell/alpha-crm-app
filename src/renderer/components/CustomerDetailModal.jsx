@@ -187,11 +187,24 @@ export default function CustomerDetailModal() {
               <div className="space-y-1.5 text-xs">
                 <div className="flex items-center justify-between py-1 border-b border-slate-800/60">
                   <span className="text-slate-500">전화번호</span>
-                  <span className="text-white font-medium">{customer.phone || '미등록'}</span>
+                  <span className="text-white font-medium font-mono">{customer.phone || '미등록'}</span>
                 </div>
                 <div className="flex items-center justify-between py-1 border-b border-slate-800/60">
                   <span className="text-slate-500">생년월일</span>
                   <span className="text-indigo-300 font-bold">{customer.birth_date ? `🎂 ${customer.birth_date}` : '미등록'}</span>
+                </div>
+                <div className="flex items-center justify-between py-1 border-b border-slate-800/60">
+                  <span className="text-slate-500">관계 / POOL 그룹</span>
+                  <div className="flex items-center space-x-1.5">
+                    <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-medium">
+                      {customer.relationship || '지인'}
+                    </span>
+                    {customer.pool_group && (
+                      <span className="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 font-bold text-[10px]">
+                        {customer.pool_group}그룹
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between py-1">
                   <span className="text-slate-500">소개자</span>

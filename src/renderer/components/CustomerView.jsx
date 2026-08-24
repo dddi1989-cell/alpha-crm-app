@@ -101,6 +101,7 @@ export default function CustomerView() {
   const customers = useCrmStore((state) => state.customers);
   const openCustomerModal = useCrmStore((state) => state.openCustomerModal);
   const openCustomerDetailModal = useCrmStore((state) => state.openCustomerDetailModal);
+  const openScheduleModal = useCrmStore((state) => state.openScheduleModal);
   const deleteCustomer = useCrmStore((state) => state.deleteCustomer);
 
   const currentUser = useCrmStore((state) => state.currentUser);
@@ -111,11 +112,12 @@ export default function CustomerView() {
   const organizations = useCrmStore((state) => state.organizations);
   const accessibleUsers = useCrmStore((state) => state.accessibleUsers);
 
+  const [activeSubTab, setActiveSubTab] = useState('directory');
   const [globalFilter, setGlobalFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [poolGroupFilter, setPoolGroupFilter] = useState('');
   const [sorting, setSorting] = useState([]);
 
-  // Client-side Strict Customer Filter Guard
   const visibleCustomers = useMemo(() => {
     if (!Array.isArray(customers)) return [];
 
@@ -127,18 +129,15 @@ export default function CustomerView() {
       });
     }
 
-    // Organization Scope
     if (!customerOrgFilter) {
-      return customers; // 전체 하위 조직 및 조직원 고객
+      return customers;
     }
 
-    // User-specific filter (e.g. 'user:3')
     if (customerOrgFilter.startsWith('user:')) {
       const targetUid = Number(customerOrgFilter.replace('user:', ''));
       return customers.filter((c) => Number(c.user_id) === targetUid);
     }
 
-    // Org-specific filter
     return customers.filter((c) => {
       if (c.org_id && String(c.org_id) === String(customerOrgFilter)) return true;
       if (c.user_org_name && String(c.user_org_name) === String(customerOrgFilter)) return true;
@@ -147,14 +146,50 @@ export default function CustomerView() {
   }, [customers, customerViewScope, customerOrgFilter, currentUser]);
 
   const filteredData = useMemo(() => {
-    if (!statusFilter) return visibleCustomers;
-    return visibleCustomers.filter(c => c.status === statusFilter);
-  }, [visibleCustomers, statusFilter]);
+    let list = visibleCustomers;
+
+    if (activeSubTab === 'pool') {
+      list = list.filter(c => c.is_pool === 1 || c.pool_group || c.relationship);
+      if (poolGroupFilter) {
+        list = list.filter(c => (c.pool_group || 'A') === poolGroupFilter);
+      }
+    }
+
+    if (statusFilter) {
+      list = list.filter(c => c.status === statusFilter);
+    }
+
+    return list;
+  }, [visibleCustomers, activeSubTab, poolGroupFilter, statusFilter]);
+
+  const poolStats = useMemo(() => {
+    const poolList = visibleCustomers.filter(c => c.is_pool === 1 || c.pool_group || c.relationship);
+    const total = poolList.length;
+    const groupA = poolList.filter(c => (c.pool_group || 'A') === 'A').length;
+    const groupB = poolList.filter(c => c.pool_group === 'B').length;
+    const groupC = poolList.filter(c => c.pool_group === 'C').length;
+    const groupD = poolList.filter(c => c.pool_group === 'D').length;
+    const leads = poolList.filter(c => c.status === 'Lead').length;
+    const actives = poolList.filter(c => c.status === 'Active').length;
+    const inactives = poolList.filter(c => c.status === 'Inactive').length;
+    const conversionRate = total > 0 ? Math.round((actives / total) * 100) : 0;
+
+    return { total, groupA, groupB, groupC, groupD, leads, actives, inactives, conversionRate };
+  }, [visibleCustomers]);
+
+  const getGroupBadge = (grp) => {
+    switch (grp) {
+      case 'A': return { label: 'A그룹 (최우선)', style: 'bg-rose-950/80 text-rose-300 border-rose-700/60' };
+      case 'B': return { label: 'B그룹 (정기관리)', style: 'bg-amber-950/80 text-amber-300 border-amber-700/60' };
+      case 'C': return { label: 'C그룹 (잠재가능)', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-700/60' };
+      case 'D': default: return { label: 'D그룹 (일반관찰)', style: 'bg-blue-950/80 text-blue-300 border-blue-700/60' };
+    }
+  };
 
   const columns = useMemo(
     () => [
       columnHelper.accessor('name', {
-        header: '고객명 & 소개자 & 담당자',
+        header: '고객명 & 담당자',
         cell: (info) => {
           const customer = info.row.original;
           const isMasked = customer.is_subordinate_masked === true;
@@ -162,296 +197,179 @@ export default function CustomerView() {
           const isOwner = customer.user_id == null ? myId === 1 : Number(customer.user_id) === myId;
 
           return (
-            <div
-              onClick={() => {
-                if (isMasked) return;
-                openCustomerDetailModal(customer);
-              }}
-              className={`flex items-center space-x-3 ${isMasked ? 'cursor-default' : 'cursor-pointer group'}`}
-              title={isMasked ? '하위 조직원의 고객 상세 정보는 보호됩니다. (장기 미터치 현황 조회 전용)' : '클릭하여 고객 상세정보 및 최근 3년 일정 조회'}
-            >
-              <div className="w-9 h-9 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center font-bold text-sm group-hover:scale-105 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+            <div className={`flex items-center space-x-3 ${isMasked ? 'cursor-default' : 'cursor-pointer group'}`} onClick={() => !isMasked && openCustomerDetailModal(customer)}>
+              <div className="w-9 h-9 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center font-bold text-sm">
                 {customer.name ? customer.name.charAt(0).toUpperCase() : 'C'}
               </div>
               <div className="space-y-0.5">
                 <div className="flex items-center space-x-1.5">
-                  <span className={`font-bold text-white ${!isMasked ? 'group-hover:text-indigo-400' : ''} transition-colors`}>
-                    {customer.name}
-                  </span>
-                  {isMasked ? (
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-950 text-amber-400 border border-amber-800 font-medium">
-                      미터치 조회전용
-                    </span>
-                  ) : !isOwner && (
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 border border-slate-700 font-medium">
-                      조회 전용
-                    </span>
-                  )}
+                  <span className="font-bold text-white">{customer.name}</span>
+                  {customer.is_pool === 1 && <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-800 font-bold">POOL</span>}
+                  {isMasked ? <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-950 text-amber-400 border border-amber-800 font-medium">미터치 조회전용</span> : !isOwner && <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 border border-slate-700 font-medium">조회 전용</span>}
                 </div>
-
-                {/* Subordinate Manager Badge */}
-                {customer.user_name && (
-                  <div className="flex items-center space-x-1 text-[11px] text-indigo-300 font-semibold bg-indigo-950/70 px-2 py-0.5 rounded-md border border-indigo-800/60 w-fit">
-                    <User className="w-3 h-3 text-indigo-400 shrink-0" />
-                    <span>담당: {customer.user_name} ({customer.user_role || 'FA'})</span>
-                    {customer.user_org_name && (
-                      <span className="text-slate-400 font-normal"> · {customer.user_org_name}</span>
-                    )}
-                  </div>
-                )}
-
-                {customer.referrer_name && !isMasked && (
-                  <div className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 text-[10px] font-medium">
-                    <UserCheck className="w-3 h-3 text-emerald-400" />
-                    <span>소개자: {customer.referrer_name}</span>
-                  </div>
-                )}
-                {customer.notes && !isMasked && (
-                  <span className="text-xs text-slate-400 line-clamp-1 max-w-xs block">{customer.notes}</span>
-                )}
-                {isMasked && customer.elapsed_days !== undefined && (
-                  <span className="text-xs text-amber-400 font-bold block">
-                    ⏳ 마지막 일정 이후 {customer.elapsed_days}일 경과
-                  </span>
-                )}
+                {customer.user_name && <div className="text-[11px] text-indigo-300">담당: {customer.user_name}</div>}
               </div>
             </div>
           );
         }
       }),
-      columnHelper.accessor('phone', {
-        header: '연락처 & 생년월일',
+      columnHelper.accessor('relationship', {
+        header: '관계 & 그룹',
         cell: (info) => {
           const customer = info.row.original;
-          if (customer.is_subordinate_masked) {
-            return <span className="text-xs text-slate-500 font-mono">보호됨 (비공개)</span>;
-          }
+          const grpBadge = getGroupBadge(customer.pool_group || 'A');
           return (
             <div className="space-y-1 text-xs">
-              {customer.phone && (
-                <div className="flex items-center space-x-1.5 text-slate-300">
-                  <Phone className="w-3.5 h-3.5 text-slate-500" />
-                  <span>{customer.phone}</span>
-                </div>
-              )}
-              {customer.birth_date && (
-                <div className="flex items-center space-x-1.5 text-indigo-300 font-medium">
-                  <span className="text-xs">🎂</span>
-                  <span>{customer.birth_date}</span>
-                </div>
-              )}
+              <span className="inline-block px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700 text-[11px]">{customer.relationship || '지인'}</span>
+              {customer.pool_group && <div><span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold border ${grpBadge.style}`}>{grpBadge.label}</span></div>}
             </div>
           );
         }
       }),
       columnHelper.accessor('insurances', {
-        header: '가입 보험 정보 (가입일 & 경과월수)',
+        header: '가입 보험 및 보장분석',
         cell: (info) => {
           const customer = info.row.original;
-          if (customer.is_subordinate_masked) {
-            return <span className="text-xs text-slate-500">—</span>;
-          }
+          if (customer.is_subordinate_masked) return <span className="text-xs text-slate-500">—</span>;
           const list = Array.isArray(customer.insurances) ? customer.insurances : [];
-          return <CustomerInsuranceCell list={list} customer={customer} />;
+          return (
+            <div className="space-y-1">
+              <CustomerInsuranceCell list={list} customer={customer} />
+              {(customer.report_pdf_path || customer.report_excel_path) && <div className="text-[10px] text-emerald-400 font-semibold">📄 리포트 첨부됨</div>}
+            </div>
+          );
         }
       }),
       columnHelper.accessor('status', {
-        header: '상태',
+        header: '고객 상태',
         cell: (info) => {
           const customer = info.row.original;
           const status = info.getValue();
-          if (customer.is_subordinate_masked) {
-            return (
-              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-950/70 text-amber-300 border border-amber-800/60">
-                <span className="w-1.5 h-1.5 rounded-full mr-1.5 bg-amber-400"></span>
-                장기미터치
-              </span>
-            );
-          }
+          if (customer.is_subordinate_masked) return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-950/70 text-amber-300">장기미터치</span>;
           const statusText = status === 'Active' ? '보유고객' : status === 'Lead' ? '가망고객' : '장기미터치고객';
           return (
-            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${
-              status === 'Active'
-                ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800/50'
-                : status === 'Lead'
-                ? 'bg-blue-950/60 text-blue-400 border-blue-800/50'
-                : 'bg-rose-950/70 text-rose-300 border-rose-800/60'
-            }`}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                status === 'Active' ? 'bg-emerald-400' : status === 'Lead' ? 'bg-blue-400' : 'bg-rose-400'
-              }`}></span>
-              {statusText}
-            </span>
+            <div className="space-y-1">
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${status === 'Active' ? 'bg-emerald-950/60 text-emerald-400' : 'bg-rose-950/70 text-rose-300'}`}>{statusText}</span>
+              {status === 'Active' && customer.is_pool === 1 && <div className="text-[10px] text-emerald-300">✨ 승격 완료</div>}
+            </div>
           );
         }
       }),
       columnHelper.display({
         id: 'actions',
-        header: () => <div className="text-right">작업</div>,
+        header: () => <div className="text-right">작업 & 일정</div>,
         cell: (info) => {
           const customer = info.row.original;
           const myId = currentUser ? Number(currentUser.id) : 1;
           const isOwner = customer.user_id == null ? myId === 1 : Number(customer.user_id) === myId;
           const isMasked = customer.is_subordinate_masked === true;
 
-          if (isMasked) {
-            return (
-              <div className="flex items-center justify-end">
-                <span className="text-[10px] text-amber-400 px-2 py-0.5 rounded bg-amber-950/60 border border-amber-800/50">
-                  미터치 현황
-                </span>
-              </div>
-            );
-          }
+          const handleQuickSchedule = (e) => {
+            e.stopPropagation();
+            openScheduleModal(null, { customer_id: customer.id, title: `${customer.name} 고객 미팅/상담`, scheduled_at: new Date().toISOString().slice(0, 16) });
+          };
 
           return (
-            <div className="flex items-center justify-end space-x-2">
-              <button
-                onClick={() => openCustomerDetailModal(customer)}
-                className="p-2 rounded-lg text-slate-400 hover:text-indigo-400 hover:bg-slate-800 transition-colors"
-                title="상세 정보 및 최근 3년 일정 조회"
-              >
-                <Eye className="w-4 h-4" />
-              </button>
-              {isOwner ? (
+            <div className="flex items-center justify-end space-x-1.5">
+              {!isMasked && <button onClick={handleQuickSchedule} className="px-2 py-1 bg-indigo-950 text-indigo-300 border border-indigo-700 rounded-lg text-xs font-semibold">일정</button>}
+              <button onClick={(e) => { e.stopPropagation(); openCustomerDetailModal(customer); }} className="p-1.5 text-slate-400 hover:text-white"><Eye className="w-4 h-4" /></button>
+              {isOwner && (
                 <>
-                  <button
-                    onClick={() => openCustomerModal(customer)}
-                    className="p-2 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-slate-800 transition-colors"
-                    title="고객 수정"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => deleteCustomer(customer.id)}
-                    className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors"
-                    title="고객 삭제"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); openCustomerModal(customer, customer.is_pool === 1); }} className="p-1.5 text-slate-400"><Edit2 className="w-4 h-4" /></button>
+                  <button onClick={(e) => { e.stopPropagation(); deleteCustomer(customer.id); }} className="p-1.5 text-slate-400"><Trash2 className="w-4 h-4" /></button>
                 </>
-              ) : (
-                <span className="text-[10px] text-slate-500 px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800" title="해당 고객의 담당자만 수정할 수 있습니다.">
-                  조회 전용
-                </span>
               )}
             </div>
           );
         }
       })
     ],
-    [openCustomerModal, openCustomerDetailModal, deleteCustomer, currentUser]
+    [currentUser, openCustomerDetailModal, openCustomerModal, openScheduleModal, deleteCustomer]
   );
 
   const table = useReactTable({
     data: filteredData,
     columns,
-    state: {
-      globalFilter,
-      sorting
-    },
+    state: { globalFilter, sorting },
     onGlobalFilterChange: setGlobalFilter,
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 8
-      }
-    }
+    initialState: { pagination: { pageSize: 10 } }
   });
 
   return (
     <div className="p-8 space-y-6 animate-fadeIn">
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="font-['Outfit',sans-serif] text-2xl font-bold text-white tracking-tight">
-            고객 디렉토리
-          </h2>
-          <p className="text-slate-400 text-sm mt-1">
-            소개자 연동, 가입보험별 가입일자 및 경과월수(X개월차) 계산 & 고객별 최근 3년 이내 일정 실시간 조회.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Customer Scope Switcher: Personal vs Organization */}
-          <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
-            <button
-              onClick={() => setCustomerViewScope('personal')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
-                customerViewScope === 'personal'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              👤 내 고객만 보기
-            </button>
-            <button
-              onClick={() => setCustomerViewScope('organization')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
-                customerViewScope === 'organization'
-                  ? 'bg-emerald-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              🏢 조직 고객 전체 및 하위조직
-            </button>
-          </div>
-
-          {/* Sub-Organization / User Selector (Only in organization scope) */}
-          {customerViewScope === 'organization' && (
-            <div className="flex items-center space-x-2 bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
-              <span className="text-slate-400 font-bold px-1.5">조회 대상:</span>
-              <select
-                value={customerOrgFilter}
-                onChange={(e) => setCustomerOrgFilter(e.target.value)}
-                className="bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1 text-xs font-semibold text-emerald-300 focus:outline-none focus:border-emerald-500 max-w-[220px] truncate"
-              >
-                <option value="">🏢 전체 하위조직 고객 통합</option>
-                <optgroup label="── 하부 조직별 선택 ──">
-                  {organizations.map((org) => (
-                    <option key={org.id} value={org.name}>
-                      [{org.type || '팀'}] {org.name} ({org.member_count || 0}명)
-                    </option>
-                  ))}
-                </optgroup>
-                {accessibleUsers.length > 0 && (
-                  <optgroup label="── 특정 조직원별 선택 ──">
-                    {accessibleUsers.map((u) => (
-                      <option key={u.id} value={`user:${u.id}`}>
-                        👤 {u.name} ({u.role}) · {u.org_name || '소속없음'}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
+          <div className="flex items-center space-x-3">
+            <h2 className="text-2xl font-bold text-white tracking-tight">{activeSubTab === 'pool' ? '📋 POOL LIST' : '👥 고객 디렉토리'}</h2>
+            <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
+              <button onClick={() => { setActiveSubTab('directory'); setPoolGroupFilter(''); }} className={`px-3 py-1 rounded-lg font-bold ${activeSubTab === 'directory' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}>전체 고객 디렉토리</button>
+              <button onClick={() => setActiveSubTab('pool')} className={`px-3 py-1 rounded-lg font-bold ${activeSubTab === 'pool' ? 'bg-amber-600 text-white' : 'text-slate-400'}`}>📋 POOL LIST ({poolStats.total})</button>
             </div>
+          </div>
+        </div>
+        <div className="flex gap-3">
+          {activeSubTab === 'pool' ? (
+            <button onClick={() => openCustomerModal(null, true)} className="bg-amber-600 px-4 py-2.5 rounded-xl text-white font-bold text-sm">+ POOL 고객 등록</button>
+          ) : (
+            <button onClick={() => openCustomerModal(null, false)} className="bg-blue-600 px-4 py-2.5 rounded-xl text-white font-medium text-sm">새 고객 추가</button>
           )}
-
-          <button
-            onClick={() => openCustomerModal()}
-            className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2.5 rounded-xl shadow-lg shadow-blue-600/25 flex items-center space-x-2 transition-all hover:scale-[1.02]"
-          >
-            <Plus className="w-4 h-4" />
-            <span>새 고객 추가</span>
-          </button>
         </div>
       </div>
 
+      {activeSubTab === 'pool' && (
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+          <div className="glass-panel p-3.5 rounded-2xl border border-slate-800 bg-slate-900/60"><span className="text-[11px] text-slate-400 font-bold">전체 POOL</span><div className="text-xl font-extrabold text-white">{poolStats.total}명</div></div>
+          <div className="glass-panel p-3.5 rounded-2xl border border-rose-900/40 bg-rose-950/20"><span className="text-[11px] text-rose-400 font-bold">A그룹</span><div className="text-xl font-extrabold text-rose-300">{poolStats.groupA}명</div></div>
+          <div className="glass-panel p-3.5 rounded-2xl border border-amber-900/40 bg-amber-950/20"><span className="text-[11px] text-amber-400 font-bold">B그룹</span><div className="text-xl font-extrabold text-amber-300">{poolStats.groupB}명</div></div>
+          <div className="glass-panel p-3.5 rounded-2xl border border-emerald-900/40 bg-emerald-950/20"><span className="text-[11px] text-emerald-400 font-bold">C그룹</span><div className="text-xl font-extrabold text-emerald-300">{poolStats.groupC}명</div></div>
+          <div className="glass-panel p-3.5 rounded-2xl border border-blue-900/40 bg-blue-950/20"><span className="text-[11px] text-blue-400 font-bold">D그룹</span><div className="text-xl font-extrabold text-blue-300">{poolStats.groupD}명</div></div>
+          <div className="glass-panel p-3.5 rounded-2xl border border-indigo-900/40 bg-indigo-950/20"><span className="text-[11px] text-indigo-400 font-bold">승격</span><div className="text-xl font-extrabold text-indigo-300">{poolStats.actives}명</div></div>
+        </div>
+      )}
+
       {/* Filter & Search Bar */}
       <div className="glass-panel p-4 rounded-2xl border border-slate-800 flex flex-col sm:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
-          <input
-            type="text"
-            placeholder="이름, 이메일, 전화번호, 소개자, 보험사 검색..."
-            value={globalFilter ?? ''}
-            onChange={(e) => setGlobalFilter(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-          />
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto flex-1">
+          <div className="relative w-full sm:w-72">
+            <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+            <input
+              type="text"
+              placeholder="이름, 연락처, 관계, 소개자, 보험사 검색..."
+              value={globalFilter ?? ''}
+              onChange={(e) => setGlobalFilter(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+            />
+          </div>
+
+          {/* Group Filter for POOL TAB */}
+          {activeSubTab === 'pool' && (
+            <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
+              {[
+                { key: '', label: '전체 그룹' },
+                { key: 'A', label: 'A그룹' },
+                { key: 'B', label: 'B그룹' },
+                { key: 'C', label: 'C그룹' },
+                { key: 'D', label: 'D그룹' }
+              ].map((grp) => (
+                <button
+                  key={grp.key}
+                  onClick={() => setPoolGroupFilter(grp.key)}
+                  className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                    poolGroupFilter === grp.key
+                      ? 'bg-amber-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {grp.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center space-x-3 w-full sm:w-auto">
@@ -459,11 +377,11 @@ export default function CustomerView() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+            className="bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-blue-500 font-medium"
           >
-            <option value="">전체 상태</option>
-            <option value="Active">보유고객</option>
-            <option value="Lead">가망고객</option>
+            <option value="">전체 상태 분류</option>
+            <option value="Lead">가망고객 (Lead)</option>
+            <option value="Active">보유고객 (Active)</option>
             <option value="Inactive">장기미터치고객 (6개월 미터치)</option>
           </select>
         </div>
@@ -474,15 +392,24 @@ export default function CustomerView() {
         {table.getRowModel().rows.length === 0 ? (
           <div className="p-16 text-center space-y-3">
             <Users className="w-12 h-12 mx-auto text-slate-600 stroke-[1.5]" />
-            <h4 className="text-base font-semibold text-slate-300">등록된 고객 기록이 없습니다</h4>
+            <h4 className="text-base font-semibold text-slate-300">
+              {activeSubTab === 'pool' ? '등록된 POOL LIST 고객이 없습니다' : '등록된 고객 기록이 없습니다'}
+            </h4>
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              {customers.length === 0
-                ? '로컬 CRM 데이터베이스가 완전히 비어 있습니다. "+ 새 고객 추가" 버튼을 눌러 첫 고객을 등록해 보세요.'
-                : '현재 검색 조건에 일치하는 고객 기록이 없습니다.'}
+              {activeSubTab === 'pool'
+                ? '가망고객을 등록하여 인맥 및 타겟 그룹별로 체계적으로 관리해 보세요.'
+                : '로컬 CRM 데이터베이스가 비어 있거나 검색 조건에 일치하는 고객이 없습니다.'}
             </p>
-            {customers.length === 0 && (
+            {activeSubTab === 'pool' ? (
               <button
-                onClick={() => openCustomerModal()}
+                onClick={() => openCustomerModal(null, true)}
+                className="mt-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-md"
+              >
+                + 첫 POOL 고객 등록하기
+              </button>
+            ) : (
+              <button
+                onClick={() => openCustomerModal(null, false)}
                 className="mt-2 bg-blue-600/80 hover:bg-blue-600 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all"
               >
                 + 첫 고객 추가하기
@@ -528,45 +455,49 @@ export default function CustomerView() {
             </div>
 
             {/* Pagination Controls */}
-            <div className="p-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+            <div className="p-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400 bg-slate-900/40">
               <div className="flex items-center space-x-2">
-                <span>페이지당</span>
+                <span>페이지당 표시:</span>
                 <select
                   value={table.getState().pagination.pageSize}
                   onChange={(e) => table.setPageSize(Number(e.target.value))}
-                  className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-white focus:outline-none"
+                  className="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 text-white focus:outline-none"
                 >
-                  {[8, 15, 25, 50].map((pageSize) => (
+                  {[10, 20, 30, 50].map((pageSize) => (
                     <option key={pageSize} value={pageSize}>
-                      {pageSize}
+                      {pageSize}개씩 보기
                     </option>
                   ))}
                 </select>
-                <span>개 보기</span>
+                <span className="text-slate-500 ml-2">
+                  총 <strong className="text-slate-200">{filteredData.length}</strong>명 중{' '}
+                  {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} -{' '}
+                  {Math.min(
+                    (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
+                    filteredData.length
+                  )}
+                  명
+                </span>
               </div>
 
-              <div className="flex items-center space-x-4">
-                <span>
-                  페이지 <strong className="text-white">{table.getState().pagination.pageIndex + 1}</strong> /{' '}
-                  <strong className="text-white">{table.getPageCount()}</strong>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                  className="p-1.5 rounded-lg border border-slate-800 hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="font-semibold text-slate-300">
+                  {table.getState().pagination.pageIndex + 1} / {table.getPageCount() || 1}
                 </span>
-
-                <div className="flex items-center space-x-1">
-                  <button
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
-                    className="p-1.5 rounded-lg border border-slate-800 hover:bg-slate-800 text-slate-300 disabled:opacity-30 disabled:hover:bg-transparent"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                    className="p-1.5 rounded-lg border border-slate-800 hover:bg-slate-800 text-slate-300 disabled:opacity-30 disabled:hover:bg-transparent"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
+                <button
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                  className="p-1.5 rounded-lg border border-slate-800 hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
             </div>
           </>

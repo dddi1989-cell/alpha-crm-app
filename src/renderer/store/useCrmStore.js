@@ -93,6 +93,7 @@ export const useCrmStore = create((set, get) => ({
   // Modals state
   isCustomerModalOpen: false,
   editingCustomer: null,
+  isPoolCustomerModal: false,
 
   isCustomerDetailModalOpen: false,
   detailCustomer: null,
@@ -136,8 +137,12 @@ export const useCrmStore = create((set, get) => ({
   clearDueScheduleAlerts: () => set({ dueScheduleAlerts: [] }),
 
   // Modal Actions
-  openCustomerModal: (customer = null) => set({ isCustomerModalOpen: true, editingCustomer: customer }),
-  closeCustomerModal: () => set({ isCustomerModalOpen: false, editingCustomer: null }),
+  openCustomerModal: (customer = null, isPool = false) => set({ 
+    isCustomerModalOpen: true, 
+    editingCustomer: customer,
+    isPoolCustomerModal: Boolean(isPool || (customer && (customer.is_pool === 1 || customer.is_pool === true)))
+  }),
+  closeCustomerModal: () => set({ isCustomerModalOpen: false, editingCustomer: null, isPoolCustomerModal: false }),
 
   openCustomerDetailModal: (customer) => set({ isCustomerDetailModalOpen: true, detailCustomer: customer }),
   closeCustomerDetailModal: () => set({ isCustomerDetailModalOpen: false, detailCustomer: null }),
