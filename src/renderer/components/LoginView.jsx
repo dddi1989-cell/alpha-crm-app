@@ -173,7 +173,7 @@ export default function LoginView() {
       <div className="w-full max-w-md glass-panel p-8 rounded-3xl border border-slate-800/80 shadow-2xl shadow-indigo-950/40 relative z-10 space-y-6">
         {/* Header Logo */}
         <div className="text-center space-y-3">
-          <div className="w-16 h-16 bg-black rounded-2xl p-2 mx-auto shadow-xl shadow-black/80 flex items-center justify-center border border-slate-700/80">
+          <div className="w-28 h-20 bg-black rounded-2xl p-1.5 mx-auto shadow-2xl shadow-black/90 flex items-center justify-center border border-slate-700/80">
             <img 
               src={logoIcon} 
               alt="WBL Logo" 
