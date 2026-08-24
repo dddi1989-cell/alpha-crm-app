@@ -111,16 +111,19 @@ function registerOrgHandlers(mainWindow, triggerDualBackup) {
                 }
               }
 
-              const filtered = enrichedOrgs.filter(o => allowedOrgIds.has(o.id));
+              const filtered = enrichedOrgs.map(o => ({
+                ...o,
+                canEdit: allowedOrgIds.has(o.id)
+              }));
               return { success: true, organizations: filtered };
             } else {
-              return { success: true, organizations: [] };
+              return { success: true, organizations: enrichedOrgs.map(o => ({ ...o, canEdit: false })) };
             }
           }
         }
       }
 
-      return { success: true, organizations: enrichedOrgs };
+      return { success: true, organizations: enrichedOrgs.map(o => ({ ...o, canEdit: true })) };
     } catch (err) {
       console.error('get-all-organizations error:', err);
       return { success: false, error: err.message, organizations: [] };
@@ -130,11 +133,12 @@ function registerOrgHandlers(mainWindow, triggerDualBackup) {
   ipcMain.handle('org:create-organization', async (event, { name, type = 'Team', parent_id = null, currentUserId = null }) => {
     const db = getDb();
     
-    // Check Admin permission
+    // Check permission: Admin or Manager creating sub-org
     if (currentUserId) {
       const actor = db.prepare('SELECT role, username FROM users WHERE id = ?').get(currentUserId);
-      if (!actor || (actor.role !== 'Admin' && actor.role !== 'admin' && actor.username !== 'admin')) {
-        return { success: false, error: '조직 생성 권한이 없습니다. (최고 관리자 전용)' };
+      const isTopAdmin = actor && (actor.role === 'Admin' || actor.role === 'admin' || actor.username === 'admin' || getRoleRank(actor.role) >= 3);
+      if (!isTopAdmin) {
+        return { success: false, error: '조직 생성 권한이 없습니다. (관리자 이상 전용)' };
       }
     }
 
@@ -164,11 +168,12 @@ function registerOrgHandlers(mainWindow, triggerDualBackup) {
   ipcMain.handle('org:update-organization', async (event, { id, name, type, parent_id, currentUserId = null }) => {
     const db = getDb();
     
-    // Check Admin permission
+    // Check permission
     if (currentUserId) {
       const actor = db.prepare('SELECT role, username FROM users WHERE id = ?').get(currentUserId);
-      if (!actor || (actor.role !== 'Admin' && actor.role !== 'admin' && actor.username !== 'admin')) {
-        return { success: false, error: '조직 정보 수정 권한이 없습니다. (최고 관리자 전용)' };
+      const isTopAdmin = actor && (actor.role === 'Admin' || actor.role === 'admin' || actor.username === 'admin' || getRoleRank(actor.role) >= 3);
+      if (!isTopAdmin) {
+        return { success: false, error: '조직 정보 수정 권한이 없습니다.' };
       }
     }
 
@@ -335,24 +340,60 @@ function registerOrgHandlers(mainWindow, triggerDualBackup) {
     }
   });
 
-  ipcMain.handle('org:get-organization-aggregate-data', async (event, { orgId, orgName }) => {
+  ipcMain.handle('org:get-organization-aggregate-data', async (event, { orgId, orgName, currentUserId = null }) => {
     const db = getDb();
     try {
-      let orgUsers = [];
+      const allOrgs = db.prepare('SELECT id, name, type, parent_id FROM organizations').all();
+      const orgMap = new Map();
+      allOrgs.forEach(o => orgMap.set(o.id, o));
+
+      // 1. Collect target org and ALL its recursive sub-organizations (children, grandchildren, etc.)
+      const subOrgIds = new Set();
+      const subOrgNames = new Set();
+
+      let targetOrg = null;
       if (orgId) {
-        orgUsers = db.prepare(`
-          SELECT u.id, u.username, u.name, u.phone, u.role, u.parent_id, u.org_id, u.org_name, u.created_at, p.name as parent_name
-          FROM users u
-          LEFT JOIN users p ON u.parent_id = p.id
-          WHERE u.org_id = ?
-        `).all(orgId);
+        targetOrg = orgMap.get(Number(orgId));
+      }
+      if (!targetOrg && orgName) {
+        targetOrg = allOrgs.find(o => o.name === orgName);
+      }
+
+      if (targetOrg) {
+        subOrgIds.add(targetOrg.id);
+        subOrgNames.add(targetOrg.name);
+
+        let added = true;
+        let guard = 0;
+        while (added && guard < 50) {
+          added = false;
+          guard++;
+          for (const o of allOrgs) {
+            if (o.parent_id && subOrgIds.has(Number(o.parent_id)) && !subOrgIds.has(Number(o.id))) {
+              subOrgIds.add(Number(o.id));
+              subOrgNames.add(o.name);
+              added = true;
+            }
+          }
+        }
+      }
+
+      // 2. Query all users and filter by subOrgIds
+      const allUsers = db.prepare(`
+        SELECT u.id, u.username, u.name, u.phone, u.role, u.parent_id, u.org_id, u.org_name, u.created_at, p.name as parent_name
+        FROM users u
+        LEFT JOIN users p ON u.parent_id = p.id
+      `).all();
+
+      let orgUsers = [];
+      if (subOrgIds.size > 0) {
+        orgUsers = allUsers.filter(u => {
+          if (u.org_id && subOrgIds.has(Number(u.org_id))) return true;
+          if (u.org_name && subOrgNames.has(u.org_name)) return true;
+          return false;
+        });
       } else if (orgName) {
-        orgUsers = db.prepare(`
-          SELECT u.id, u.username, u.name, u.phone, u.role, u.parent_id, u.org_id, u.org_name, u.created_at, p.name as parent_name
-          FROM users u
-          LEFT JOIN users p ON u.parent_id = p.id
-          WHERE u.org_name = ?
-        `).all(orgName);
+        orgUsers = allUsers.filter(u => u.org_name === orgName);
       }
 
       const userIds = orgUsers.map(u => u.id);

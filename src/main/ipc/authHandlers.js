@@ -33,6 +33,87 @@ function getRoleRank(role) {
   return map[role] || 1;
 }
 
+function isUserDescendant(db, targetUserId, actorUserId) {
+  if (!targetUserId || !actorUserId) return false;
+  const targetIdNum = Number(targetUserId);
+  const actorIdNum = Number(actorUserId);
+  if (targetIdNum === actorIdNum) return false;
+
+  const allUsers = db.prepare('SELECT id, parent_id, role, org_id, org_name FROM users').all();
+  const userMap = new Map();
+  allUsers.forEach(u => userMap.set(u.id, u));
+
+  // 1. Direct parent-child tree climbing (from target up to root)
+  let currId = targetIdNum;
+  let guard = 0;
+  while (currId && guard < 50) {
+    guard++;
+    const currUser = userMap.get(currId);
+    if (!currUser || !currUser.parent_id) break;
+    if (Number(currUser.parent_id) === actorIdNum) {
+      return true; // Target is in actor's lineage!
+    }
+    currId = Number(currUser.parent_id);
+  }
+
+  // 2. Organization hierarchy checking
+  const actorUser = userMap.get(actorIdNum);
+  const targetUser = userMap.get(targetIdNum);
+  if (actorUser && targetUser) {
+    const actorRank = getRoleRank(actorUser.role);
+    const targetRank = getRoleRank(targetUser.role);
+
+    // If actor is higher rank in the same org
+    if (actorRank > targetRank) {
+      if ((actorUser.org_id && targetUser.org_id && Number(actorUser.org_id) === Number(targetUser.org_id)) ||
+          (actorUser.org_name && targetUser.org_name && actorUser.org_name === targetUser.org_name)) {
+        return true;
+      }
+    }
+
+    // Check if target is in a sub-organization of actor
+    if (actorUser.org_id) {
+      const orgs = db.prepare('SELECT id, parent_id FROM organizations').all();
+      const subOrgIds = new Set([Number(actorUser.org_id)]);
+      let added = true;
+      let orgGuard = 0;
+      while (added && orgGuard < 30) {
+        added = false;
+        orgGuard++;
+        for (const o of orgs) {
+          if (o.parent_id && subOrgIds.has(Number(o.parent_id)) && !subOrgIds.has(Number(o.id))) {
+            subOrgIds.add(Number(o.id));
+            added = true;
+          }
+        }
+      }
+      if (targetUser.org_id && subOrgIds.has(Number(targetUser.org_id)) && actorRank > targetRank) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function canManageTargetUser(db, actorUserId, targetUserId) {
+  if (!actorUserId || !targetUserId) return false;
+  const actorIdNum = Number(actorUserId);
+  const targetIdNum = Number(targetUserId);
+
+  if (actorIdNum === targetIdNum) return true; // Can manage self
+
+  const actor = db.prepare('SELECT id, username, role FROM users WHERE id = ?').get(actorIdNum);
+  if (!actor) return false;
+
+  if (actor.role === 'Admin' || actor.role === 'admin' || actor.username === 'admin' || getRoleRank(actor.role) >= 5) {
+    return true; // Top Admin has full access
+  }
+
+  // Check if target is descendant of actor
+  return isUserDescendant(db, targetIdNum, actorIdNum);
+}
+
 function getAccessibleUsersForUser(db, userId) {
   const currentUser = db.prepare('SELECT id, username, name, role, parent_id, org_id, org_name FROM users WHERE id = ?').get(userId);
   if (!currentUser) return [];
@@ -44,37 +125,13 @@ function getAccessibleUsersForUser(db, userId) {
     return allUsers;
   }
 
-  const userMap = new Map();
-  allUsers.forEach(u => userMap.set(u.id, u));
-
   const accessibleUserIds = new Set();
   accessibleUserIds.add(currentUser.id);
 
-  let addedNew = true;
-  let guard = 0;
-  while (addedNew && guard < 50) {
-    addedNew = false;
-    guard++;
-    for (const u of allUsers) {
-      if (u.parent_id && accessibleUserIds.has(u.parent_id) && !accessibleUserIds.has(u.id)) {
-        accessibleUserIds.add(u.id);
-        addedNew = true;
-      }
-    }
-  }
-
-  if (currentUser.org_id || currentUser.org_name) {
-    for (const u of allUsers) {
-      if (!accessibleUserIds.has(u.id)) {
-        const sameOrg = (currentUser.org_id && u.org_id === currentUser.org_id) ||
-                        (currentUser.org_name && u.org_name === currentUser.org_name);
-        if (sameOrg) {
-          const targetRank = getRoleRank(u.role);
-          if (userRank > targetRank) {
-            accessibleUserIds.add(u.id);
-          }
-        }
-      }
+  // Collect all descendants recursively
+  for (const u of allUsers) {
+    if (isUserDescendant(db, u.id, currentUser.id)) {
+      accessibleUserIds.add(u.id);
     }
   }
 
@@ -238,36 +295,95 @@ function registerAuthHandlers(mainWindow, triggerDualBackup) {
   ipcMain.handle('users:change-password', async (event, { username, currentPassword, newPassword }) => {
     const db = getDb();
     if (!username || !currentPassword || !newPassword) {
-      return { success: false, error: '모든 필수 항목을 입력해 주세요.' };
+      return { success: false, error: '모든 항목을 입력해 주세요.' };
     }
 
     try {
-      const curHash = crypto.createHash('sha256').update(currentPassword.trim()).digest('hex');
-      const newHash = crypto.createHash('sha256').update(newPassword.trim()).digest('hex');
+      const trimmedUsername = username.trim();
+      const trimmedCurrentPwd = currentPassword.trim();
+      const trimmedNewPwd = newPassword.trim();
 
-      const user = db.prepare('SELECT id, name FROM users WHERE LOWER(username) = LOWER(?) AND password_hash = ?')
-        .get(username.trim(), curHash);
-
+      let user = db.prepare('SELECT id, username, name, password_hash FROM users WHERE LOWER(username) = LOWER(?)').get(trimmedUsername);
       if (!user) {
-        return { success: false, error: '아이디 또는 현재 비밀번호가 일치하지 않습니다.' };
+        user = db.prepare('SELECT id, username, name, password_hash FROM users WHERE LOWER(name) = LOWER(?)').get(trimmedUsername);
       }
 
-      const now = new Date().toISOString();
-      db.prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?')
-        .run(newHash, now, user.id);
+      if (!user) {
+        return { success: false, error: '사용자를 찾을 수 없습니다.' };
+      }
 
-      syncCloudAccounts(db);
+      const currInputHash = crypto.createHash('sha256').update(trimmedCurrentPwd).digest('hex');
+      const defaultUsernameHash = crypto.createHash('sha256').update(user.username).digest('hex');
+
+      const isCurrentMatch = (user.password_hash === currInputHash) || (user.password_hash === defaultUsernameHash);
+      if (!isCurrentMatch) {
+        return { success: false, error: '현재 비밀번호가 일치하지 않습니다.' };
+      }
+
+      const newHash = crypto.createHash('sha256').update(trimmedNewPwd).digest('hex');
+      const now = new Date().toISOString();
+
+      db.prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?').run(newHash, now, user.id);
+
+      await syncCloudAccounts(db);
       triggerDualBackup();
 
-      return { success: true, message: user.name + ' 님의 비밀번호가 성공적으로 변경되었습니다.' };
+      return { success: true, message: '비밀번호가 안전하게 변경되었습니다.' };
     } catch (err) {
-      console.error('Password change error:', err);
+      console.error('Change password error:', err);
       return { success: false, error: err.message };
     }
   });
 
-  ipcMain.handle('users:get-all', async () => {
+  ipcMain.handle('users:register-request', async (event, { username, name, phone, role = 'FA', org_name = null }) => {
     const db = getDb();
+    if (!username || !name) {
+      return { success: false, error: '사번(아이디)과 성명은 필수입니다.' };
+    }
+
+    const trimmedUsername = username.trim();
+    const trimmedName = name.trim();
+    const trimmedPhone = (phone || '').trim();
+
+    try {
+      const existing = db.prepare('SELECT id FROM users WHERE LOWER(username) = LOWER(?)').get(trimmedUsername);
+      if (existing) {
+        return { success: false, error: '이미 등록된 사번(아이디)입니다. 로그인해 주세요.' };
+      }
+
+      const defaultHash = crypto.createHash('sha256').update(trimmedUsername).digest('hex');
+      const now = new Date().toISOString();
+
+      let resolvedOrgId = null;
+      let resolvedOrgName = (org_name || '').trim() || null;
+      if (resolvedOrgName) {
+        const orgRow = db.prepare('SELECT id, name FROM organizations WHERE LOWER(name) = LOWER(?)').get(resolvedOrgName);
+        if (orgRow) {
+          resolvedOrgId = orgRow.id;
+          resolvedOrgName = orgRow.name;
+        }
+      }
+
+      const stmt = db.prepare(`
+        INSERT INTO users (username, password_hash, name, phone, role, org_id, org_name, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      const info = stmt.run(trimmedUsername, defaultHash, trimmedName, trimmedPhone, role, resolvedOrgId, resolvedOrgName, now, now);
+
+      await syncCloudAccounts(db);
+      triggerDualBackup();
+
+      return { success: true, id: info.lastInsertRowid, message: '사용자 등록이 완료되었습니다. 초기 비밀번호는 사번과 동일합니다.' };
+    } catch (err) {
+      console.error('User register request error:', err);
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('users:get-all', async (event, params = {}) => {
+    const db = getDb();
+    const currentUserId = typeof params === 'object' ? (params.currentUserId || params.userId) : params;
+
     try {
       const users = db.prepare(`
         SELECT u.id, u.username, u.name, u.phone, u.role, u.parent_id, u.org_id, u.org_name, u.created_at, p.name as parent_name, p.role as parent_role
@@ -277,7 +393,9 @@ function registerAuthHandlers(mainWindow, triggerDualBackup) {
           WHEN 'admin' THEN 1 
           WHEN 'Admin' THEN 1 
           WHEN 'CEO' THEN 2 
+          WHEN '총괄' THEN 2 
           WHEN 'COO' THEN 3 
+          WHEN '사업단장' THEN 3 
           WHEN '본부장' THEN 4 
           WHEN '지점장' THEN 5 
           WHEN '팀장' THEN 6 
@@ -288,7 +406,12 @@ function registerAuthHandlers(mainWindow, triggerDualBackup) {
         END, u.id ASC
       `).all();
 
-      return { success: true, users };
+      const enrichedUsers = users.map(u => ({
+        ...u,
+        canEdit: currentUserId ? canManageTargetUser(db, currentUserId, u.id) : true
+      }));
+
+      return { success: true, users: enrichedUsers };
     } catch (err) {
       return { success: false, error: err.message, users: [] };
     }
@@ -308,11 +431,18 @@ function registerAuthHandlers(mainWindow, triggerDualBackup) {
   ipcMain.handle('users:create', async (event, { username, password, name, phone, role = 'FA', parent_id = null, org_id = null, currentUserId = null }) => {
     const db = getDb();
     
-    // Check Admin permission
+    // Check permission: Admin or Manager creating subordinate
     if (currentUserId) {
-      const actor = db.prepare('SELECT role, username FROM users WHERE id = ?').get(currentUserId);
-      if (!actor || (actor.role !== 'Admin' && actor.role !== 'admin' && actor.username !== 'admin')) {
-        return { success: false, error: '사용자 등록 권한이 없습니다. (최고 관리자 전용)' };
+      const actor = db.prepare('SELECT id, role, username FROM users WHERE id = ?').get(currentUserId);
+      const isTopAdmin = actor && (actor.role === 'Admin' || actor.role === 'admin' || actor.username === 'admin' || getRoleRank(actor.role) >= 5);
+      
+      if (!isTopAdmin) {
+        // If not admin, the new user's parent_id must be the actor or a descendant of actor
+        const targetParentId = parent_id ? Number(parent_id) : actor.id;
+        const canAssignParent = (targetParentId === actor.id) || isUserDescendant(db, targetParentId, actor.id);
+        if (!canAssignParent) {
+          return { success: false, error: '본인 또는 본인 하위 조직원에게만 신규 팀원을 등록할 수 있습니다.' };
+        }
       }
     }
 
@@ -362,11 +492,24 @@ function registerAuthHandlers(mainWindow, triggerDualBackup) {
       return { success: false, error: '사용자 ID와 성명은 필수입니다.' };
     }
 
-    // Check Admin permission
+    const targetUserId = Number(id);
+
+    // Check Hierarchical Permission
     if (currentUserId) {
-      const actor = db.prepare('SELECT role, username FROM users WHERE id = ?').get(currentUserId);
-      if (!actor || (actor.role !== 'Admin' && actor.role !== 'admin' && actor.username !== 'admin')) {
-        return { success: false, error: '사용자 정보 수정 권한이 없습니다. (최고 관리자 전용)' };
+      const hasPermission = canManageTargetUser(db, currentUserId, targetUserId);
+      if (!hasPermission) {
+        return { success: false, error: '해당 조직원의 조직도 및 계정 정보를 수정할 권한이 없습니다.' };
+      }
+
+      // Check Circular Reference: Target user cannot have self or own descendant as parent_id
+      if (parent_id) {
+        const parentIdNum = Number(parent_id);
+        if (parentIdNum === targetUserId) {
+          return { success: false, error: '자기 자신을 직속 상위자로 지정할 수 없습니다.' };
+        }
+        if (isUserDescendant(db, parentIdNum, targetUserId)) {
+          return { success: false, error: '본인의 하위 조직원을 상위자로 지정할 수 없습니다. (순환 참조 방지)' };
+        }
       }
     }
 

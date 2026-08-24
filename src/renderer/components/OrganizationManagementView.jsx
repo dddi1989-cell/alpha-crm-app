@@ -47,6 +47,24 @@ function calculateElapsedMonths(startDateStr) {
   return totalMonths > 0 ? totalMonths : 1;
 }
 
+function getRoleRank(role) {
+  const map = {
+    'Admin': 99,
+    'admin': 99,
+    'CEO': 6,
+    '총괄': 6,
+    'COO': 5,
+    '사업단장': 5,
+    '본부장': 4,
+    '지점장': 3,
+    '팀장': 2,
+    'Manager': 2,
+    'FA': 1,
+    'Agent': 1
+  };
+  return map[role] || 1;
+}
+
 export default function OrganizationManagementView() {
   const currentUser = useCrmStore((state) => state.currentUser);
   const openCustomerDetailModal = useCrmStore((state) => state.openCustomerDetailModal);
@@ -96,7 +114,7 @@ export default function OrganizationManagementView() {
   const [customerSearchFilter, setCustomerSearchFilter] = useState('');
 
   // ==========================================
-  // 3. [Admin 계정 & 조직도 관리] 상태
+  // 3. [Admin / Manager 계정 & 조직도 관리] 상태
   // ==========================================
   const [allUsersList, setAllUsersList] = useState([]);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
@@ -113,6 +131,11 @@ export default function OrganizationManagementView() {
   });
   const [adminError, setAdminError] = useState('');
   const [adminSuccessMsg, setAdminSuccessMsg] = useState('');
+
+  const roleRank = useMemo(() => getRoleRank(currentUser?.role), [currentUser]);
+  const isAdminOrManager = useMemo(() => {
+    return currentUser?.role === 'Admin' || currentUser?.role === 'admin' || (accessibleUsers && accessibleUsers.length > 1) || roleRank >= 2;
+  }, [currentUser, accessibleUsers, roleRank]);
 
   // Load organizations list (filtered by user's organization scope)
   const loadOrganizations = async () => {
@@ -159,10 +182,10 @@ export default function OrganizationManagementView() {
     }
   };
 
-  // Load all users list (Admin)
+  // Load all users list (for Hierarchy management)
   const loadAllUsersList = async () => {
     try {
-      const res = await api.users.getAll();
+      const res = await api.users.getAll(currentUser?.id);
       if (res?.success && Array.isArray(res.users)) {
         setAllUsersList(res.users);
       }
@@ -193,7 +216,7 @@ export default function OrganizationManagementView() {
     }
   };
 
-  // Load team aggregate CRM data
+  // Load team aggregate CRM data (recursive sub-orgs included)
   const loadTeamData = async (orgId, orgName, forceSync = false) => {
     if (!currentUser?.id) return;
     setIsLoadingData(true);
@@ -221,9 +244,7 @@ export default function OrganizationManagementView() {
   useEffect(() => {
     loadOrganizations();
     loadSubordinates();
-    if (currentUser?.role === 'Admin' || currentUser?.role === 'admin') {
-      loadAllUsersList();
-    }
+    loadAllUsersList();
   }, [currentUser]);
 
   useEffect(() => {
@@ -662,7 +683,7 @@ export default function OrganizationManagementView() {
               <span>조직 모니터링</span>
             </button>
 
-            {(currentUser?.role === 'Admin' || currentUser?.role === 'admin') && (
+            {isAdminOrManager && (
               <button
                 onClick={() => setMainTab('hierarchy')}
                 className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
@@ -672,7 +693,7 @@ export default function OrganizationManagementView() {
                 }`}
               >
                 <Network className="w-3.5 h-3.5" />
-                <span>조직도 및 계정 관리 (Admin)</span>
+                <span>조직도 및 계정 관리</span>
               </button>
             )}
           </div>
@@ -1370,9 +1391,9 @@ export default function OrganizationManagementView() {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 2: 조직도 및 계정 & 조직(부서/팀) 관리 (Admin Only) */}
+      {/* TAB 2: 조직도 및 계정 & 조직(부서/팀) 관리 (Admin & Managers) */}
       {/* ========================================================================= */}
-      {mainTab === 'hierarchy' && (currentUser?.role === 'Admin' || currentUser?.role === 'admin') && (
+      {mainTab === 'hierarchy' && isAdminOrManager && (
         <div className="space-y-8">
           {/* 1. 조직(팀/지점/본부/사업단/총괄) 생성 및 관리 섹션 */}
           <div className="glass-panel p-6 rounded-2xl border space-y-4">
@@ -1387,13 +1408,15 @@ export default function OrganizationManagementView() {
                 </p>
               </div>
 
-              <button
-                onClick={handleOpenCreateOrgModal}
-                className="flex items-center space-x-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-md transition-all"
-              >
-                <FolderPlus className="w-4 h-4" />
-                <span>신규 조직 등록</span>
-              </button>
+              {(currentUser?.role === 'Admin' || currentUser?.role === 'admin' || roleRank >= 3) && (
+                <button
+                  onClick={handleOpenCreateOrgModal}
+                  className="flex items-center space-x-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-md transition-all"
+                >
+                  <FolderPlus className="w-4 h-4" />
+                  <span>신규 조직 등록</span>
+                </button>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1431,20 +1454,24 @@ export default function OrganizationManagementView() {
                     </div>
 
                     <div className="flex items-center space-x-1">
-                      <button
-                        onClick={() => handleOpenEditOrgModal(org)}
-                        className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                        title="조직명 및 상하관계 수정"
-                      >
-                        <Edit className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteOrg(org)}
-                        className="p-1.5 text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition-colors"
-                        title="조직 삭제"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {org.canEdit !== false && (
+                        <button
+                          onClick={() => handleOpenEditOrgModal(org)}
+                          className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                          title="조직명 및 상하관계 수정"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {(currentUser?.role === 'Admin' || currentUser?.role === 'admin') && (
+                        <button
+                          onClick={() => handleDeleteOrg(org)}
+                          className="p-1.5 text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition-colors"
+                          title="조직 삭제"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -1452,7 +1479,7 @@ export default function OrganizationManagementView() {
             </div>
           </div>
 
-          {/* 2. 전체 조직원 계정 관리 섹션 */}
+          {/* 2. 전체 조직원 계정 및 조직도 계층 관리 섹션 */}
           <div className="glass-panel p-6 rounded-2xl border space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -1461,7 +1488,7 @@ export default function OrganizationManagementView() {
                   <span>전체 계정 및 조직도 계층 관리</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  조직원의 직급(Role), 소속 조직(팀), 직속 상위자를 자유롭게 배정합니다.
+                  직속 하위 조직원 및 그 아래 모든 n차 하위 조직원의 직급(Role), 소속 조직, 직속 상위자를 자유롭게 배정/편제할 수 있습니다.
                 </p>
               </div>
 
@@ -1484,12 +1511,14 @@ export default function OrganizationManagementView() {
                     <th className="p-3">소속 조직</th>
                     <th className="p-3">직속 상위자</th>
                     <th className="p-3">연락처</th>
-                    <th className="p-3 text-right">관리</th>
+                    <th className="p-3 text-right">조직도 수정 권한</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
                   {allUsersList.map((u) => {
                     const badge = getRoleBadge(u.role);
+                    const canEditUser = (currentUser?.role === 'Admin' || currentUser?.role === 'admin' || u.canEdit);
+
                     return (
                       <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                         <td className="p-3 font-extrabold text-slate-900 dark:text-white flex items-center space-x-2">
@@ -1497,6 +1526,11 @@ export default function OrganizationManagementView() {
                           {u.username === 'admin' && (
                             <span className="text-[9px] bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-purple-300 px-1 rounded font-bold">
                               시스템
+                            </span>
+                          )}
+                          {Number(u.id) === Number(currentUser?.id) && (
+                            <span className="text-[9px] bg-indigo-100 text-indigo-900 dark:bg-indigo-950 dark:text-indigo-300 px-1 rounded font-bold">
+                              본인
                             </span>
                           )}
                         </td>
@@ -1516,17 +1550,24 @@ export default function OrganizationManagementView() {
                         </td>
                         <td className="p-3 text-slate-500 font-mono">{u.phone || '-'}</td>
                         <td className="p-3 text-right space-x-1">
-                          <button
-                            onClick={() => handleOpenEditUserModal(u)}
-                            className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                            title="계정 정보 수정"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                          {u.username !== 'admin' && (
+                          {canEditUser ? (
+                            <button
+                              onClick={() => handleOpenEditUserModal(u)}
+                              className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/80 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-lg border border-indigo-200 dark:border-indigo-800 text-xs font-bold transition-colors inline-flex items-center space-x-1"
+                              title="조직도 편제 및 정보 수정"
+                            >
+                              <Edit className="w-3 h-3" />
+                              <span>수정</span>
+                            </button>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800/80 px-2 py-1 rounded border border-slate-200 dark:border-slate-800 font-medium">
+                              🔒 읽기 전용
+                            </span>
+                          )}
+                          {(currentUser?.role === 'Admin' || currentUser?.role === 'admin') && u.username !== 'admin' && (
                             <button
                               onClick={() => handleDeleteUser(u)}
-                              className="p-1.5 text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition-colors"
+                              className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition-colors inline-flex items-center"
                               title="계정 삭제"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -1755,11 +1796,11 @@ export default function OrganizationManagementView() {
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500"
                 >
                   <option value="">직속 상위자 없음 (최상위)</option>
-                  {allUsersList
+                  {(currentUser?.role === 'Admin' || currentUser?.role === 'admin' ? allUsersList : allUsersList.filter(u => u.canEdit || Number(u.id) === Number(currentUser?.id)))
                     .filter(u => !editingUser || u.id !== editingUser.id)
                     .map(u => (
                       <option key={u.id} value={u.id}>
-                        {u.name} ({u.role} · {u.org_name || u.username})
+                        {u.name} ({u.role} · {u.org_name || u.username}) {Number(u.id) === Number(currentUser?.id) ? '★본인' : ''}
                       </option>
                     ))}
                 </select>
