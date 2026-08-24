@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Users, User, Calendar, Clock, UserPlus, CalendarPlus, Bell, CheckCircle2, ArrowRight, ChevronLeft, ChevronRight, UserCheck, Shield, Plus, Eye, Mail, Phone, AlertTriangle } from 'lucide-react';
+import { Users, User, Calendar, Clock, UserPlus, CalendarPlus, Bell, CheckCircle2, ArrowRight, ChevronLeft, ChevronRight, UserCheck, Shield, Plus, Eye, Mail, Phone, AlertTriangle, Building2, Filter } from 'lucide-react';
 import { useCrmStore } from '../store/useCrmStore';
 
 function calculateElapsedMonths(startDateStr) {
@@ -57,24 +57,22 @@ export default function DashboardView() {
   const setActiveTab = useCrmStore((state) => state.setActiveTab);
 
   const currentUser = useCrmStore((state) => state.currentUser);
-  const scheduleViewScope = useCrmStore((state) => state.scheduleViewScope);
-  const selectedOrgFilter = useCrmStore((state) => state.selectedOrgFilter);
-  const setSelectedOrgFilter = useCrmStore((state) => state.setSelectedOrgFilter);
-
-  const customerViewScope = useCrmStore((state) => state.customerViewScope);
-  const setCustomerViewScope = useCrmStore((state) => state.setCustomerViewScope);
-  const customerOrgFilter = useCrmStore((state) => state.customerOrgFilter);
-  const setCustomerOrgFilter = useCrmStore((state) => state.setCustomerOrgFilter);
-
   const organizations = useCrmStore((state) => state.organizations);
   const accessibleUsers = useCrmStore((state) => state.accessibleUsers);
+
+  // Dashboard Scope: 'personal' (사용자 본인) | 'org' (소속 조직 전체)
+  const [dashboardScope, setDashboardScope] = useState('personal');
+  const [selectedSubOrgFilter, setSelectedSubOrgFilter] = useState('');
+
+  const myId = useMemo(() => (currentUser ? Number(currentUser.id) : 1), [currentUser]);
+  const userName = currentUser?.name || '사용자';
+  const orgName = currentUser?.org_name || '소속 조직';
 
   // Client-side Strict Schedule Filter Guard
   const visibleSchedules = useMemo(() => {
     if (!Array.isArray(schedules)) return [];
 
-    if (scheduleViewScope === 'personal') {
-      const myId = currentUser ? Number(currentUser.id) : 1;
+    if (dashboardScope === 'personal') {
       return schedules.filter((s) => {
         const sOwnerId = s.user_id !== null && s.user_id !== undefined ? Number(s.user_id) : 1;
         return sOwnerId === myId;
@@ -82,24 +80,29 @@ export default function DashboardView() {
     }
 
     // Organization Scope
-    if (!selectedOrgFilter) {
+    if (!selectedSubOrgFilter) {
       return schedules; // 전체 하위 조직 포함
+    }
+
+    // Specific User Filter
+    if (selectedSubOrgFilter.startsWith('user:')) {
+      const targetUid = Number(selectedSubOrgFilter.replace('user:', ''));
+      return schedules.filter((s) => Number(s.user_id) === targetUid);
     }
 
     // Sub-Organization Filter
     return schedules.filter((s) => {
-      if (s.org_id && String(s.org_id) === String(selectedOrgFilter)) return true;
-      if (s.user_org_name && String(s.user_org_name) === String(selectedOrgFilter)) return true;
+      if (s.org_id && String(s.org_id) === String(selectedSubOrgFilter)) return true;
+      if (s.user_org_name && String(s.user_org_name) === String(selectedSubOrgFilter)) return true;
       return false;
     });
-  }, [schedules, scheduleViewScope, selectedOrgFilter, currentUser]);
+  }, [schedules, dashboardScope, selectedSubOrgFilter, myId]);
 
   // Client-side Strict Customer Filter Guard
   const visibleCustomers = useMemo(() => {
     if (!Array.isArray(customers)) return [];
 
-    if (customerViewScope === 'personal') {
-      const myId = currentUser ? Number(currentUser.id) : 1;
+    if (dashboardScope === 'personal') {
       return customers.filter((c) => {
         const cOwnerId = c.user_id !== null && c.user_id !== undefined ? Number(c.user_id) : 1;
         return cOwnerId === myId;
@@ -107,23 +110,23 @@ export default function DashboardView() {
     }
 
     // Organization Scope
-    if (!customerOrgFilter) {
+    if (!selectedSubOrgFilter) {
       return customers; // 전체 하위 조직 포함
     }
 
     // User-specific Filter
-    if (customerOrgFilter.startsWith('user:')) {
-      const targetUid = Number(customerOrgFilter.replace('user:', ''));
+    if (selectedSubOrgFilter.startsWith('user:')) {
+      const targetUid = Number(selectedSubOrgFilter.replace('user:', ''));
       return customers.filter((c) => Number(c.user_id) === targetUid);
     }
 
     // Org-specific Filter
     return customers.filter((c) => {
-      if (c.org_id && String(c.org_id) === String(customerOrgFilter)) return true;
-      if (c.user_org_name && String(c.user_org_name) === String(customerOrgFilter)) return true;
+      if (c.org_id && String(c.org_id) === String(selectedSubOrgFilter)) return true;
+      if (c.user_org_name && String(c.user_org_name) === String(selectedSubOrgFilter)) return true;
       return false;
     });
-  }, [customers, customerViewScope, customerOrgFilter, currentUser]);
+  }, [customers, dashboardScope, selectedSubOrgFilter, myId]);
 
   // Calendar State for the right panel
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -163,7 +166,7 @@ export default function DashboardView() {
   };
 
   const getBirthdaysForDay = (day) => {
-    return customers.filter((c) => {
+    return visibleCustomers.filter((c) => {
       if (!c.birth_date) return false;
       const parts = c.birth_date.split('-');
       if (parts.length >= 3) {
@@ -177,7 +180,7 @@ export default function DashboardView() {
     });
   };
 
-  const selectedDaySchedules = schedules.filter((s) => {
+  const selectedDaySchedules = visibleSchedules.filter((s) => {
     const d = new Date(s.scheduled_at);
     return (
       d.getFullYear() === selectedDate.getFullYear() &&
@@ -186,7 +189,7 @@ export default function DashboardView() {
     );
   });
 
-  const selectedDayBirthdays = customers.filter((c) => {
+  const selectedDayBirthdays = visibleCustomers.filter((c) => {
     if (!c.birth_date) return false;
     const parts = c.birth_date.split('-');
     if (parts.length >= 3) {
@@ -202,13 +205,78 @@ export default function DashboardView() {
   return (
     <div className="p-8 space-y-8 animate-fadeIn font-['Inter',sans-serif]">
       {/* Header Banner */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="font-['Outfit',sans-serif] text-2xl font-bold text-white tracking-tight">
-            대시보드 개요
-          </h2>
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="font-['Outfit',sans-serif] text-2xl font-bold text-white tracking-tight">
+              대시보드 개요
+            </h2>
+
+            {/* Scope Switcher: User Name vs Org Name */}
+            <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs font-bold shadow-sm">
+              <button
+                onClick={() => setDashboardScope('personal')}
+                className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg transition-all ${
+                  dashboardScope === 'personal'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="본인 개인 정보 조회"
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>{userName}</span>
+              </button>
+
+              <button
+                onClick={() => setDashboardScope('org')}
+                className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg transition-all ${
+                  dashboardScope === 'org'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="소속 조직 및 하부조직 전체 정보 조회"
+              >
+                <Building2 className="w-3.5 h-3.5" />
+                <span>{orgName}</span>
+              </button>
+            </div>
+
+            {/* Sub-Org & Subordinate Selector (Visible when Org Scope is Active) */}
+            {dashboardScope === 'org' && (
+              <div className="flex items-center space-x-2 animate-fadeIn">
+                <select
+                  value={selectedSubOrgFilter}
+                  onChange={(e) => setSelectedSubOrgFilter(e.target.value)}
+                  className="bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-medium shadow-inner"
+                >
+                  <option value="">🏢 {orgName} 전체 (하위 조직 및 전원 포함)</option>
+                  {organizations.length > 0 && (
+                    <optgroup label="하위 조직(팀/지점/본부) 단위">
+                      {organizations.map((o) => (
+                        <option key={`org-${o.id}`} value={o.id}>
+                          📁 {o.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {accessibleUsers.length > 0 && (
+                    <optgroup label="개별 조직원">
+                      {accessibleUsers.map((u) => (
+                        <option key={`user-${u.id}`} value={`user:${u.id}`}>
+                          👤 {u.name} ({u.role || 'FA'}) {u.org_name ? `· ${u.org_name}` : ''}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+              </div>
+            )}
+          </div>
+
           <p className="text-slate-400 text-sm mt-1">
-            고객 정보 관리 및 장기미터치(6개월 미터치) 현황 & 월간 일정관리 캘린더입니다.
+            {dashboardScope === 'personal'
+              ? `[${userName}] 님의 개인 고객 및 일정, 6개월 장기미터치 현황입니다.`
+              : `[${orgName}] 소속 조직의 통합 고객 및 일정, 장기미터치 모니터링 현황입니다.`}
           </p>
         </div>
 
@@ -405,64 +473,16 @@ export default function DashboardView() {
               </span>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Customer Scope Switcher */}
-              <div className="flex bg-slate-900/80 p-0.5 rounded-lg border border-slate-800 text-[11px]">
-                <button
-                  onClick={() => setCustomerViewScope('personal')}
-                  className={`px-2 py-1 rounded-md font-bold transition-all ${
-                    customerViewScope === 'personal'
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  👤 내 고객
-                </button>
-                <button
-                  onClick={() => setCustomerViewScope('organization')}
-                  className={`px-2 py-1 rounded-md font-bold transition-all ${
-                    customerViewScope === 'organization'
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  🏢 조직 고객
-                </button>
-              </div>
-
-              {/* Sub-Organization / User Selector */}
-              {customerViewScope === 'organization' && (
-                <select
-                  value={customerOrgFilter}
-                  onChange={(e) => setCustomerOrgFilter(e.target.value)}
-                  className="bg-slate-900 border border-slate-700/80 rounded-lg px-2 py-1 text-[11px] font-medium text-emerald-300 focus:outline-none focus:border-emerald-500 max-w-40 truncate"
-                >
-                  <option value="">🏢 전체 하위조직</option>
-                  <optgroup label="── 하부 조직별 ──">
-                    {organizations.map((org) => (
-                      <option key={org.id} value={org.name}>
-                        [{org.type || '팀'}] {org.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                  {accessibleUsers.length > 0 && (
-                    <optgroup label="── 특정 조직원별 ──">
-                      {accessibleUsers.map((u) => (
-                        <option key={u.id} value={`user:${u.id}`}>
-                          👤 {u.name} ({u.role})
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                </select>
-              )}
-
+            <div className="flex items-center space-x-3">
+              <span className="text-xs text-slate-400 font-medium">
+                {dashboardScope === 'personal' ? `[${userName}] 님의 고객` : `[${orgName}] 조직 고객`}
+              </span>
               <button
                 onClick={() => setActiveTab('customers')}
                 className="text-xs text-blue-400 hover:text-blue-300 flex items-center space-x-1 font-medium group ml-1"
               >
-                <span>전체</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                <span>전체 관리</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
           </div>
