@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_synced_at": "2026-08-24T08:36:13.469Z",
+  "last_synced_at": "2026-08-24T08:36:28.508Z",
   "customers": [
     {
       "id": 1,
@@ -890,6 +890,26 @@
       "date": null,
       "time": null,
       "type": "Meeting"
+    },
+    {
+      "id": 35,
+      "customer_id": null,
+      "title": "dd",
+      "description": "",
+      "scheduled_at": "2026-08-24T09:36:00.000Z",
+      "reminder_offset_minutes": 10,
+      "status": "Pending",
+      "notified": 0,
+      "created_at": "2026-08-24T08:36:28.507Z",
+      "updated_at": "2026-08-24T08:36:28.507Z",
+      "user_id": 1,
+      "category_type": "OrgNotice",
+      "org_id": 5,
+      "org_name": "Crocodile팀",
+      "is_broadcast": 1,
+      "date": "2026-08-24",
+      "time": "09:36",
+      "type": "공지"
     }
   ],
   "posts": [
