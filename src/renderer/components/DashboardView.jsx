@@ -83,12 +83,14 @@ export default function DashboardView() {
     if (dashboardScope === 'personal') {
       return schedules.filter((s) => {
         const sOwnerId = s.user_id !== null && s.user_id !== undefined ? Number(s.user_id) : 1;
-        return sOwnerId === myId;
+        if (sOwnerId === myId) return true;
+        if (s.is_broadcast === 1) return true;
+        return false;
       });
     }
 
-    // Organization Scope (Includes all recursive descendants)
-    return schedules.filter((s) => matchesOrgFilter(s, hierarchyInfo));
+    // Organization Scope (Includes all recursive descendants and broadcast notices)
+    return schedules.filter((s) => matchesOrgFilter(s, hierarchyInfo) || s.is_broadcast === 1);
   }, [schedules, dashboardScope, hierarchyInfo, myId]);
 
   // Client-side Strict Customer Filter Guard

@@ -87,6 +87,9 @@ function initDatabase(dbPath = null) {
       scheduled_at TEXT NOT NULL,
       reminder_offset_minutes INTEGER DEFAULT 0,
       category_type TEXT DEFAULT 'UserSchedule',
+      org_id INTEGER,
+      org_name TEXT,
+      is_broadcast INTEGER DEFAULT 0,
       status TEXT DEFAULT 'Pending',
       notified INTEGER DEFAULT 0,
       created_at TEXT NOT NULL,
@@ -182,6 +185,15 @@ function initDatabase(dbPath = null) {
     }
     if (!existingColumns.includes('category_type')) {
       dbInstance.exec("ALTER TABLE schedules ADD COLUMN category_type TEXT DEFAULT 'UserSchedule';");
+    }
+    if (!existingColumns.includes('org_id')) {
+      dbInstance.exec("ALTER TABLE schedules ADD COLUMN org_id INTEGER;");
+    }
+    if (!existingColumns.includes('org_name')) {
+      dbInstance.exec("ALTER TABLE schedules ADD COLUMN org_name TEXT;");
+    }
+    if (!existingColumns.includes('is_broadcast')) {
+      dbInstance.exec("ALTER TABLE schedules ADD COLUMN is_broadcast INTEGER DEFAULT 0;");
     }
   } catch (colErr) {}
 

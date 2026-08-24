@@ -81,6 +81,27 @@ function syncCustomerInsuranceExpirySchedules(db) {
   }
 }
 
+function getAncestorOrgIdsForUser(db, userId) {
+  const orgIds = new Set();
+  const user = db.prepare('SELECT org_id FROM users WHERE id = ?').get(userId);
+  if (!user || !user.org_id) return [];
+
+  let currOrgId = Number(user.org_id);
+  const allOrgs = db.prepare('SELECT id, parent_id FROM organizations').all();
+  const orgMap = new Map(allOrgs.map(o => [Number(o.id), o]));
+
+  let guard = 0;
+  while (currOrgId && guard < 30) {
+    guard++;
+    orgIds.add(currOrgId);
+    const currOrg = orgMap.get(currOrgId);
+    if (!currOrg || !currOrg.parent_id) break;
+    currOrgId = Number(currOrg.parent_id);
+  }
+
+  return Array.from(orgIds);
+}
+
 function registerScheduleHandlers(mainWindow, triggerDualBackup) {
   ipcMain.handle('schedules:get-all', async (event, { search = '', status = '', userId = null, user_id = null, includeSubordinates = false } = {}) => {
     const db = getDb();
@@ -99,26 +120,51 @@ function registerScheduleHandlers(mainWindow, triggerDualBackup) {
       if (includeSubordinates) {
         const accessibleUsers = getAccessibleUsersForUser(db, targetUserId);
         const userIds = accessibleUsers.map(u => u.id);
+        const ancestorOrgs = getAncestorOrgIdsForUser(db, targetUserId);
+
+        let filterParts = [];
         if (userIds.length > 0) {
           const placeholders = userIds.map(() => '?').join(',');
-          query += ` AND s.user_id IN (${placeholders})`;
+          filterParts.push(`s.user_id IN (${placeholders})`);
           params.push(...userIds);
+        }
+        if (ancestorOrgs.length > 0) {
+          const orgPlaceholders = ancestorOrgs.map(() => '?').join(',');
+          filterParts.push(`(s.is_broadcast = 1 AND s.org_id IN (${orgPlaceholders}))`);
+          params.push(...ancestorOrgs);
+        }
+
+        if (filterParts.length > 0) {
+          query += ` AND (${filterParts.join(' OR ')})`;
         }
       } else {
         const uIdNum = Number(targetUserId);
-        if (uIdNum === 1) {
-          query += ' AND (s.user_id = 1 OR s.user_id IS NULL)';
+        const ancestorOrgs = getAncestorOrgIdsForUser(db, uIdNum);
+
+        if (ancestorOrgs.length > 0) {
+          const orgPlaceholders = ancestorOrgs.map(() => '?').join(',');
+          if (uIdNum === 1) {
+            query += ` AND ((s.user_id = 1 OR s.user_id IS NULL) OR (s.is_broadcast = 1 AND s.org_id IN (${orgPlaceholders})))`;
+          } else {
+            query += ` AND (s.user_id = ? OR (s.is_broadcast = 1 AND s.org_id IN (${orgPlaceholders})))`;
+            params.push(uIdNum);
+          }
+          params.push(...ancestorOrgs);
         } else {
-          query += ' AND s.user_id = ?';
-          params.push(uIdNum);
+          if (uIdNum === 1) {
+            query += ' AND (s.user_id = 1 OR s.user_id IS NULL OR s.is_broadcast = 1)';
+          } else {
+            query += ' AND (s.user_id = ? OR s.is_broadcast = 1)';
+            params.push(uIdNum);
+          }
         }
       }
     }
 
     if (search) {
-      query += ' AND (s.title LIKE ? OR s.description LIKE ? OR c.name LIKE ? OR s.type LIKE ?)';
+      query += ' AND (s.title LIKE ? OR s.description LIKE ? OR c.name LIKE ? OR s.type LIKE ? OR s.org_name LIKE ?)';
       const term = `%${search}%`;
-      params.push(term, term, term, term);
+      params.push(term, term, term, term, term);
     }
 
     if (status) {
@@ -137,9 +183,22 @@ function registerScheduleHandlers(mainWindow, triggerDualBackup) {
     const now = new Date().toISOString();
     const ownerUserId = Number(scheduleData.user_id || scheduleData.userId || 1);
 
+    const isBroadcast = scheduleData.is_broadcast ? 1 : 0;
+    let resolvedOrgId = scheduleData.org_id ? Number(scheduleData.org_id) : null;
+    let resolvedOrgName = scheduleData.org_name || null;
+
+    if (isBroadcast && resolvedOrgId) {
+      const orgRow = db.prepare('SELECT id, name FROM organizations WHERE id = ?').get(resolvedOrgId);
+      if (orgRow) {
+        resolvedOrgName = orgRow.name;
+      }
+    }
+
+    const categoryType = isBroadcast ? 'OrgNotice' : (scheduleData.category_type || 'UserSchedule');
+
     const stmt = db.prepare(`
-      INSERT INTO schedules (user_id, customer_id, title, description, scheduled_at, date, time, type, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO schedules (user_id, customer_id, title, description, scheduled_at, date, time, type, status, reminder_offset_minutes, category_type, org_id, org_name, is_broadcast, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const info = stmt.run(
@@ -150,8 +209,13 @@ function registerScheduleHandlers(mainWindow, triggerDualBackup) {
       scheduleData.scheduled_at || `${scheduleData.date}T${scheduleData.time || '00:00'}:00`,
       scheduleData.date,
       scheduleData.time || '00:00',
-      scheduleData.type || 'Meeting',
+      scheduleData.type || (isBroadcast ? '공지' : 'Meeting'),
       scheduleData.status || 'Pending',
+      Number(scheduleData.reminder_offset_minutes) || 0,
+      categoryType,
+      resolvedOrgId,
+      resolvedOrgName,
+      isBroadcast,
       now,
       now
     );
@@ -164,7 +228,6 @@ function registerScheduleHandlers(mainWindow, triggerDualBackup) {
       const cust = db.prepare('SELECT id, name, status FROM customers WHERE id = ?').get(scheduleData.customer_id);
       if (cust) {
         customerName = cust.name;
-        // Auto-Transition Rule 4: If customer had Inactive status (장기미터치), restore to 'Active' (보유고객) on new schedule
         if (cust.status === 'Inactive') {
           db.prepare('UPDATE customers SET status = "Active", updated_at = ? WHERE id = ?').run(now, cust.id);
         }
@@ -175,6 +238,10 @@ function registerScheduleHandlers(mainWindow, triggerDualBackup) {
       id: info.lastInsertRowid,
       user_id: ownerUserId,
       ...scheduleData,
+      org_id: resolvedOrgId,
+      org_name: resolvedOrgName,
+      is_broadcast: isBroadcast,
+      category_type: categoryType,
       customer_name: customerName,
       created_at: now,
       updated_at: now
@@ -198,13 +265,28 @@ function registerScheduleHandlers(mainWindow, triggerDualBackup) {
     const requesterId = Number(actingUserId || currentUserId || scheduleData.user_id || 1);
     const originalOwnerId = existing.user_id !== null && existing.user_id !== undefined ? Number(existing.user_id) : 1;
 
-    if (originalOwnerId !== requesterId) {
+    // Security check: Only creator or top admin can update
+    const requester = db.prepare('SELECT id, role, username FROM users WHERE id = ?').get(requesterId);
+    const isTopAdmin = requester && (requester.role === 'Admin' || requester.role === 'admin' || requester.username === 'admin');
+
+    if (originalOwnerId !== requesterId && !isTopAdmin) {
       return { success: false, error: '해당 일정을 등록한 담당자만 수정할 수 있습니다. (권한 없음)' };
     }
 
+    const isBroadcast = scheduleData.is_broadcast !== undefined ? (scheduleData.is_broadcast ? 1 : 0) : (existing.is_broadcast || 0);
+    const resolvedOrgId = scheduleData.org_id !== undefined ? (scheduleData.org_id ? Number(scheduleData.org_id) : null) : existing.org_id;
+    let resolvedOrgName = scheduleData.org_name !== undefined ? scheduleData.org_name : existing.org_name;
+
+    if (isBroadcast && resolvedOrgId) {
+      const orgRow = db.prepare('SELECT id, name FROM organizations WHERE id = ?').get(resolvedOrgId);
+      if (orgRow) resolvedOrgName = orgRow.name;
+    }
+
+    const categoryType = isBroadcast ? 'OrgNotice' : (scheduleData.category_type || existing.category_type || 'UserSchedule');
+
     const stmt = db.prepare(`
       UPDATE schedules 
-      SET user_id = ?, customer_id = ?, title = ?, description = ?, scheduled_at = ?, date = ?, time = ?, type = ?, status = ?, updated_at = ?
+      SET user_id = ?, customer_id = ?, title = ?, description = ?, scheduled_at = ?, date = ?, time = ?, type = ?, status = ?, reminder_offset_minutes = ?, category_type = ?, org_id = ?, org_name = ?, is_broadcast = ?, updated_at = ?
       WHERE id = ?
     `);
 
@@ -218,6 +300,11 @@ function registerScheduleHandlers(mainWindow, triggerDualBackup) {
       scheduleData.time !== undefined ? scheduleData.time : existing.time,
       scheduleData.type !== undefined ? scheduleData.type : existing.type,
       scheduleData.status !== undefined ? scheduleData.status : existing.status,
+      scheduleData.reminder_offset_minutes !== undefined ? Number(scheduleData.reminder_offset_minutes) : (existing.reminder_offset_minutes || 0),
+      categoryType,
+      resolvedOrgId,
+      resolvedOrgName,
+      isBroadcast,
       now,
       id
     );
@@ -236,6 +323,10 @@ function registerScheduleHandlers(mainWindow, triggerDualBackup) {
       id,
       user_id: originalOwnerId,
       ...scheduleData,
+      org_id: resolvedOrgId,
+      org_name: resolvedOrgName,
+      is_broadcast: isBroadcast,
+      category_type: categoryType,
       customer_name: customerName,
       updated_at: now
     };
@@ -257,7 +348,10 @@ function registerScheduleHandlers(mainWindow, triggerDualBackup) {
     if (actingUserId) {
       const originalOwnerId = existing.user_id !== null && existing.user_id !== undefined ? Number(existing.user_id) : 1;
       const requesterId = Number(actingUserId);
-      if (originalOwnerId !== requesterId) {
+      const requester = db.prepare('SELECT id, role, username FROM users WHERE id = ?').get(requesterId);
+      const isTopAdmin = requester && (requester.role === 'Admin' || requester.role === 'admin' || requester.username === 'admin');
+
+      if (originalOwnerId !== requesterId && !isTopAdmin) {
         return { success: false, error: '해당 일정을 등록한 담당자만 삭제할 수 있습니다. (권한 없음)' };
       }
     }

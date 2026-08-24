@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Save, Bell } from 'lucide-react';
+import { X, Calendar, Save, Bell, Megaphone, User, Building2, Info } from 'lucide-react';
 import { useCrmStore } from '../store/useCrmStore';
 
 export default function ScheduleModal() {
   const isOpen = useCrmStore((state) => state.isScheduleModalOpen);
   const editingSchedule = useCrmStore((state) => state.editingSchedule);
   const customers = useCrmStore((state) => state.customers);
+  const organizations = useCrmStore((state) => state.organizations);
   const closeScheduleModal = useCrmStore((state) => state.closeScheduleModal);
   const saveSchedule = useCrmStore((state) => state.saveSchedule);
   const currentUser = useCrmStore((state) => state.currentUser);
@@ -18,7 +19,9 @@ export default function ScheduleModal() {
     customer_id: '',
     scheduled_at: '',
     reminder_offset_minutes: 0,
-    status: 'Pending'
+    status: 'Pending',
+    is_broadcast: 0,
+    org_id: ''
   });
 
   const initialScheduleData = useCrmStore((state) => state.initialScheduleData);
@@ -37,7 +40,9 @@ export default function ScheduleModal() {
         customer_id: editingSchedule.customer_id || '',
         scheduled_at: formattedDate || '',
         reminder_offset_minutes: editingSchedule.reminder_offset_minutes ?? 0,
-        status: editingSchedule.status || 'Pending'
+        status: editingSchedule.status || 'Pending',
+        is_broadcast: editingSchedule.is_broadcast ? 1 : 0,
+        org_id: editingSchedule.org_id || (currentUser?.org_id || '')
       });
     } else {
       const defaultDate = new Date(Date.now() + 3600000);
@@ -46,13 +51,15 @@ export default function ScheduleModal() {
       setFormData({
         title: initialScheduleData?.title || '',
         description: '',
-        customer_id: initialScheduleData?.customer_id || customers[0]?.id || '',
+        customer_id: initialScheduleData?.customer_id || '',
         scheduled_at: initialScheduleData?.scheduled_at || localISO,
         reminder_offset_minutes: 10,
-        status: 'Pending'
+        status: 'Pending',
+        is_broadcast: 0,
+        org_id: currentUser?.org_id || (organizations[0]?.id || '')
       });
     }
-  }, [editingSchedule, isOpen, customers, initialScheduleData]);
+  }, [editingSchedule, isOpen, customers, initialScheduleData, currentUser, organizations]);
 
   if (!isOpen) return null;
 
@@ -65,11 +72,16 @@ export default function ScheduleModal() {
     if (!formData.title.trim() || !formData.scheduled_at) return;
     
     const isoDate = new Date(formData.scheduled_at).toISOString();
+    const selectedOrg = organizations.find(o => Number(o.id) === Number(formData.org_id));
+
     saveSchedule({
       ...formData,
       customer_id: formData.customer_id ? Number(formData.customer_id) : null,
       scheduled_at: isoDate,
-      reminder_offset_minutes: Number(formData.reminder_offset_minutes) || 0
+      reminder_offset_minutes: Number(formData.reminder_offset_minutes) || 0,
+      is_broadcast: formData.is_broadcast ? 1 : 0,
+      org_id: formData.is_broadcast ? (formData.org_id ? Number(formData.org_id) : (currentUser?.org_id || null)) : null,
+      org_name: formData.is_broadcast ? (selectedOrg ? selectedOrg.name : (currentUser?.org_name || null)) : null
     });
   };
 
@@ -81,8 +93,14 @@ export default function ScheduleModal() {
           <div className="flex items-center space-x-2.5">
             <Calendar className="w-5 h-5 text-indigo-400" />
             <div>
-              <h3 className="font-semibold text-lg text-white">
-                {editingSchedule ? (isOwner ? '일정 정보 수정' : '일정 정보 조회 (조회 전용)') : '새 일정 / 알림 등록'}
+              <h3 className="font-semibold text-lg text-white flex items-center space-x-2">
+                <span>{editingSchedule ? (isOwner ? '일정 정보 수정' : '일정 정보 조회 (조회 전용)') : '새 일정 / 알림 등록'}</span>
+                {formData.is_broadcast === 1 && (
+                  <span className="text-[10px] bg-amber-950 text-amber-300 border border-amber-800 px-2 py-0.5 rounded-md font-bold flex items-center space-x-1">
+                    <Megaphone className="w-3 h-3 text-amber-400" />
+                    <span>조직 공지 일정</span>
+                  </span>
+                )}
               </h3>
               {editingSchedule?.user_name && (
                 <span className="text-xs text-slate-400">담당자: {editingSchedule.user_name}</span>
@@ -99,6 +117,70 @@ export default function ScheduleModal() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* 일정 구분 (개인 일정 vs 조직 공지 일정) */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-slate-300">
+              일정 공유 구분
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={!isOwner}
+                onClick={() => setFormData({ ...formData, is_broadcast: 0 })}
+                className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center space-x-2 transition-all ${
+                  formData.is_broadcast !== 1
+                    ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-sm ring-1 ring-indigo-500/50'
+                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
+                }`}
+              >
+                <User className="w-3.5 h-3.5 text-indigo-400" />
+                <span>👤 개인 전용 일정</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={!isOwner}
+                onClick={() => setFormData({ ...formData, is_broadcast: 1, org_id: formData.org_id || currentUser?.org_id || (organizations[0]?.id || '') })}
+                className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center space-x-2 transition-all ${
+                  formData.is_broadcast === 1
+                    ? 'bg-amber-600/20 border-amber-500 text-amber-200 shadow-sm ring-1 ring-amber-500/50'
+                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
+                }`}
+              >
+                <Megaphone className="w-3.5 h-3.5 text-amber-400" />
+                <span>📢 조직 공지/공유 일정</span>
+              </button>
+            </div>
+
+            {formData.is_broadcast === 1 && (
+              <div className="bg-amber-950/40 border border-amber-500/30 rounded-xl p-3 space-y-2 mt-2 animate-fadeIn">
+                <div className="flex items-center space-x-1.5 text-amber-300 font-bold text-xs">
+                  <Building2 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>공지 대상 조직 선택</span>
+                </div>
+                <select
+                  value={formData.org_id}
+                  disabled={!isOwner}
+                  onChange={(e) => setFormData({ ...formData, org_id: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 font-medium"
+                  required
+                >
+                  {organizations.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      📁 {org.name} {org.type ? `[${org.type}]` : ''}
+                    </option>
+                  ))}
+                  {organizations.length === 0 && currentUser?.org_name && (
+                    <option value={currentUser.org_id || 1}>📁 {currentUser.org_name}</option>
+                  )}
+                </select>
+                <p className="text-[11px] text-amber-300/80 leading-tight">
+                  선택하신 조직과 그 하위 조직원들의 캘린더에 공지사항으로 일정이 자동 공유됩니다.
+                </p>
+              </div>
+            )}
+          </div>
+
           <div>
             <label className="block text-xs font-medium text-slate-400 mb-1.5">
               일정 제목 <span className="text-red-400">*</span>
@@ -107,7 +189,7 @@ export default function ScheduleModal() {
               type="text"
               required
               disabled={!isOwner}
-              placeholder="예: 영업 미팅 및 계약 팔로업"
+              placeholder={formData.is_broadcast === 1 ? "예: [지점 공지] 주간 전략 회의 및 상품 교육" : "예: 영업 미팅 및 계약 팔로업"}
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"

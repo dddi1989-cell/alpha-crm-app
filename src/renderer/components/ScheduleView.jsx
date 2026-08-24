@@ -79,12 +79,15 @@ export default function ScheduleView() {
       const myId = currentUser ? Number(currentUser.id) : 1;
       return schedules.filter((s) => {
         const sOwnerId = s.user_id !== null && s.user_id !== undefined ? Number(s.user_id) : 1;
-        return sOwnerId === myId;
+        if (sOwnerId === myId) return true;
+        // Include org broadcast notice schedules for user's organization
+        if (s.is_broadcast === 1) return true;
+        return false;
       });
     }
 
-    // Organization Scope (Includes all recursive descendants)
-    return schedules.filter((s) => matchesOrgFilter(s, hierarchyInfo));
+    // Organization Scope (Includes all recursive descendants and broadcast notices)
+    return schedules.filter((s) => matchesOrgFilter(s, hierarchyInfo) || s.is_broadcast === 1);
   }, [schedules, scheduleViewScope, hierarchyInfo, currentUser]);
 
   const filteredData = useMemo(() => {
@@ -255,12 +258,16 @@ export default function ScheduleView() {
           return (
             <div className="space-y-1">
               <div className="flex items-center space-x-2">
-                {schedule.user_name && (
+                {schedule.is_broadcast === 1 ? (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-800 font-bold flex items-center space-x-1">
+                    <span>📢 {schedule.org_name || '조직 공지'}</span>
+                  </span>
+                ) : schedule.user_name ? (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold flex items-center space-x-1">
                     <User className="w-3 h-3 text-indigo-400" />
                     <span>{schedule.user_name}</span>
                   </span>
-                )}
+                ) : null}
                 <span className={`font-semibold text-sm ${
                   schedule.status === 'Completed' ? 'line-through text-slate-500' : 'text-white'
                 }`}>
@@ -636,6 +643,7 @@ export default function ScheduleView() {
 
                         {daySchedules.slice(0, 2).map((s) => {
                           const isCompleted = s.status === 'Completed';
+                          const isBroadcast = s.is_broadcast === 1;
                           const timeStr = s.time || (s.scheduled_at ? s.scheduled_at.slice(11, 16) : '');
 
                           return (
@@ -648,11 +656,17 @@ export default function ScheduleView() {
                               className={`px-1.5 py-0.5 rounded text-[10px] font-medium truncate flex items-center space-x-1 border transition-transform hover:scale-[1.02] ${
                                 isCompleted
                                   ? 'bg-emerald-950/70 text-emerald-300 border-emerald-800/60 line-through opacity-70'
+                                  : isBroadcast
+                                  ? 'bg-amber-950/90 text-amber-200 border-amber-600/80 font-bold shadow-sm'
                                   : 'bg-indigo-950/90 text-indigo-200 border-indigo-800/70 hover:bg-indigo-900'
                               }`}
-                              title={`${timeStr ? `[${timeStr}] ` : ''}${s.customer_name ? `(${s.customer_name}) ` : ''}${s.title}`}
+                              title={`${isBroadcast ? `[📢 ${s.org_name || '조직공지'}] ` : ''}${timeStr ? `[${timeStr}] ` : ''}${s.customer_name ? `(${s.customer_name}) ` : ''}${s.title}`}
                             >
-                              <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-current"></span>
+                              {isBroadcast ? (
+                                <span className="text-[10px] shrink-0">📢</span>
+                              ) : (
+                                <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-current"></span>
+                              )}
                               {timeStr && <span className="font-mono text-[9px] opacity-80">{timeStr}</span>}
                               <span className="truncate">{s.customer_name ? `${s.customer_name}: ` : ''}{s.title}</span>
                             </div>
@@ -787,9 +801,16 @@ export default function ScheduleView() {
                               </button>
 
                               <div>
-                                <h5 className={`text-sm font-bold ${isCompleted ? 'line-through text-slate-500' : 'text-white'}`}>
-                                  {s.title}
-                                </h5>
+                                <div className="flex items-center space-x-2">
+                                  <h5 className={`text-sm font-bold ${isCompleted ? 'line-through text-slate-500' : 'text-white'}`}>
+                                    {s.title}
+                                  </h5>
+                                  {s.is_broadcast === 1 && (
+                                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-800 shrink-0">
+                                      📢 {s.org_name || '조직 공지'}
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="flex flex-wrap items-center gap-1.5 mt-1 text-xs text-slate-400">
                                   {timeStr && (
                                     <span className="font-mono text-indigo-300 font-semibold bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-800/60">
@@ -803,7 +824,7 @@ export default function ScheduleView() {
                                   )}
                                   {s.user_name && (
                                     <span className="text-indigo-400 text-[11px]">
-                                      (담당: {s.user_name})
+                                      (작성자: {s.user_name})
                                     </span>
                                   )}
                                 </div>
