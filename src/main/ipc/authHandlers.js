@@ -267,7 +267,7 @@ function registerAuthHandlers(mainWindow, triggerDualBackup) {
     }
   });
 
-  ipcMain.handle('users:register', async (event, { username, name, phone }) => {
+  ipcMain.handle('users:register', async (event, { username, name, phone, org_id = null, org_name = null, role = 'FA' }) => {
     const db = getDb();
     if (!username || !name || !phone) {
       return { success: false, error: '사번(아이디), 성명, 연락처는 필수 입력 항목입니다.' };
@@ -286,11 +286,49 @@ function registerAuthHandlers(mainWindow, triggerDualBackup) {
       const hash = crypto.createHash('sha256').update(trimmedUsername).digest('hex');
       const now = new Date().toISOString();
 
+      let resolvedOrgId = org_id ? Number(org_id) : null;
+      let resolvedOrgName = (org_name || '').trim() || null;
+      let parentId = null;
+
+      if (resolvedOrgId) {
+        const orgRow = db.prepare('SELECT id, name, parent_id FROM organizations WHERE id = ?').get(resolvedOrgId);
+        if (orgRow) {
+          resolvedOrgName = orgRow.name;
+
+          // 1. Find direct manager in the same organization
+          const directManager = db.prepare(`
+            SELECT id FROM users 
+            WHERE org_id = ? AND (role LIKE '%팀장%' OR role = 'Manager' OR role LIKE '%지점장%' OR role LIKE '%본부장%' OR role LIKE '%사업단장%')
+            ORDER BY id ASC LIMIT 1
+          `).get(resolvedOrgId);
+
+          if (directManager) {
+            parentId = directManager.id;
+          } else if (orgRow.parent_id) {
+            // 2. Find superior manager in the parent organization
+            const superiorManager = db.prepare(`
+              SELECT id FROM users 
+              WHERE org_id = ? AND (role LIKE '%지점장%' OR role LIKE '%본부장%' OR role LIKE '%사업단장%' OR role = 'COO' OR role = 'CEO' OR role = 'Admin')
+              ORDER BY id ASC LIMIT 1
+            `).get(orgRow.parent_id);
+            if (superiorManager) {
+              parentId = superiorManager.id;
+            }
+          }
+        }
+      } else if (resolvedOrgName) {
+        const orgRow = db.prepare('SELECT id, name FROM organizations WHERE LOWER(name) = LOWER(?)').get(resolvedOrgName);
+        if (orgRow) {
+          resolvedOrgId = orgRow.id;
+          resolvedOrgName = orgRow.name;
+        }
+      }
+
       const stmt = db.prepare(`
-        INSERT INTO users (username, password_hash, name, phone, role, parent_id, created_at, updated_at)
-        VALUES (?, ?, ?, ?, 'FA', NULL, ?, ?)
+        INSERT INTO users (username, password_hash, name, phone, role, parent_id, org_id, org_name, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
-      const info = stmt.run(trimmedUsername, hash, trimmedName, trimmedPhone, now, now);
+      const info = stmt.run(trimmedUsername, hash, trimmedName, trimmedPhone, role, parentId, resolvedOrgId, resolvedOrgName, now, now);
 
       syncCloudAccounts(db);
       triggerDualBackup();

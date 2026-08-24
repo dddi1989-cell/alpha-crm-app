@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import logoIcon from '../assets/icon.png';
-import { ShieldCheck, Lock, User, KeyRound, AlertCircle, ArrowRight, UserPlus, Phone, CheckCircle2, Info } from 'lucide-react';
+import { ShieldCheck, Lock, User, KeyRound, AlertCircle, ArrowRight, UserPlus, Phone, CheckCircle2, Info, Building2 } from 'lucide-react';
 import { api } from '../utils/api';
 import { useCrmStore } from '../store/useCrmStore';
 
@@ -51,16 +51,29 @@ export default function LoginView() {
   // 1. 이용자 등록 (신규 가입) Modal State
   // ==========================================
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
-  const [regForm, setRegForm] = useState({ username: '', name: '', phone: '' });
+  const [regForm, setRegForm] = useState({ username: '', name: '', phone: '', org_id: '' });
+  const [availableOrgs, setAvailableOrgs] = useState([]);
   const [regError, setRegError] = useState('');
   const [regSuccess, setRegSuccess] = useState('');
   const [isRegSubmitting, setIsRegSubmitting] = useState(false);
 
+  const loadOrganizations = async () => {
+    try {
+      const res = await api.org.getAllOrganizations();
+      if (res?.organizations && Array.isArray(res.organizations)) {
+        setAvailableOrgs(res.organizations);
+      }
+    } catch (e) {
+      console.error('Failed to load organizations on register modal:', e);
+    }
+  };
+
   const handleOpenRegisterModal = () => {
-    setRegForm({ username: '', name: '', phone: '' });
+    setRegForm({ username: '', name: '', phone: '', org_id: '' });
     setRegError('');
     setRegSuccess('');
     setIsRegisterModalOpen(true);
+    loadOrganizations();
   };
 
   const handleRegisterSubmit = async (e) => {
@@ -71,9 +84,17 @@ export default function LoginView() {
     const trimmedUsername = regForm.username.trim();
     const trimmedName = regForm.name.trim();
     const trimmedPhone = regForm.phone.trim();
+    const selectedOrgId = regForm.org_id ? Number(regForm.org_id) : null;
+    const selectedOrg = availableOrgs.find(o => Number(o.id) === selectedOrgId);
+    const selectedOrgName = selectedOrg ? selectedOrg.name : null;
 
     if (!trimmedUsername || !trimmedName || !trimmedPhone) {
       setRegError('사번(아이디), 성명, 연락처를 모두 입력해 주세요.');
+      return;
+    }
+
+    if (!selectedOrgId) {
+      setRegError('소속되실 조직(팀/지점/본부)을 선택해 주세요.');
       return;
     }
 
@@ -83,7 +104,10 @@ export default function LoginView() {
       const res = await api.users.register({
         username: trimmedUsername,
         name: trimmedName,
-        phone: trimmedPhone
+        phone: trimmedPhone,
+        org_id: selectedOrgId,
+        org_name: selectedOrgName,
+        role: 'FA'
       });
 
       if (res?.success) {
@@ -315,9 +339,9 @@ export default function LoginView() {
                 <span>이용자 등록 안내</span>
               </div>
               <ul className="space-y-1 text-[11px] text-slate-400 pl-5 list-disc">
-                <li>사번, 성명, 연락처 3가지만 입력하시면 즉시 등록됩니다.</li>
+                <li>사번, 성명, 연락처, 소속 조직을 선택하시면 즉시 등록됩니다.</li>
                 <li><strong className="text-indigo-200">최초 비밀번호는 입력하신 사번(아이디)으로 자동 고정</strong>됩니다.</li>
-                <li>직급 및 상위 조직 배정은 관리자(Admin)가 추후 설정합니다.</li>
+                <li>등록 완료 후 초기 비밀번호(사번)로 바로 로그인하실 수 있습니다.</li>
               </ul>
             </div>
 
@@ -380,6 +404,30 @@ export default function LoginView() {
                   className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 font-mono"
                   required
                 />
+              </div>
+
+              {/* 소속 조직 선택 */}
+              <div className="space-y-1">
+                <label className="text-slate-300 font-semibold flex items-center space-x-1">
+                  <Building2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>소속 조직 선택 <span className="text-rose-400">*</span></span>
+                </label>
+                <select
+                  value={regForm.org_id}
+                  onChange={(e) => setRegForm({ ...regForm, org_id: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-indigo-500 text-xs font-medium shadow-inner"
+                  required
+                >
+                  <option value="">소속되실 조직을 선택해 주세요</option>
+                  {availableOrgs.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      📁 {org.name} {org.type ? `[${org.type}]` : ''} {org.org_path ? `(${org.org_path})` : ''}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-slate-500 pl-1">
+                  등록 후 해당 조직의 상위 관리자 및 조직원들과 연동됩니다.
+                </p>
               </div>
 
               <div className="pt-2 flex justify-end space-x-2">
