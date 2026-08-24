@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_synced_at": "2026-08-24T08:27:04.985Z",
+  "last_synced_at": "2026-08-24T08:36:13.469Z",
   "customers": [
     {
       "id": 1,
@@ -226,7 +226,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 2,
@@ -243,7 +246,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 3,
@@ -260,7 +266,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 4,
@@ -277,7 +286,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 5,
@@ -294,7 +306,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 6,
@@ -311,7 +326,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 7,
@@ -328,7 +346,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 8,
@@ -345,7 +366,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 9,
@@ -362,7 +386,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 10,
@@ -379,7 +406,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 11,
@@ -396,7 +426,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 12,
@@ -413,7 +446,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 13,
@@ -430,7 +466,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 14,
@@ -447,7 +486,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 15,
@@ -464,7 +506,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 16,
@@ -481,7 +526,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 17,
@@ -498,7 +546,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 18,
@@ -515,7 +566,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 19,
@@ -532,7 +586,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 20,
@@ -549,7 +606,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 21,
@@ -566,7 +626,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 22,
@@ -583,7 +646,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 23,
@@ -600,7 +666,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 24,
@@ -617,7 +686,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 25,
@@ -634,7 +706,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 26,
@@ -651,7 +726,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 27,
@@ -668,7 +746,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 28,
@@ -685,7 +766,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 29,
@@ -702,7 +786,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 30,
@@ -719,7 +806,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 31,
@@ -736,7 +826,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 32,
@@ -753,7 +846,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 33,
@@ -770,7 +866,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     },
     {
       "id": 34,
@@ -787,7 +886,10 @@
       "category_type": "UserSchedule",
       "org_id": null,
       "org_name": null,
-      "is_broadcast": 0
+      "is_broadcast": 0,
+      "date": null,
+      "time": null,
+      "type": "Meeting"
     }
   ],
   "posts": [
