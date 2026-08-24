@@ -2,6 +2,7 @@ const { ipcMain } = require('electron');
 const { getDb } = require('../database');
 const { syncCloudAccounts } = require('../services/cloudSyncService');
 const { getRoleRank } = require('./authHandlers');
+const { normalizeCustomerInsurances } = require('../services/documentParserService');
 
 function registerOrgHandlers(mainWindow, triggerDualBackup) {
   ipcMain.handle('org:get-all-organizations', async (event, params = {}) => {
@@ -328,11 +329,23 @@ function registerOrgHandlers(mainWindow, triggerDualBackup) {
         }
       }
 
+      // 3. Subordinate POOL Customers (Full POOL list for target subordinate)
+      const poolCustomersRaw = db.prepare(`
+        SELECT c.*, u.name as user_name, u.role as user_role, u.org_name as user_org_name
+        FROM customers c
+        LEFT JOIN users u ON c.user_id = u.id
+        WHERE c.user_id IN (${placeholders}) AND (c.is_pool = 1 OR c.pool_group IS NOT NULL OR c.relationship IS NOT NULL)
+        ORDER BY c.id DESC
+      `).all(...subUserIds);
+
+      const poolCustomers = poolCustomersRaw.map(normalizeCustomerInsurances);
+
       return {
         success: true,
         users: subordinateUsers,
         schedules,
-        longTouchCustomers
+        longTouchCustomers,
+        poolCustomers
       };
     } catch (err) {
       console.error('get-subordinate-data error:', err);
