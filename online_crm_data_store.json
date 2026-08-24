@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_synced_at": "2026-08-24T08:11:09.080Z",
+  "last_synced_at": "2026-08-24T08:20:57.532Z",
   "customers": [
     {
       "id": 1,
@@ -223,7 +223,10 @@
       "created_at": "2026-08-07T00:04:16.002Z",
       "updated_at": "2026-08-07T01:46:58.380Z",
       "user_id": 3,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 2,
@@ -237,7 +240,10 @@
       "created_at": "2026-08-07T00:07:58.903Z",
       "updated_at": "2026-08-18T02:28:01.897Z",
       "user_id": 3,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 3,
@@ -251,7 +257,10 @@
       "created_at": "2026-08-07T01:06:20.332Z",
       "updated_at": "2026-08-11T01:03:10.676Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 4,
@@ -265,7 +274,10 @@
       "created_at": "2026-08-13T02:56:58.503Z",
       "updated_at": "2026-08-07T01:09:25.629Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 5,
@@ -279,7 +291,10 @@
       "created_at": "2026-08-07T01:10:59.055Z",
       "updated_at": "2026-08-11T23:01:40.494Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 6,
@@ -293,7 +308,10 @@
       "created_at": "2026-08-13T03:03:43.538Z",
       "updated_at": "2026-08-19T00:21:33.696Z",
       "user_id": 5,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 7,
@@ -307,7 +325,10 @@
       "created_at": "2026-08-07T02:10:57.215Z",
       "updated_at": "2026-08-11T01:03:13.036Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 8,
@@ -321,7 +342,10 @@
       "created_at": "2026-08-13T03:04:39.211Z",
       "updated_at": "2026-08-13T03:04:39.211Z",
       "user_id": 5,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 9,
@@ -335,7 +359,10 @@
       "created_at": "2026-08-11T00:05:44.440Z",
       "updated_at": "2026-08-19T00:36:20.928Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 10,
@@ -349,7 +376,10 @@
       "created_at": "2026-08-11T00:05:44.440Z",
       "updated_at": "2026-08-19T00:36:20.927Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 11,
@@ -363,7 +393,10 @@
       "created_at": "2026-08-11T00:05:44.441Z",
       "updated_at": "2026-08-19T00:36:20.928Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 12,
@@ -377,7 +410,10 @@
       "created_at": "2026-08-11T00:10:18.606Z",
       "updated_at": "2026-08-19T00:36:20.929Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 13,
@@ -391,7 +427,10 @@
       "created_at": "2026-08-11T00:10:18.607Z",
       "updated_at": "2026-08-19T00:36:20.929Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 14,
@@ -405,7 +444,10 @@
       "created_at": "2026-08-11T00:10:18.607Z",
       "updated_at": "2026-08-19T00:36:20.929Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 15,
@@ -419,7 +461,10 @@
       "created_at": "2026-08-11T00:10:18.607Z",
       "updated_at": "2026-08-19T00:36:20.929Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 16,
@@ -433,7 +478,10 @@
       "created_at": "2026-08-11T00:10:18.607Z",
       "updated_at": "2026-08-19T00:36:20.929Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 17,
@@ -447,7 +495,10 @@
       "created_at": "2026-08-11T00:12:42.781Z",
       "updated_at": "2026-08-19T00:36:20.930Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 18,
@@ -461,7 +512,10 @@
       "created_at": "2026-08-11T00:12:42.782Z",
       "updated_at": "2026-08-19T00:36:20.931Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 19,
@@ -475,7 +529,10 @@
       "created_at": "2026-08-11T00:12:42.782Z",
       "updated_at": "2026-08-19T00:36:20.930Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 20,
@@ -489,7 +546,10 @@
       "created_at": "2026-08-11T00:12:42.782Z",
       "updated_at": "2026-08-19T00:36:20.931Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 21,
@@ -503,7 +563,10 @@
       "created_at": "2026-08-11T00:12:42.782Z",
       "updated_at": "2026-08-19T00:36:20.930Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 22,
@@ -517,7 +580,10 @@
       "created_at": "2026-08-11T00:15:01.517Z",
       "updated_at": "2026-08-19T00:36:20.931Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 23,
@@ -531,7 +597,10 @@
       "created_at": "2026-08-11T00:15:01.517Z",
       "updated_at": "2026-08-19T00:36:20.931Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 24,
@@ -545,7 +614,10 @@
       "created_at": "2026-08-11T00:15:01.517Z",
       "updated_at": "2026-08-19T00:36:20.931Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 25,
@@ -559,7 +631,10 @@
       "created_at": "2026-08-11T00:17:03.043Z",
       "updated_at": "2026-08-19T00:36:20.932Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 26,
@@ -573,7 +648,10 @@
       "created_at": "2026-08-11T00:17:03.043Z",
       "updated_at": "2026-08-19T00:36:20.932Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 27,
@@ -587,7 +665,10 @@
       "created_at": "2026-08-11T00:17:03.043Z",
       "updated_at": "2026-08-19T00:36:20.932Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 28,
@@ -601,7 +682,10 @@
       "created_at": "2026-08-11T00:17:03.043Z",
       "updated_at": "2026-08-19T00:36:20.932Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 29,
@@ -615,7 +699,10 @@
       "created_at": "2026-08-11T00:17:03.043Z",
       "updated_at": "2026-08-19T00:36:20.932Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 30,
@@ -629,7 +716,10 @@
       "created_at": "2026-08-11T00:17:03.043Z",
       "updated_at": "2026-08-19T00:36:20.932Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 31,
@@ -643,7 +733,10 @@
       "created_at": "2026-08-11T00:17:03.044Z",
       "updated_at": "2026-08-19T00:36:20.933Z",
       "user_id": 2,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 32,
@@ -657,7 +750,10 @@
       "created_at": "2026-08-19T00:36:31.972Z",
       "updated_at": "2026-08-19T01:26:04.275Z",
       "user_id": 5,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 33,
@@ -671,7 +767,10 @@
       "created_at": "2026-08-19T00:53:18.088Z",
       "updated_at": "2026-08-19T01:56:46.816Z",
       "user_id": 5,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     },
     {
       "id": 34,
@@ -685,7 +784,10 @@
       "created_at": "2026-08-19T05:18:05.458Z",
       "updated_at": "2026-08-19T05:18:05.458Z",
       "user_id": 5,
-      "category_type": "UserSchedule"
+      "category_type": "UserSchedule",
+      "org_id": null,
+      "org_name": null,
+      "is_broadcast": 0
     }
   ],
   "posts": [
