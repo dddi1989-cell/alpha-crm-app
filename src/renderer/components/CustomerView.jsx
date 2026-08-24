@@ -10,6 +10,7 @@ import {
 } from '@tanstack/react-table';
 import { Users, User, Search, Plus, Edit2, Trash2, Mail, Phone, Shield, Filter, UserCheck, ArrowUpDown, ChevronLeft, ChevronRight, Calendar, Eye, ChevronDown, ChevronUp } from 'lucide-react';
 import { useCrmStore } from '../store/useCrmStore';
+import { getDescendantOrgAndUserIds, matchesOrgFilter } from '../utils/orgHierarchy';
 
 const columnHelper = createColumnHelper();
 
@@ -121,6 +122,11 @@ export default function CustomerView() {
 
   const myId = useMemo(() => (currentUser ? Number(currentUser.id) : 1), [currentUser]);
 
+  // Resolved hierarchy for all-customers organization filter
+  const hierarchyInfo = useMemo(() => {
+    return getDescendantOrgAndUserIds(customerOrgFilter, organizations, accessibleUsers);
+  }, [customerOrgFilter, organizations, accessibleUsers]);
+
   // 1. User's own customers
   const myCustomers = useMemo(() => {
     if (!Array.isArray(customers)) return [];
@@ -135,25 +141,11 @@ export default function CustomerView() {
     return myCustomers.filter((c) => c.is_pool === 1 || c.pool_group || c.relationship);
   }, [myCustomers]);
 
-  // 3. All accessible customers (with org/user filter)
+  // 3. All accessible customers (with recursive org/user filter)
   const allCustomers = useMemo(() => {
     if (!Array.isArray(customers)) return [];
-
-    if (!customerOrgFilter) {
-      return customers;
-    }
-
-    if (customerOrgFilter.startsWith('user:')) {
-      const targetUid = Number(customerOrgFilter.replace('user:', ''));
-      return customers.filter((c) => Number(c.user_id) === targetUid);
-    }
-
-    return customers.filter((c) => {
-      if (c.org_id && String(c.org_id) === String(customerOrgFilter)) return true;
-      if (c.user_org_name && String(c.user_org_name) === String(customerOrgFilter)) return true;
-      return false;
-    });
-  }, [customers, customerOrgFilter]);
+    return customers.filter((c) => matchesOrgFilter(c, hierarchyInfo));
+  }, [customers, hierarchyInfo]);
 
   // Base list depending on active subtab
   const currentBaseList = useMemo(() => {

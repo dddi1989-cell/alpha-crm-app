@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Calendar as CalendarIcon, Clock, CheckCircle2, X, RefreshCw, ChevronLeft, ChevronRight, User, Pin, Sliders, Plus, Edit3, Trash2, Save } from 'lucide-react';
 import { useCrmStore } from '../store/useCrmStore';
 import { api } from '../utils/api';
+import { getDescendantOrgAndUserIds, matchesOrgFilter } from '../utils/orgHierarchy';
 
 export default function DesktopWidgetView() {
   const schedules = useCrmStore((state) => state.schedules);
@@ -91,6 +92,12 @@ export default function DesktopWidgetView() {
   const effectiveOrgs = localOrgs.length > 0 ? localOrgs : storeOrganizations;
   const effectiveUsers = localUsers.length > 0 ? localUsers : storeAccessibleUsers;
 
+  // Resolved hierarchy for selected organization filter
+  const hierarchyInfo = useMemo(() => {
+    if (scheduleViewScope === 'personal') return null;
+    return getDescendantOrgAndUserIds(selectedOrgFilter, effectiveOrgs, effectiveUsers);
+  }, [scheduleViewScope, selectedOrgFilter, effectiveOrgs, effectiveUsers]);
+
   // Client-side Strict Filter Guard
   const visibleSchedules = useMemo(() => {
     if (!Array.isArray(schedules)) return [];
@@ -103,24 +110,9 @@ export default function DesktopWidgetView() {
       });
     }
 
-    // Organization Scope
-    if (!selectedOrgFilter) {
-      return schedules; // 전체 하위 조직 포함
-    }
-
-    // User-specific Filter (e.g. 'user:3')
-    if (selectedOrgFilter.startsWith('user:')) {
-      const targetUid = Number(selectedOrgFilter.replace('user:', ''));
-      return schedules.filter((s) => Number(s.user_id) === targetUid);
-    }
-
-    // Sub-Organization Filter
-    return schedules.filter((s) => {
-      if (s.org_id && String(s.org_id) === String(selectedOrgFilter)) return true;
-      if (s.user_org_name && String(s.user_org_name) === String(selectedOrgFilter)) return true;
-      return false;
-    });
-  }, [schedules, scheduleViewScope, selectedOrgFilter, currentUser]);
+    // Organization Scope (Includes all recursive descendants)
+    return schedules.filter((s) => matchesOrgFilter(s, hierarchyInfo));
+  }, [schedules, scheduleViewScope, hierarchyInfo, currentUser]);
 
   const getSchedulesForDay = (day) => visibleSchedules.filter((s) => {
     const d = new Date(s.scheduled_at);

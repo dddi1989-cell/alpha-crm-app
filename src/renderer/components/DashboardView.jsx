@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Users, User, Calendar, Clock, UserPlus, CalendarPlus, Bell, CheckCircle2, ArrowRight, ChevronLeft, ChevronRight, UserCheck, Shield, Plus, Eye, Mail, Phone, AlertTriangle, Building2, Filter } from 'lucide-react';
 import { useCrmStore } from '../store/useCrmStore';
+import { getDescendantOrgAndUserIds, matchesOrgFilter } from '../utils/orgHierarchy';
 
 function calculateElapsedMonths(startDateStr) {
   if (!startDateStr) return null;
@@ -68,6 +69,12 @@ export default function DashboardView() {
   const userName = currentUser?.name || '사용자';
   const orgName = currentUser?.org_name || '소속 조직';
 
+  // Resolved hierarchy for current selected sub-org filter
+  const hierarchyInfo = useMemo(() => {
+    if (dashboardScope === 'personal') return null;
+    return getDescendantOrgAndUserIds(selectedSubOrgFilter, organizations, accessibleUsers);
+  }, [dashboardScope, selectedSubOrgFilter, organizations, accessibleUsers]);
+
   // Client-side Strict Schedule Filter Guard
   const visibleSchedules = useMemo(() => {
     if (!Array.isArray(schedules)) return [];
@@ -79,24 +86,9 @@ export default function DashboardView() {
       });
     }
 
-    // Organization Scope
-    if (!selectedSubOrgFilter) {
-      return schedules; // 전체 하위 조직 포함
-    }
-
-    // Specific User Filter
-    if (selectedSubOrgFilter.startsWith('user:')) {
-      const targetUid = Number(selectedSubOrgFilter.replace('user:', ''));
-      return schedules.filter((s) => Number(s.user_id) === targetUid);
-    }
-
-    // Sub-Organization Filter
-    return schedules.filter((s) => {
-      if (s.org_id && String(s.org_id) === String(selectedSubOrgFilter)) return true;
-      if (s.user_org_name && String(s.user_org_name) === String(selectedSubOrgFilter)) return true;
-      return false;
-    });
-  }, [schedules, dashboardScope, selectedSubOrgFilter, myId]);
+    // Organization Scope (Includes all recursive descendants)
+    return schedules.filter((s) => matchesOrgFilter(s, hierarchyInfo));
+  }, [schedules, dashboardScope, hierarchyInfo, myId]);
 
   // Client-side Strict Customer Filter Guard
   const visibleCustomers = useMemo(() => {
@@ -109,24 +101,9 @@ export default function DashboardView() {
       });
     }
 
-    // Organization Scope
-    if (!selectedSubOrgFilter) {
-      return customers; // 전체 하위 조직 포함
-    }
-
-    // User-specific Filter
-    if (selectedSubOrgFilter.startsWith('user:')) {
-      const targetUid = Number(selectedSubOrgFilter.replace('user:', ''));
-      return customers.filter((c) => Number(c.user_id) === targetUid);
-    }
-
-    // Org-specific Filter
-    return customers.filter((c) => {
-      if (c.org_id && String(c.org_id) === String(selectedSubOrgFilter)) return true;
-      if (c.user_org_name && String(c.user_org_name) === String(selectedSubOrgFilter)) return true;
-      return false;
-    });
-  }, [customers, dashboardScope, selectedSubOrgFilter, myId]);
+    // Organization Scope (Includes all recursive descendants)
+    return customers.filter((c) => matchesOrgFilter(c, hierarchyInfo));
+  }, [customers, dashboardScope, hierarchyInfo, myId]);
 
   // Calendar State for the right panel
   const [currentDate, setCurrentDate] = useState(new Date());
