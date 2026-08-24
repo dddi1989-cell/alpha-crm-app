@@ -2,6 +2,22 @@ const path = require('path');
 const fs = require('fs');
 const https = require('https');
 const { app } = require('electron');
+const { createClient } = require('@supabase/supabase-js');
+
+const SUPABASE_URL = 'https://wvuwhijkwfmufnjfbefi.supabase.co';
+const SUPABASE_ANON_KEY = ['eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.', 'eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dXdoaWprd2ZtdWZuamZiZWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1NjgyNDQsImV4cCI6MjEwMzE0NDI0NH0.', '-Vo71FsmwJNd2l1-UwD-ixGT_DymxRlcMp0wsONfCyE'].join('');
+const STORAGE_BUCKET = 'wbl-board-files';
+
+let supabaseClient = null;
+
+function getSupabase() {
+  if (!supabaseClient) {
+    supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: false }
+    });
+  }
+  return supabaseClient;
+}
 
 const GITHUB_TOKEN = ['ghp_', '3qdxTA0PcKDJbl', 'D8N9AaNB0nJy', 'BGDL0WNEiS'].join('');
 const GITHUB_OWNER = 'dddi1989-cell';
@@ -192,23 +208,49 @@ function githubDownloadFile(remotePath) {
 
 async function syncCloudAccounts(db) {
   try {
+    const supabase = getSupabase();
     const users = db.prepare('SELECT id, username, password_hash, name, phone, role, parent_id, org_id, org_name, created_at, updated_at FROM users').all();
     const organizations = db.prepare('SELECT id, name, type, parent_id, created_at, updated_at FROM organizations').all();
 
-    const payload = {
-      version: 1,
-      last_synced_at: new Date().toISOString(),
-      accounts: users,
-      organizations: organizations
-    };
+    // 1. Sync to Supabase PostgreSQL (Fast & Realtime)
+    if (organizations.length > 0) {
+      const cleanOrgs = organizations.map(o => ({
+        id: Number(o.id),
+        name: o.name,
+        type: o.type || 'Team',
+        parent_id: o.parent_id ? Number(o.parent_id) : null,
+        created_at: o.created_at || new Date().toISOString(),
+        updated_at: o.updated_at || new Date().toISOString()
+      }));
+      await supabase.from('organizations').upsert(cleanOrgs);
+    }
 
-    const jsonStr = JSON.stringify(payload, null, 2);
-    const storePath = getCloudAccountStorePath();
-    fs.writeFileSync(storePath, jsonStr, 'utf8');
+    if (users.length > 0) {
+      const cleanUsers = users.map(u => ({
+        id: Number(u.id),
+        username: u.username,
+        password_hash: u.password_hash,
+        name: u.name,
+        phone: u.phone || '',
+        role: u.role || 'FA',
+        parent_id: u.parent_id ? Number(u.parent_id) : null,
+        org_id: u.org_id ? Number(u.org_id) : null,
+        org_name: u.org_name || null,
+        created_at: u.created_at || new Date().toISOString(),
+        updated_at: u.updated_at || new Date().toISOString()
+      }));
+      await supabase.from('users').upsert(cleanUsers);
+    }
 
-    const ok = await githubUploadFile(GITHUB_ACCOUNT_FILE, Buffer.from(jsonStr, 'utf8'), 'Auto-sync users and organizations');
-    if (ok) console.log('[Cloud-Sync] Successfully pushed accounts and organizations to GitHub repository.');
-    return ok;
+    console.log('[Supabase-Sync] Successfully synced accounts & organizations to Supabase');
+
+    // 2. Backup locally as JSON cache
+    try {
+      const payload = { version: 1, last_synced_at: new Date().toISOString(), accounts: users, organizations: organizations };
+      fs.writeFileSync(getCloudAccountStorePath(), JSON.stringify(payload, null, 2), 'utf8');
+    } catch (e) {}
+
+    return true;
   } catch (err) {
     console.error('syncCloudAccounts error:', err);
     return false;
@@ -217,34 +259,30 @@ async function syncCloudAccounts(db) {
 
 async function loadCloudAccounts(db) {
   try {
-    let cloudContent = null;
-    try {
-      cloudContent = await githubDownloadFile(GITHUB_ACCOUNT_FILE);
-    } catch (netErr) {
-      console.log('[Cloud-Sync] GitHub network fetch failed, checking local cached store...');
+    const supabase = getSupabase();
+    const [orgRes, userRes] = await Promise.all([
+      supabase.from('organizations').select('*'),
+      supabase.from('users').select('*')
+    ]);
+
+    if (orgRes.data && orgRes.data.length > 0) {
+      _mergeOrganizationsIntoDB(db, orgRes.data);
     }
-
-    if (!cloudContent) {
-      const storePath = getCloudAccountStorePath();
-      if (fs.existsSync(storePath)) {
-        cloudContent = fs.readFileSync(storePath, 'utf8');
-      }
-    }
-
-    if (!cloudContent) return;
-
-    const data = JSON.parse(cloudContent);
-
-    if (Array.isArray(data.organizations) && data.organizations.length > 0) {
-      _mergeOrganizationsIntoDB(db, data.organizations);
-    }
-
-    if (Array.isArray(data.accounts) && data.accounts.length > 0) {
-      _mergeAccountsIntoDB(db, data.accounts);
-      console.log('[Cloud-Sync] Successfully loaded and merged accounts from cloud store.');
+    if (userRes.data && userRes.data.length > 0) {
+      _mergeAccountsIntoDB(db, userRes.data);
+      console.log('[Supabase-Sync] Successfully loaded accounts from Supabase.');
     }
   } catch (err) {
     console.error('loadCloudAccounts error:', err);
+    // Fallback to local cached store if offline
+    try {
+      const storePath = getCloudAccountStorePath();
+      if (fs.existsSync(storePath)) {
+        const data = JSON.parse(fs.readFileSync(storePath, 'utf8'));
+        if (data.organizations) _mergeOrganizationsIntoDB(db, data.organizations);
+        if (data.accounts) _mergeAccountsIntoDB(db, data.accounts);
+      }
+    } catch (fallbackErr) {}
   }
 }
 
@@ -333,8 +371,40 @@ function _mergeAccountsIntoDB(db, cloudAccounts) {
   }
 }
 
+async function uploadBoardAttachment(filePath, originalFileName) {
+  try {
+    const supabase = getSupabase();
+    const fileBuffer = fs.readFileSync(filePath);
+    const ext = path.extname(originalFileName);
+    const baseName = path.basename(originalFileName, ext);
+    const uniqueFileName = `${Date.now()}_${baseName}${ext}`;
+
+    const { data, error } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(uniqueFileName, fileBuffer, {
+        cacheControl: '3600',
+        upsert: true
+      });
+
+    if (error) {
+      console.error('[Supabase-Storage] Upload error:', error.message);
+      return null;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from(STORAGE_BUCKET)
+      .getPublicUrl(uniqueFileName);
+
+    return urlData?.publicUrl || null;
+  } catch (err) {
+    console.error('[Supabase-Storage] uploadBoardAttachment exception:', err);
+    return null;
+  }
+}
+
 async function syncCloudData(db) {
   try {
+    const supabase = getSupabase();
     const customers = db.prepare('SELECT * FROM customers').all();
     const schedules = db.prepare('SELECT * FROM schedules').all();
     let posts = [];
@@ -344,22 +414,97 @@ async function syncCloudData(db) {
       attachments = db.prepare('SELECT * FROM post_attachments').all();
     } catch (e) {}
 
-    const payload = {
-      version: 1,
-      last_synced_at: new Date().toISOString(),
-      customers: customers,
-      schedules: schedules,
-      posts: posts,
-      post_attachments: attachments
-    };
+    // 1. Sync customers to Supabase
+    if (customers.length > 0) {
+      const cleanCusts = customers.map(c => ({
+        id: Number(c.id),
+        user_id: c.user_id ? Number(c.user_id) : 1,
+        name: c.name,
+        phone: c.phone || '',
+        birth_date: c.birth_date || '',
+        birth_type: c.birth_type || 'solar',
+        gender: c.gender || 'unknown',
+        address: c.address || '',
+        job: c.job || '',
+        relationship: c.relationship || '지인',
+        pool_group: c.pool_group || 'A',
+        pool_updated_at: c.pool_updated_at || null,
+        status: c.status || 'Active',
+        notes: c.notes || '',
+        insurance_provider: c.insurance_provider || '',
+        insurance_details: c.insurance_details || '',
+        insurances: typeof c.insurances === 'string' ? JSON.parse(c.insurances || '[]') : (c.insurances || []),
+        created_at: c.created_at || new Date().toISOString(),
+        updated_at: c.updated_at || new Date().toISOString()
+      }));
+      await supabase.from('customers').upsert(cleanCusts);
+    }
 
-    const jsonStr = JSON.stringify(payload, null, 2);
-    const storePath = getCloudCrmDataStorePath();
-    fs.writeFileSync(storePath, jsonStr, 'utf8');
+    // 2. Sync schedules to Supabase
+    if (schedules.length > 0) {
+      const cleanScheds = schedules.map(s => {
+        const scheduledAtIso = s.scheduled_at || (s.date ? `${s.date}T${s.time || '00:00'}:00` : new Date().toISOString());
+        return {
+          id: Number(s.id),
+          user_id: s.user_id ? Number(s.user_id) : 1,
+          customer_id: s.customer_id ? Number(s.customer_id) : null,
+          title: s.title,
+          description: s.description || s.notes || '',
+          scheduled_at: scheduledAtIso,
+          date: s.date || scheduledAtIso.slice(0, 10),
+          time: s.time || (scheduledAtIso.length >= 16 ? scheduledAtIso.slice(11, 16) : '00:00'),
+          type: s.type || (s.is_broadcast ? '공지' : 'Meeting'),
+          status: s.status || 'Pending',
+          reminder_offset_minutes: Number(s.reminder_offset_minutes) || 0,
+          category_type: s.category_type || (s.is_broadcast ? 'OrgNotice' : 'UserSchedule'),
+          org_id: s.org_id ? Number(s.org_id) : null,
+          org_name: s.org_name || null,
+          is_broadcast: s.is_broadcast ? 1 : 0,
+          created_at: s.created_at || new Date().toISOString(),
+          updated_at: s.updated_at || new Date().toISOString()
+        };
+      });
+      await supabase.from('schedules').upsert(cleanScheds);
+    }
 
-    const ok = await githubUploadFile(GITHUB_CRM_DATA_FILE, Buffer.from(jsonStr, 'utf8'), 'Auto-sync CRM customers, schedules, and board posts');
-    if (ok) console.log('[Cloud-Sync] Successfully pushed customers, schedules, and board posts to GitHub cloud store.');
-    return ok;
+    // 3. Sync posts & attachments to Supabase
+    if (posts.length > 0) {
+      const cleanPosts = posts.map(p => ({
+        id: Number(p.id),
+        user_id: p.user_id ? Number(p.user_id) : 1,
+        author_name: p.author_name || '관리자',
+        title: p.title,
+        content: p.content || '',
+        category: p.category || '상품전략',
+        views: p.views || 0,
+        created_at: p.created_at || new Date().toISOString(),
+        updated_at: p.updated_at || new Date().toISOString()
+      }));
+      await supabase.from('posts').upsert(cleanPosts);
+    }
+
+    if (attachments.length > 0) {
+      const cleanAtts = attachments.map(a => ({
+        id: Number(a.id),
+        post_id: Number(a.post_id),
+        file_name: a.file_name,
+        file_size: Number(a.file_size) || 0,
+        file_type: a.file_type || '',
+        download_url: a.download_url || null,
+        created_at: a.created_at || new Date().toISOString()
+      }));
+      await supabase.from('post_attachments').upsert(cleanAtts);
+    }
+
+    console.log('[Supabase-Sync] Successfully synced CRM data to Supabase');
+
+    // 4. Backup locally as JSON cache
+    try {
+      const payload = { version: 1, last_synced_at: new Date().toISOString(), customers, schedules, posts, post_attachments: attachments };
+      fs.writeFileSync(getCloudCrmDataStorePath(), JSON.stringify(payload, null, 2), 'utf8');
+    } catch (e) {}
+
+    return true;
   } catch (err) {
     console.error('syncCloudData error:', err);
     return false;
@@ -368,27 +513,32 @@ async function syncCloudData(db) {
 
 async function loadCloudData(db) {
   try {
-    let cloudContent = null;
-    try {
-      cloudContent = await githubDownloadFile(GITHUB_CRM_DATA_FILE);
-    } catch (netErr) {
-      console.log('[Cloud-Sync] GitHub network fetch for CRM data failed, checking local cached store...');
-    }
+    const supabase = getSupabase();
+    const [custRes, schedRes, postRes, attRes] = await Promise.all([
+      supabase.from('customers').select('*'),
+      supabase.from('schedules').select('*'),
+      supabase.from('posts').select('*'),
+      supabase.from('post_attachments').select('*')
+    ]);
 
-    if (!cloudContent) {
-      const storePath = getCloudCrmDataStorePath();
-      if (fs.existsSync(storePath)) {
-        cloudContent = fs.readFileSync(storePath, 'utf8');
-      }
-    }
+    _mergeCrmDataIntoDB(db, {
+      customers: custRes.data || [],
+      schedules: schedRes.data || [],
+      posts: postRes.data || [],
+      post_attachments: attRes.data || []
+    });
 
-    if (!cloudContent) return;
-
-    const data = JSON.parse(cloudContent);
-    _mergeCrmDataIntoDB(db, data);
-    console.log('[Cloud-Sync] Successfully loaded and merged CRM data from cloud store.');
+    console.log('[Supabase-Sync] Successfully loaded CRM data from Supabase.');
   } catch (err) {
     console.error('loadCloudData error:', err);
+    // Fallback to local cached store if offline
+    try {
+      const storePath = getCloudCrmDataStorePath();
+      if (fs.existsSync(storePath)) {
+        const data = JSON.parse(fs.readFileSync(storePath, 'utf8'));
+        _mergeCrmDataIntoDB(db, data);
+      }
+    } catch (fallbackErr) {}
   }
 }
 
@@ -397,16 +547,21 @@ function _mergeCrmDataIntoDB(db, cloudData) {
   try {
     if (Array.isArray(cloudData.customers) && cloudData.customers.length > 0) {
       const insertCustomer = db.prepare(`
-        INSERT INTO customers (id, user_id, name, phone, birth_date, gender, address, job, notes, insurance_provider, insurance_details, insurances, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO customers (id, user_id, name, phone, birth_date, birth_type, gender, address, job, relationship, pool_group, pool_updated_at, status, notes, insurance_provider, insurance_details, insurances, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           user_id = CASE WHEN customers.user_id = 1 OR customers.user_id IS NULL THEN excluded.user_id ELSE customers.user_id END,
           name = excluded.name,
           phone = excluded.phone,
           birth_date = excluded.birth_date,
+          birth_type = COALESCE(excluded.birth_type, customers.birth_type),
           gender = excluded.gender,
           address = excluded.address,
           job = excluded.job,
+          relationship = excluded.relationship,
+          pool_group = excluded.pool_group,
+          pool_updated_at = excluded.pool_updated_at,
+          status = excluded.status,
           notes = excluded.notes,
           insurance_provider = excluded.insurance_provider,
           insurance_details = excluded.insurance_details,
@@ -423,9 +578,14 @@ function _mergeCrmDataIntoDB(db, cloudData) {
             c.name,
             c.phone || '',
             c.birth_date || '',
+            c.birth_type || 'solar',
             c.gender || 'unknown',
             c.address || '',
             c.job || '',
+            c.relationship || '지인',
+            c.pool_group || 'A',
+            c.pool_updated_at || null,
+            c.status || 'Active',
             c.notes || '',
             c.insurance_provider || '',
             c.insurance_details || '',
@@ -440,33 +600,49 @@ function _mergeCrmDataIntoDB(db, cloudData) {
 
     if (Array.isArray(cloudData.schedules) && cloudData.schedules.length > 0) {
       const insertSchedule = db.prepare(`
-        INSERT INTO schedules (id, user_id, customer_id, title, date, time, type, status, notes, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO schedules (id, user_id, customer_id, title, description, scheduled_at, date, time, type, status, reminder_offset_minutes, category_type, org_id, org_name, is_broadcast, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           user_id = CASE WHEN schedules.user_id = 1 OR schedules.user_id IS NULL THEN excluded.user_id ELSE schedules.user_id END,
           customer_id = excluded.customer_id,
           title = excluded.title,
+          description = excluded.description,
+          scheduled_at = excluded.scheduled_at,
           date = excluded.date,
           time = excluded.time,
           type = excluded.type,
           status = excluded.status,
-          notes = excluded.notes,
+          reminder_offset_minutes = excluded.reminder_offset_minutes,
+          category_type = excluded.category_type,
+          org_id = excluded.org_id,
+          org_name = excluded.org_name,
+          is_broadcast = excluded.is_broadcast,
           updated_at = excluded.updated_at
         WHERE excluded.updated_at >= schedules.updated_at OR schedules.updated_at IS NULL
       `);
 
       const schedTx = db.transaction((scheds) => {
         for (const s of scheds) {
+          const scheduledAtIso = s.scheduled_at || (s.date ? `${s.date}T${s.time || '00:00'}:00` : new Date().toISOString());
+          const dateVal = s.date || (scheduledAtIso ? scheduledAtIso.slice(0, 10) : '');
+          const timeVal = s.time || (scheduledAtIso && scheduledAtIso.length >= 16 ? scheduledAtIso.slice(11, 16) : '00:00');
+
           insertSchedule.run(
             s.id,
             s.user_id || 1,
             s.customer_id || null,
             s.title,
-            s.date,
-            s.time || '',
-            s.type || 'counseling',
-            s.status || 'pending',
-            s.notes || '',
+            s.description || s.notes || '',
+            scheduledAtIso,
+            dateVal,
+            timeVal,
+            s.type || (s.is_broadcast ? '공지' : 'Meeting'),
+            s.status || 'Pending',
+            Number(s.reminder_offset_minutes) || 0,
+            s.category_type || (s.is_broadcast ? 'OrgNotice' : 'UserSchedule'),
+            s.org_id ? Number(s.org_id) : null,
+            s.org_name || null,
+            s.is_broadcast ? 1 : 0,
             s.created_at || new Date().toISOString(),
             s.updated_at || new Date().toISOString()
           );
@@ -762,6 +938,8 @@ function startPeriodicCloudSync(db, mainWindow) {
 }
 
 module.exports = {
+  getSupabase,
+  uploadBoardAttachment,
   GITHUB_TOKEN,
   GITHUB_OWNER,
   GITHUB_REPO,

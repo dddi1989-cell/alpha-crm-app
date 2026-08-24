@@ -6,6 +6,7 @@ const https = require('https');
 const http = require('http');
 const { URL } = require('url');
 const { getDb } = require('../database');
+const { uploadBoardAttachment } = require('../services/cloudSyncService');
 
 const GITHUB_TOKEN = ['ghp_', '3qdxTA0PcKDJbl', 'D8N9AaNB0nJy', 'BGDL0WNEiS'].join('');
 const GITHUB_OWNER = 'dddi1989-cell';
@@ -58,40 +59,30 @@ function ghRequest(urlPath, method = 'GET', body = null) {
 }
 
 let cachedBoardRelease = null;
+
 async function getOrCreateBoardAssetsRelease() {
-  if (cachedBoardRelease && cachedBoardRelease.upload_url) {
-    return cachedBoardRelease;
-  }
+  if (cachedBoardRelease) return cachedBoardRelease;
 
   try {
-    const relRes = await ghRequest('/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/tags/' + BOARD_ASSETS_TAG);
-    if (relRes.status === 200 && relRes.data && relRes.data.upload_url) {
-      cachedBoardRelease = relRes.data;
-      return cachedBoardRelease;
+    const res = await ghRequest('/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/tags/' + BOARD_ASSETS_TAG);
+    if (res.status === 200 && res.data && res.data.upload_url) {
+      cachedBoardRelease = res.data;
+      return res.data;
     }
 
+    // Create release if not exists
     const createRes = await ghRequest('/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases', 'POST', JSON.stringify({
       tag_name: BOARD_ASSETS_TAG,
       target_commitish: 'main',
-      name: '상품전략자료실 공유 첨부파일 저장소 (Board Cloud Storage)',
-      body: 'ALPHA CRM 상품전략자료실에 업로드된 공유 첨부파일(PDF, PPT, 엑셀 등)이 안전하게 저장되는 클라우드 스토리지입니다.',
+      name: 'Product Strategy Board Assets Storage',
+      body: 'Permanent cloud storage for product strategy attachments and documents.',
       draft: false,
-      prerelease: true
+      prerelease: false
     }));
 
-    if (createRes.status === 201 && createRes.data) {
+    if (createRes.status === 201 && createRes.data && createRes.data.upload_url) {
       cachedBoardRelease = createRes.data;
-      return cachedBoardRelease;
-    }
-  } catch (err) {
-    console.error('getOrCreateBoardAssetsRelease error:', err);
-  }
-
-  try {
-    const latestRes = await ghRequest('/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest');
-    if (latestRes.status === 200 && latestRes.data) {
-      cachedBoardRelease = latestRes.data;
-      return cachedBoardRelease;
+      return createRes.data;
     }
   } catch (e) {}
 
@@ -99,6 +90,17 @@ async function getOrCreateBoardAssetsRelease() {
 }
 
 async function uploadBoardFileToCloudServer(filePath, originalFileName) {
+  try {
+    // 1st Priority: Supabase Storage (Ultra-fast & dedicated bucket)
+    const supabaseUrl = await uploadBoardAttachment(filePath, originalFileName);
+    if (supabaseUrl) {
+      console.log('[Board-Cloud] Supabase Storage upload SUCCESS! URL: ' + supabaseUrl);
+      return supabaseUrl;
+    }
+  } catch (supaErr) {
+    console.warn('[Board-Cloud] Supabase Storage upload failed, falling back to GitHub release storage...', supaErr.message);
+  }
+
   try {
     const release = await getOrCreateBoardAssetsRelease();
     if (!release || !release.upload_url) {

@@ -12,6 +12,7 @@
     "rebuild": "electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.4",
     "@tanstack/react-table": "^8.20.6",
     "adm-zip": "^0.6.0",
     "better-sqlite3": "^11.8.1",
@@ -31,6 +32,8 @@
     "electron": "^34.2.0",
     "electron-builder": "^25.1.8",
     "pdf-parse": "^2.4.5",
+    "png-to-ico": "^3.0.2",
+    "pngjs": "^7.0.0",
     "postcss": "^8.5.2",
     "tailwindcss": "^3.4.17",
     "vite": "^6.1.0"
