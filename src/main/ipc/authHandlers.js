@@ -442,9 +442,10 @@ function registerAuthHandlers(mainWindow, triggerDualBackup) {
     }
   });
 
-  ipcMain.handle('users:get-accessible-subordinates', async (event, currentUserId) => {
+  ipcMain.handle('users:get-accessible-subordinates', async (event, params) => {
     const db = getDb();
     try {
+      const currentUserId = typeof params === 'object' && params !== null ? (params.currentUserId || params.userId) : params;
       const accessibleUsers = getAccessibleUsersForUser(db, currentUserId);
       return { success: true, users: accessibleUsers };
     } catch (err) {

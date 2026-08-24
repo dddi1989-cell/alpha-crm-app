@@ -242,42 +242,85 @@ function registerOrgHandlers(mainWindow, triggerDualBackup) {
     }
   });
 
-  ipcMain.handle('org:get-subordinate-data', async (event, managerUserId) => {
+  ipcMain.handle('org:get-subordinate-data', async (event, params) => {
     const db = getDb();
     try {
-      const subordinateUsers = getAccessibleUsersForUser(db, managerUserId);
-      const subUserIds = subordinateUsers.map(u => u.id);
+      let currentUserId = null;
+      let targetUserId = null;
 
-      if (subUserIds.length === 0) {
-        return { success: true, users: [], schedules: [], longTouchCustomers: [] };
+      if (typeof params === 'object' && params !== null) {
+        currentUserId = params.currentUserId || params.managerUserId || params.userId;
+        targetUserId = params.targetUserId;
+      } else {
+        currentUserId = params;
+        targetUserId = params;
       }
 
-      const placeholders = subUserIds.map(() => '?').join(',');
+      if (!currentUserId && !targetUserId) {
+        return { success: false, error: '사용자 ID가 지정되지 않았습니다.' };
+      }
 
-      // 1. Subordinate Schedules (Allowed in full)
+      const actingTargetId = targetUserId || currentUserId;
+
+      // 1. Fetch Target User Profile
+      const targetUser = db.prepare(`
+        SELECT u.id, u.username, u.name, u.role, u.parent_id, u.org_id, u.org_name, u.phone,
+               o.name as organization_name, o.type as organization_type
+        FROM users u
+        LEFT JOIN organizations o ON u.org_id = o.id
+        WHERE u.id = ?
+      `).get(actingTargetId);
+
+      if (!targetUser) {
+        return { success: false, error: '대상 사용자를 찾을 수 없습니다.' };
+      }
+
+      // Build target user's organization path
+      let orgPath = targetUser.org_name || targetUser.organization_name || '소속 미지정';
+      if (targetUser.org_id) {
+        const pathSegments = [];
+        let curOrg = db.prepare('SELECT id, name, parent_id FROM organizations WHERE id = ?').get(targetUser.org_id);
+        while (curOrg) {
+          pathSegments.unshift(curOrg.name);
+          if (curOrg.parent_id) {
+            curOrg = db.prepare('SELECT id, name, parent_id FROM organizations WHERE id = ?').get(curOrg.parent_id);
+          } else {
+            break;
+          }
+        }
+        if (pathSegments.length > 0) {
+          orgPath = pathSegments.join(' > ');
+        }
+      }
+      targetUser.orgPath = orgPath;
+
+      // 2. Fetch Schedules for Target User
       const schedules = db.prepare(`
         SELECT s.*, u.name as user_name, u.role as user_role, u.org_name as user_org_name, c.name as customer_name
         FROM schedules s
         LEFT JOIN users u ON s.user_id = u.id
         LEFT JOIN customers c ON s.customer_id = c.id
-        WHERE s.user_id IN (${placeholders})
+        WHERE s.user_id = ?
         ORDER BY s.scheduled_at ASC
-      `).all(...subUserIds);
+      `).all(actingTargetId);
 
-      // 2. Subordinate Customers (Masked to Long-Touch summary only)
-      const customers = db.prepare(`
-        SELECT c.id, c.user_id, c.name, c.status, c.created_at, u.name as user_name, u.role as user_role, u.org_name as user_org_name
+      // 3. Fetch All Customers for Target User
+      const customersRaw = db.prepare(`
+        SELECT c.*, u.name as user_name, u.role as user_role, u.org_name as user_org_name
         FROM customers c
         LEFT JOIN users u ON c.user_id = u.id
-        WHERE c.user_id IN (${placeholders})
+        WHERE c.user_id = ?
         ORDER BY c.name ASC
-      `).all(...subUserIds);
+      `).all(actingTargetId);
 
+      const customers = customersRaw.map(normalizeCustomerInsurances);
+
+      // 4. Calculate 6-Month Long-Touch Customers
       const now = new Date();
       const past6MonthsTime = now.getTime() - (180 * 24 * 60 * 60 * 1000);
       const future1MonthTime = now.getTime() + (30 * 24 * 60 * 60 * 1000);
 
-      const longTouchCustomers = [];
+      const longTouchList = [];
 
       for (const cust of customers) {
         const custSchedules = schedules.filter(s => {
@@ -313,14 +356,8 @@ function registerOrgHandlers(mainWindow, triggerDualBackup) {
           const elapsedDays = Math.floor(elapsedMs / (1000 * 60 * 60 * 24));
           const elapsedMonths = Math.floor(elapsedDays / 30);
 
-          longTouchCustomers.push({
-            id: cust.id,
-            name: cust.name,
-            user_id: cust.user_id,
-            user_name: cust.user_name || '미배정',
-            user_role: cust.user_role || 'FA',
-            user_org_name: cust.user_org_name || '',
-            status: cust.status,
+          longTouchList.push({
+            ...cust,
             last_schedule_date: latestScheduleDate,
             elapsed_days: elapsedDays,
             elapsed_months: elapsedMonths > 0 ? elapsedMonths : (elapsedDays > 0 ? 1 : 0),
@@ -329,23 +366,42 @@ function registerOrgHandlers(mainWindow, triggerDualBackup) {
         }
       }
 
-      // 3. Subordinate POOL Customers (Full POOL list for target subordinate)
-      const poolCustomersRaw = db.prepare(`
-        SELECT c.*, u.name as user_name, u.role as user_role, u.org_name as user_org_name
-        FROM customers c
-        LEFT JOIN users u ON c.user_id = u.id
-        WHERE c.user_id IN (${placeholders}) AND (c.is_pool = 1 OR c.pool_group IS NOT NULL OR c.relationship IS NOT NULL)
-        ORDER BY c.id DESC
-      `).all(...subUserIds);
+      // 5. Filter POOL Customers
+      const poolList = customers.filter(c => c.is_pool === 1 || c.pool_group || c.relationship);
 
-      const poolCustomers = poolCustomersRaw.map(normalizeCustomerInsurances);
+      // 6. Calculate Detailed Stats for Dashboard
+      const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const upcomingThisMonth = schedules.filter(s => {
+        const sDate = s.date || (s.scheduled_at ? s.scheduled_at.slice(0, 7) : '');
+        return sDate.startsWith(currentYearMonth);
+      }).length;
+
+      const activeCustomers = customers.filter(c => c.status === 'Active').length;
+      const leadCustomers = customers.filter(c => c.status === 'Lead').length;
+      const pendingSchedules = schedules.filter(s => s.status === 'Pending').length;
+      const completedSchedules = schedules.filter(s => s.status === 'Completed').length;
+
+      const stats = {
+        totalCustomers: customers.length,
+        longTouchCustomers: longTouchList.length,
+        activeCustomers,
+        leadCustomers,
+        totalSchedules: schedules.length,
+        pendingSchedules,
+        completedSchedules,
+        upcomingThisMonth
+      };
 
       return {
         success: true,
-        users: subordinateUsers,
+        targetUser,
+        stats,
+        longTouchList,
+        longTouchCustomers: longTouchList,
         schedules,
-        longTouchCustomers,
-        poolCustomers
+        customers,
+        poolCustomers: poolList,
+        poolList
       };
     } catch (err) {
       console.error('get-subordinate-data error:', err);
