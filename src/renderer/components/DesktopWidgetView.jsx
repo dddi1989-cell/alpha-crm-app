@@ -28,16 +28,38 @@ export default function DesktopWidgetView() {
     setOpacity(val);
     if (api?.system?.setWindowOpacity) api.system.setWindowOpacity(val);
   };
+  // Local cache for orgs & accessible users in widget
+  const [localOrgs, setLocalOrgs] = useState([]);
+  const [localUsers, setLocalUsers] = useState([]);
+
+  const loadWidgetData = async () => {
+    await loadAllData();
+    try {
+      const stored = typeof window !== 'undefined' ? (sessionStorage.getItem('alpha_crm_active_user') || localStorage.getItem('alpha_crm_active_user')) : null;
+      const u = stored ? JSON.parse(stored) : null;
+      const uid = u?.id || null;
+
+      const [orgsRes, usersRes] = await Promise.all([
+        api.org?.getAllOrganizations ? api.org.getAllOrganizations(uid) : Promise.resolve({ organizations: [] }),
+        api.users?.getAccessibleSubordinates ? api.users.getAccessibleSubordinates(uid) : Promise.resolve({ users: [] })
+      ]);
+
+      if (orgsRes?.organizations) setLocalOrgs(orgsRes.organizations);
+      if (usersRes?.users) setLocalUsers(usersRes.users);
+    } catch (e) {
+      console.error('Widget org loading error:', e);
+    }
+  };
 
   useEffect(() => {
-    loadAllData();
-    const unsub1 = api.onSchedulesChanged ? api.onSchedulesChanged(() => loadAllData()) : null;
-    const unsub2 = api.onScheduleDue ? api.onScheduleDue(() => loadAllData()) : null;
+    loadWidgetData();
+    const unsub1 = api.onSchedulesChanged ? api.onSchedulesChanged(() => loadWidgetData()) : null;
+    const unsub2 = api.onScheduleDue ? api.onScheduleDue(() => loadWidgetData()) : null;
     return () => {
       if (unsub1) unsub1();
       if (unsub2) unsub2();
     };
-  }, [loadAllData]);
+  }, []);
 
   const handleTogglePin = async () => {
     const nextPin = !isPinned;
@@ -63,8 +85,11 @@ export default function DesktopWidgetView() {
   const setScheduleViewScope = useCrmStore((state) => state.setScheduleViewScope);
   const selectedOrgFilter = useCrmStore((state) => state.selectedOrgFilter);
   const setSelectedOrgFilter = useCrmStore((state) => state.setSelectedOrgFilter);
-  const organizations = useCrmStore((state) => state.organizations);
-  const accessibleUsers = useCrmStore((state) => state.accessibleUsers);
+  const storeOrganizations = useCrmStore((state) => state.organizations);
+  const storeAccessibleUsers = useCrmStore((state) => state.accessibleUsers);
+
+  const effectiveOrgs = localOrgs.length > 0 ? localOrgs : storeOrganizations;
+  const effectiveUsers = localUsers.length > 0 ? localUsers : storeAccessibleUsers;
 
   // Client-side Strict Filter Guard
   const visibleSchedules = useMemo(() => {
@@ -324,16 +349,18 @@ export default function DesktopWidgetView() {
               className="flex-1 bg-slate-950 border border-slate-700/80 rounded-lg px-2 py-1 text-[11px] font-medium text-emerald-300 focus:outline-none focus:border-emerald-500 truncate"
             >
               <option value="">🏢 전체 하위조직 통합 조회</option>
-              <optgroup label="── 하부 조직별 ──">
-                {organizations.map((org) => (
-                  <option key={org.id} value={org.name}>
-                    [{org.type || '팀'}] {org.name}
-                  </option>
-                ))}
-              </optgroup>
-              {accessibleUsers.length > 0 && (
+              {effectiveOrgs.length > 0 && (
+                <optgroup label="── 하부 조직별 ──">
+                  {effectiveOrgs.map((org) => (
+                    <option key={org.id} value={org.name}>
+                      [{org.type || '팀'}] {org.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {effectiveUsers.length > 0 && (
                 <optgroup label="── 특정 조직원별 ──">
-                  {accessibleUsers.map((u) => (
+                  {effectiveUsers.map((u) => (
                     <option key={u.id} value={`user:${u.id}`}>
                       👤 {u.name} ({u.role})
                     </option>

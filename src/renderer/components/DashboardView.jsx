@@ -627,63 +627,15 @@ export default function DashboardView() {
                 <h3 className="font-semibold text-base text-white">일정관리 캘린더</h3>
               </div>
 
-              {/* Scope Switcher: Personal vs Organization */}
-              <div className="flex flex-wrap items-center gap-1.5">
-                <div className="flex bg-slate-900/80 p-0.5 rounded-lg border border-slate-800 text-[11px]">
-                  <button
-                    onClick={() => useCrmStore.getState().setScheduleViewScope('personal')}
-                    className={`px-2 py-1 rounded-md font-bold transition-all ${
-                      scheduleViewScope === 'personal'
-                        ? 'bg-indigo-600 text-white shadow-sm'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    👤 내 일정
-                  </button>
-                  <button
-                    onClick={() => useCrmStore.getState().setScheduleViewScope('organization')}
-                    className={`px-2 py-1 rounded-md font-bold transition-all ${
-                      scheduleViewScope === 'organization'
-                        ? 'bg-emerald-600 text-white shadow-sm'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    🏢 조직 일정
-                  </button>
-                </div>
-
-                {/* Sub-Organization / User Selector */}
-                {scheduleViewScope === 'organization' && (
-                  <select
-                    value={selectedOrgFilter}
-                    onChange={(e) => setSelectedOrgFilter(e.target.value)}
-                    className="bg-slate-900 border border-slate-700/80 rounded-lg px-2 py-1 text-[11px] font-medium text-emerald-300 focus:outline-none focus:border-emerald-500 max-w-40 truncate"
-                  >
-                    <option value="">🏢 전체 하위조직</option>
-                    <optgroup label="── 하부 조직별 ──">
-                      {organizations.map((org) => (
-                        <option key={org.id} value={org.name}>
-                          [{org.type || '팀'}] {org.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                    {accessibleUsers.length > 0 && (
-                      <optgroup label="── 특정 조직원별 ──">
-                        {accessibleUsers.map((u) => (
-                          <option key={u.id} value={`user:${u.id}`}>
-                            👤 {u.name} ({u.role})
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
-                  </select>
-                )}
-
+              <div className="flex items-center space-x-2">
+                <span className="text-xs text-slate-400 font-medium">
+                  {dashboardScope === 'personal' ? `[${userName}] 님의 일정` : `[${orgName}] 조직 일정`}
+                </span>
                 <button
                   onClick={() => setActiveTab('schedules')}
                   className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center space-x-1 font-medium group ml-1"
                 >
-                  <span>전체</span>
+                  <span>전체 캘린더</span>
                   <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                 </button>
               </div>
