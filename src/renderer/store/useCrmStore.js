@@ -4,10 +4,11 @@ import { api } from '../utils/api';
 const getStoredUser = () => {
   if (typeof window === 'undefined') return null;
   try {
+    // Only persist within the current running session. Full app restarts will require re-login.
     const sessionSaved = sessionStorage.getItem('alpha_crm_active_user');
     if (sessionSaved) return JSON.parse(sessionSaved);
-    const localSaved = localStorage.getItem('alpha_crm_active_user');
-    if (localSaved) return JSON.parse(localSaved);
+    // Clear any legacy localStorage user
+    localStorage.removeItem('alpha_crm_active_user');
     return null;
   } catch (e) {
     return null;
@@ -68,7 +69,7 @@ export const useCrmStore = create((set, get) => ({
     if (user) {
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('alpha_crm_active_user', JSON.stringify(user));
-        localStorage.setItem('alpha_crm_active_user', JSON.stringify(user));
+        localStorage.removeItem('alpha_crm_active_user');
       }
       set({ currentUser: user });
       if (api.users?.setActiveUser) api.users.setActiveUser(user.id);

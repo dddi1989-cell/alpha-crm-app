@@ -11,7 +11,10 @@ export default function ScheduleModal() {
   const saveSchedule = useCrmStore((state) => state.saveSchedule);
   const currentUser = useCrmStore((state) => state.currentUser);
   const myId = currentUser ? Number(currentUser.id) : 1;
-  const isOwner = !editingSchedule || editingSchedule.user_id == null ? myId === 1 : Number(editingSchedule.user_id) === myId;
+  const isTopAdmin = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'admin' || currentUser.username === 'admin');
+  
+  // For new schedules, user is always owner. For editing, owner is creator or top admin.
+  const isOwner = !editingSchedule ? true : (editingSchedule.user_id == null || Number(editingSchedule.user_id) === myId || isTopAdmin);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -42,7 +45,7 @@ export default function ScheduleModal() {
         reminder_offset_minutes: editingSchedule.reminder_offset_minutes ?? 0,
         status: editingSchedule.status || 'Pending',
         is_broadcast: editingSchedule.is_broadcast ? 1 : 0,
-        org_id: editingSchedule.org_id || (currentUser?.org_id || '')
+        org_id: editingSchedule.org_id || currentUser?.org_id || (organizations[0]?.id || '')
       });
     } else {
       const defaultDate = new Date(Date.now() + 3600000);
