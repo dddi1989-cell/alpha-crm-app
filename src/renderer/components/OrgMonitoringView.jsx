@@ -49,7 +49,7 @@ export default function OrgMonitoringView() {
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [activeSubTab, setActiveSubTab] = useState('pool'); // 'pool' | 'longtouch' | 'schedules' | 'all-customers'
+  const [activeSubTab, setActiveSubTab] = useState('schedules'); // 'schedules' | 'longtouch' | 'pool' | 'all-customers'
   const [poolGroupFilter, setPoolGroupFilter] = useState('');
 
   // Calendar state for schedules tab
@@ -474,17 +474,15 @@ export default function OrgMonitoringView() {
           {/* 3. Navigation Tabs */}
           <div className="flex items-center space-x-2 border-b border-slate-800 pb-2">
             <button
-              onClick={() => {
-                setActiveSubTab('pool');
-                setPoolGroupFilter('');
-              }}
+              onClick={() => setActiveSubTab('schedules')}
               className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${
-                activeSubTab === 'pool'
-                  ? 'bg-amber-600 text-white shadow-lg shadow-amber-950/60'
+                activeSubTab === 'schedules'
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-950/60'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
             >
-              <span>📋 POOL LIST ({poolStats.total}명)</span>
+              <Calendar className="w-4 h-4" />
+              <span>📅 월간 일정 관리 ({stats.totalSchedules}건)</span>
             </button>
 
             <button
@@ -500,15 +498,17 @@ export default function OrgMonitoringView() {
             </button>
 
             <button
-              onClick={() => setActiveSubTab('schedules')}
+              onClick={() => {
+                setActiveSubTab('pool');
+                setPoolGroupFilter('');
+              }}
               className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${
-                activeSubTab === 'schedules'
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-950/60'
+                activeSubTab === 'pool'
+                  ? 'bg-amber-600 text-white shadow-lg shadow-amber-950/60'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
             >
-              <Calendar className="w-4 h-4" />
-              <span>📅 월간 일정 관리 ({stats.totalSchedules}건)</span>
+              <span>📋 POOL LIST ({poolStats.total}명)</span>
             </button>
 
             <button

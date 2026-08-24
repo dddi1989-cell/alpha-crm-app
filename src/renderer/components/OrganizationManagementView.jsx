@@ -119,7 +119,7 @@ export default function OrganizationManagementView() {
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [activeSubTab, setActiveSubTab] = useState('pool'); // 'pool' | 'schedules' | 'longtouch' | 'all-customers'
+  const [activeSubTab, setActiveSubTab] = useState('schedules'); // 'schedules' | 'longtouch' | 'pool' | 'all-customers'
   const [poolGroupFilter, setPoolGroupFilter] = useState('');
 
   // Calendar state for schedules tab
@@ -1082,23 +1082,9 @@ export default function OrganizationManagementView() {
               </div>
 
               {/* ========================================================================= */}
-              {/* Sub-tab Navigation (POOL LIST 1st Priority, Schedules, Long-touch) */}
+              {/* Sub-tab Navigation (1. Schedules, 2. Long-touch, 3. POOL LIST) */}
               {/* ========================================================================= */}
               <div className="flex border-b border-slate-200 dark:border-slate-800 space-x-6">
-                <button
-                  onClick={() => {
-                    setActiveSubTab('pool');
-                    setPoolGroupFilter('');
-                  }}
-                  className={`pb-3 text-xs font-extrabold flex items-center space-x-2 border-b-2 transition-all ${
-                    activeSubTab === 'pool'
-                      ? 'border-amber-500 text-amber-700 dark:text-amber-400'
-                      : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <span>📋 POOL LIST ({poolStats.total}명)</span>
-                </button>
-
                 <button
                   onClick={() => setActiveSubTab('schedules')}
                   className={`pb-3 text-xs font-extrabold flex items-center space-x-2 border-b-2 transition-all ${
@@ -1121,6 +1107,20 @@ export default function OrganizationManagementView() {
                 >
                   <Clock className="w-4 h-4" />
                   <span>⏳ 장기 미터치 고객 현황 ({filteredLongTouchCustomers.length}명)</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setActiveSubTab('pool');
+                    setPoolGroupFilter('');
+                  }}
+                  className={`pb-3 text-xs font-extrabold flex items-center space-x-2 border-b-2 transition-all ${
+                    activeSubTab === 'pool'
+                      ? 'border-amber-500 text-amber-700 dark:text-amber-400'
+                      : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <span>📋 POOL LIST ({poolStats.total}명)</span>
                 </button>
               </div>
 

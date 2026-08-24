@@ -112,23 +112,32 @@ export default function CustomerView() {
   const organizations = useCrmStore((state) => state.organizations);
   const accessibleUsers = useCrmStore((state) => state.accessibleUsers);
 
-  // Sub-tab: 'pool' (POOL LIST 가망고객 풀 - 기본) | 'directory' (전체 고객 디렉토리)
-  const [activeSubTab, setActiveSubTab] = useState('pool');
+  // Sub-tab: 'my-customers' (1. 본인 고객리스트 - 기본) | 'my-pool' (2. 본인 POOL LIST) | 'all-customers' (3. 전체고객 조회하기)
+  const [activeSubTab, setActiveSubTab] = useState('my-customers');
   const [globalFilter, setGlobalFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [poolGroupFilter, setPoolGroupFilter] = useState('');
   const [sorting, setSorting] = useState([]);
 
-  const visibleCustomers = useMemo(() => {
-    if (!Array.isArray(customers)) return [];
+  const myId = useMemo(() => (currentUser ? Number(currentUser.id) : 1), [currentUser]);
 
-    if (customerViewScope === 'personal') {
-      const myId = currentUser ? Number(currentUser.id) : 1;
-      return customers.filter((c) => {
-        const cOwnerId = c.user_id !== null && c.user_id !== undefined ? Number(c.user_id) : 1;
-        return cOwnerId === myId;
-      });
-    }
+  // 1. User's own customers
+  const myCustomers = useMemo(() => {
+    if (!Array.isArray(customers)) return [];
+    return customers.filter((c) => {
+      const cOwnerId = c.user_id !== null && c.user_id !== undefined ? Number(c.user_id) : 1;
+      return cOwnerId === myId;
+    });
+  }, [customers, myId]);
+
+  // 2. User's own POOL customers
+  const myPoolCustomers = useMemo(() => {
+    return myCustomers.filter((c) => c.is_pool === 1 || c.pool_group || c.relationship);
+  }, [myCustomers]);
+
+  // 3. All accessible customers (with org/user filter)
+  const allCustomers = useMemo(() => {
+    if (!Array.isArray(customers)) return [];
 
     if (!customerOrgFilter) {
       return customers;
@@ -144,39 +153,43 @@ export default function CustomerView() {
       if (c.user_org_name && String(c.user_org_name) === String(customerOrgFilter)) return true;
       return false;
     });
-  }, [customers, customerViewScope, customerOrgFilter, currentUser]);
+  }, [customers, customerOrgFilter]);
+
+  // Base list depending on active subtab
+  const currentBaseList = useMemo(() => {
+    if (activeSubTab === 'my-customers') return myCustomers;
+    if (activeSubTab === 'my-pool') return myPoolCustomers;
+    return allCustomers;
+  }, [activeSubTab, myCustomers, myPoolCustomers, allCustomers]);
 
   const filteredData = useMemo(() => {
-    let list = visibleCustomers;
+    let list = currentBaseList;
 
-    if (activeSubTab === 'pool') {
-      list = list.filter(c => c.is_pool === 1 || c.pool_group || c.relationship);
-      if (poolGroupFilter) {
-        list = list.filter(c => (c.pool_group || 'A') === poolGroupFilter);
-      }
+    if (activeSubTab === 'my-pool' && poolGroupFilter) {
+      list = list.filter((c) => (c.pool_group || 'A') === poolGroupFilter);
     }
 
     if (statusFilter) {
-      list = list.filter(c => c.status === statusFilter);
+      list = list.filter((c) => c.status === statusFilter);
     }
 
     return list;
-  }, [visibleCustomers, activeSubTab, poolGroupFilter, statusFilter]);
+  }, [currentBaseList, activeSubTab, poolGroupFilter, statusFilter]);
 
   const poolStats = useMemo(() => {
-    const poolList = visibleCustomers.filter(c => c.is_pool === 1 || c.pool_group || c.relationship);
+    const poolList = myPoolCustomers;
     const total = poolList.length;
-    const groupA = poolList.filter(c => (c.pool_group || 'A') === 'A').length;
-    const groupB = poolList.filter(c => c.pool_group === 'B').length;
-    const groupC = poolList.filter(c => c.pool_group === 'C').length;
-    const groupD = poolList.filter(c => c.pool_group === 'D').length;
-    const leads = poolList.filter(c => c.status === 'Lead').length;
-    const actives = poolList.filter(c => c.status === 'Active').length;
-    const inactives = poolList.filter(c => c.status === 'Inactive').length;
+    const groupA = poolList.filter((c) => (c.pool_group || 'A') === 'A').length;
+    const groupB = poolList.filter((c) => c.pool_group === 'B').length;
+    const groupC = poolList.filter((c) => c.pool_group === 'C').length;
+    const groupD = poolList.filter((c) => c.pool_group === 'D').length;
+    const leads = poolList.filter((c) => c.status === 'Lead').length;
+    const actives = poolList.filter((c) => c.status === 'Active').length;
+    const inactives = poolList.filter((c) => c.status === 'Inactive').length;
     const conversionRate = total > 0 ? Math.round((actives / total) * 100) : 0;
 
     return { total, groupA, groupB, groupC, groupD, leads, actives, inactives, conversionRate };
-  }, [visibleCustomers]);
+  }, [myPoolCustomers]);
 
   const getGroupBadge = (grp) => {
     switch (grp) {
@@ -305,31 +318,115 @@ export default function CustomerView() {
     <div className="p-8 space-y-6 animate-fadeIn">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center space-x-3">
-            <h2 className="text-2xl font-bold text-white tracking-tight">{activeSubTab === 'pool' ? '📋 POOL LIST' : '👥 고객 디렉토리'}</h2>
-            <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
-              <button onClick={() => { setActiveSubTab('directory'); setPoolGroupFilter(''); }} className={`px-3 py-1 rounded-lg font-bold ${activeSubTab === 'directory' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}>전체 고객 디렉토리</button>
-              <button onClick={() => setActiveSubTab('pool')} className={`px-3 py-1 rounded-lg font-bold ${activeSubTab === 'pool' ? 'bg-amber-600 text-white' : 'text-slate-400'}`}>📋 POOL LIST ({poolStats.total})</button>
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-2xl font-bold text-white tracking-tight">
+              {activeSubTab === 'my-customers' && '👤 내 고객 목록'}
+              {activeSubTab === 'my-pool' && '📋 내 POOL LIST'}
+              {activeSubTab === 'all-customers' && '🏢 전체고객 조회'}
+            </h2>
+            
+            {/* Sub-tab 3-level Buttons */}
+            <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs font-semibold">
+              <button
+                onClick={() => {
+                  setActiveSubTab('my-customers');
+                  setPoolGroupFilter('');
+                }}
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  activeSubTab === 'my-customers'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                👤 내 고객 목록 ({myCustomers.length})
+              </button>
+
+              <button
+                onClick={() => setActiveSubTab('my-pool')}
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  activeSubTab === 'my-pool'
+                    ? 'bg-amber-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                📋 내 POOL LIST ({myPoolCustomers.length})
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveSubTab('all-customers');
+                  setPoolGroupFilter('');
+                }}
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  activeSubTab === 'all-customers'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                🏢 전체고객 조회하기 ({allCustomers.length})
+              </button>
             </div>
           </div>
         </div>
-        <div className="flex gap-3">
-          {activeSubTab === 'pool' ? (
-            <button onClick={() => openCustomerModal(null, true)} className="bg-amber-600 px-4 py-2.5 rounded-xl text-white font-bold text-sm">+ POOL 고객 등록</button>
+
+        {/* Right Action Button & Org Filter */}
+        <div className="flex flex-wrap items-center gap-3">
+          {activeSubTab === 'all-customers' && (
+            <select
+              value={customerOrgFilter}
+              onChange={(e) => setCustomerOrgFilter(e.target.value)}
+              className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-medium"
+            >
+              <option value="">전체 조직 및 담당자</option>
+              {organizations.length > 0 && (
+                <optgroup label="조직 단위">
+                  {organizations.map((o) => (
+                    <option key={`org-${o.id}`} value={o.id}>
+                      🏢 {o.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {accessibleUsers.length > 0 && (
+                <optgroup label="개별 조직원">
+                  {accessibleUsers.map((u) => (
+                    <option key={`user-${u.id}`} value={`user:${u.id}`}>
+                      👤 {u.name} ({u.role || 'FA'}) {u.org_name ? `· ${u.org_name}` : ''}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+          )}
+
+          {activeSubTab === 'my-pool' ? (
+            <button
+              onClick={() => openCustomerModal(null, true)}
+              className="bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-xl text-white font-bold text-xs shadow-lg shadow-amber-950 flex items-center space-x-1.5 transition-all hover:scale-[1.02]"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ POOL 고객 등록</span>
+            </button>
           ) : (
-            <button onClick={() => openCustomerModal(null, false)} className="bg-blue-600 px-4 py-2.5 rounded-xl text-white font-medium text-sm">새 고객 추가</button>
+            <button
+              onClick={() => openCustomerModal(null, false)}
+              className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-xl text-white font-bold text-xs shadow-lg shadow-blue-950 flex items-center space-x-1.5 transition-all hover:scale-[1.02]"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ 새 고객 추가</span>
+            </button>
           )}
         </div>
       </div>
 
-      {activeSubTab === 'pool' && (
+      {activeSubTab === 'my-pool' && (
         <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
           <div className="glass-panel p-3.5 rounded-2xl border border-slate-800 bg-slate-900/60"><span className="text-[11px] text-slate-400 font-bold">전체 POOL</span><div className="text-xl font-extrabold text-white">{poolStats.total}명</div></div>
           <div className="glass-panel p-3.5 rounded-2xl border border-rose-900/40 bg-rose-950/20"><span className="text-[11px] text-rose-400 font-bold">A</span><div className="text-xl font-extrabold text-rose-300">{poolStats.groupA}명</div></div>
           <div className="glass-panel p-3.5 rounded-2xl border border-amber-900/40 bg-amber-950/20"><span className="text-[11px] text-amber-400 font-bold">B</span><div className="text-xl font-extrabold text-amber-300">{poolStats.groupB}명</div></div>
           <div className="glass-panel p-3.5 rounded-2xl border border-emerald-900/40 bg-emerald-950/20"><span className="text-[11px] text-emerald-400 font-bold">C</span><div className="text-xl font-extrabold text-emerald-300">{poolStats.groupC}명</div></div>
           <div className="glass-panel p-3.5 rounded-2xl border border-blue-900/40 bg-blue-950/20"><span className="text-[11px] text-blue-400 font-bold">D</span><div className="text-xl font-extrabold text-blue-300">{poolStats.groupD}명</div></div>
-          <div className="glass-panel p-3.5 rounded-2xl border border-indigo-900/40 bg-indigo-950/20"><span className="text-[11px] text-indigo-400 font-bold">보유 승격</span><div className="text-xl font-extrabold text-indigo-300">{poolStats.actives}명</div></div>
+          <div className="glass-panel p-3.5 rounded-2xl border border-indigo-900/40 bg-indigo-950/20"><span className="text-[11px] text-indigo-400 font-bold">보유 승격</span><div className="text-xl font-extrabold text-indigo-300">{poolStats.actives}명 ({poolStats.conversionRate}%)</div></div>
         </div>
       )}
 
@@ -348,7 +445,7 @@ export default function CustomerView() {
           </div>
 
           {/* Group Filter for POOL TAB */}
-          {activeSubTab === 'pool' && (
+          {activeSubTab === 'my-pool' && (
             <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
               {[
                 { key: '', label: '전체' },
@@ -394,14 +491,20 @@ export default function CustomerView() {
           <div className="p-16 text-center space-y-3">
             <Users className="w-12 h-12 mx-auto text-slate-600 stroke-[1.5]" />
             <h4 className="text-base font-semibold text-slate-300">
-              {activeSubTab === 'pool' ? '등록된 POOL LIST 고객이 없습니다' : '등록된 고객 기록이 없습니다'}
+              {activeSubTab === 'my-pool'
+                ? '등록된 POOL LIST 고객이 없습니다'
+                : activeSubTab === 'my-customers'
+                ? '등록된 내 고객이 없습니다'
+                : '등록된 고객 기록이 없습니다'}
             </h4>
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              {activeSubTab === 'pool'
+              {activeSubTab === 'my-pool'
                 ? '가망고객을 등록하여 인맥 및 타겟 그룹별로 체계적으로 관리해 보세요.'
-                : '로컬 CRM 데이터베이스가 비어 있거나 검색 조건에 일치하는 고객이 없습니다.'}
+                : activeSubTab === 'my-customers'
+                ? '신규 고객을 등록하여 일정을 계획하고 상담을 시작해 보세요.'
+                : '선택된 조직 또는 검색 조건에 일치하는 고객이 없습니다.'}
             </p>
-            {activeSubTab === 'pool' ? (
+            {activeSubTab === 'my-pool' ? (
               <button
                 onClick={() => openCustomerModal(null, true)}
                 className="mt-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-md"
