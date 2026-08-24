@@ -48,21 +48,35 @@ function calculateElapsedMonths(startDateStr) {
 }
 
 function getRoleRank(role) {
+  if (!role) return 1;
+  const normalized = String(role).trim();
   const map = {
     'Admin': 99,
     'admin': 99,
     'CEO': 6,
+    '대표': 6,
+    '대표이사': 6,
     '총괄': 6,
+    '총괄대표': 6,
     'COO': 5,
+    '총괄이사': 5,
     '사업단장': 5,
+    '단장': 5,
+    'RM': 4,
     '본부장': 4,
+    'BM': 3,
     '지점장': 3,
+    'SM': 2,
     '팀장': 2,
     'Manager': 2,
+    '매니저': 2,
     'FA': 1,
-    'Agent': 1
+    'Agent': 1,
+    'FP': 1,
+    '설계사': 1,
+    '팀원': 1
   };
-  return map[role] || 1;
+  return map[normalized] || 1;
 }
 
 export default function OrganizationManagementView() {
