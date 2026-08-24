@@ -85,6 +85,9 @@ function initDatabase(dbPath = null) {
       title TEXT NOT NULL,
       description TEXT,
       scheduled_at TEXT NOT NULL,
+      date TEXT,
+      time TEXT,
+      type TEXT DEFAULT 'Meeting',
       reminder_offset_minutes INTEGER DEFAULT 0,
       category_type TEXT DEFAULT 'UserSchedule',
       org_id INTEGER,
@@ -185,6 +188,15 @@ function initDatabase(dbPath = null) {
     }
     if (!existingColumns.includes('category_type')) {
       dbInstance.exec("ALTER TABLE schedules ADD COLUMN category_type TEXT DEFAULT 'UserSchedule';");
+    }
+    if (!existingColumns.includes('date')) {
+      dbInstance.exec("ALTER TABLE schedules ADD COLUMN date TEXT;");
+    }
+    if (!existingColumns.includes('time')) {
+      dbInstance.exec("ALTER TABLE schedules ADD COLUMN time TEXT;");
+    }
+    if (!existingColumns.includes('type')) {
+      dbInstance.exec("ALTER TABLE schedules ADD COLUMN type TEXT DEFAULT 'Meeting';");
     }
     if (!existingColumns.includes('org_id')) {
       dbInstance.exec("ALTER TABLE schedules ADD COLUMN org_id INTEGER;");

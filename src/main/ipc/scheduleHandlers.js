@@ -195,6 +195,9 @@ function registerScheduleHandlers(mainWindow, triggerDualBackup) {
     }
 
     const categoryType = isBroadcast ? 'OrgNotice' : (scheduleData.category_type || 'UserSchedule');
+    const scheduledAtIso = scheduleData.scheduled_at || (scheduleData.date ? `${scheduleData.date}T${scheduleData.time || '00:00'}:00` : now);
+    const dateVal = scheduleData.date || (scheduledAtIso ? scheduledAtIso.slice(0, 10) : '');
+    const timeVal = scheduleData.time || (scheduledAtIso && scheduledAtIso.length >= 16 ? scheduledAtIso.slice(11, 16) : '00:00');
 
     const stmt = db.prepare(`
       INSERT INTO schedules (user_id, customer_id, title, description, scheduled_at, date, time, type, status, reminder_offset_minutes, category_type, org_id, org_name, is_broadcast, created_at, updated_at)
@@ -206,9 +209,9 @@ function registerScheduleHandlers(mainWindow, triggerDualBackup) {
       scheduleData.customer_id || null,
       scheduleData.title,
       scheduleData.description || '',
-      scheduleData.scheduled_at || `${scheduleData.date}T${scheduleData.time || '00:00'}:00`,
-      scheduleData.date,
-      scheduleData.time || '00:00',
+      scheduledAtIso,
+      dateVal,
+      timeVal,
       scheduleData.type || (isBroadcast ? '공지' : 'Meeting'),
       scheduleData.status || 'Pending',
       Number(scheduleData.reminder_offset_minutes) || 0,
@@ -238,6 +241,9 @@ function registerScheduleHandlers(mainWindow, triggerDualBackup) {
       id: info.lastInsertRowid,
       user_id: ownerUserId,
       ...scheduleData,
+      scheduled_at: scheduledAtIso,
+      date: dateVal,
+      time: timeVal,
       org_id: resolvedOrgId,
       org_name: resolvedOrgName,
       is_broadcast: isBroadcast,
@@ -283,6 +289,9 @@ function registerScheduleHandlers(mainWindow, triggerDualBackup) {
     }
 
     const categoryType = isBroadcast ? 'OrgNotice' : (scheduleData.category_type || existing.category_type || 'UserSchedule');
+    const scheduledAtIso = scheduleData.scheduled_at !== undefined ? scheduleData.scheduled_at : existing.scheduled_at;
+    const dateVal = scheduleData.date !== undefined ? scheduleData.date : (scheduledAtIso ? scheduledAtIso.slice(0, 10) : existing.date);
+    const timeVal = scheduleData.time !== undefined ? scheduleData.time : (scheduledAtIso && scheduledAtIso.length >= 16 ? scheduledAtIso.slice(11, 16) : existing.time);
 
     const stmt = db.prepare(`
       UPDATE schedules 
@@ -295,9 +304,9 @@ function registerScheduleHandlers(mainWindow, triggerDualBackup) {
       scheduleData.customer_id !== undefined ? scheduleData.customer_id : existing.customer_id,
       scheduleData.title !== undefined ? scheduleData.title : existing.title,
       scheduleData.description !== undefined ? scheduleData.description : existing.description,
-      scheduleData.scheduled_at !== undefined ? scheduleData.scheduled_at : existing.scheduled_at,
-      scheduleData.date !== undefined ? scheduleData.date : existing.date,
-      scheduleData.time !== undefined ? scheduleData.time : existing.time,
+      scheduledAtIso,
+      dateVal,
+      timeVal,
       scheduleData.type !== undefined ? scheduleData.type : existing.type,
       scheduleData.status !== undefined ? scheduleData.status : existing.status,
       scheduleData.reminder_offset_minutes !== undefined ? Number(scheduleData.reminder_offset_minutes) : (existing.reminder_offset_minutes || 0),
