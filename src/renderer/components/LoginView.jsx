@@ -173,10 +173,10 @@ export default function LoginView() {
       <div className="w-full max-w-md glass-panel p-8 rounded-3xl border border-slate-800/80 shadow-2xl shadow-indigo-950/40 relative z-10 space-y-6">
         {/* Header Logo */}
         <div className="text-center space-y-3">
-          <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-2xl p-3 mx-auto shadow-lg shadow-indigo-600/30 flex items-center justify-center border border-indigo-400/30">
+          <div className="w-16 h-16 bg-black rounded-2xl p-2 mx-auto shadow-xl shadow-black/80 flex items-center justify-center border border-slate-700/80">
             <img 
               src={logoIcon} 
-              alt="ALPHA Logo" 
+              alt="WBL Logo" 
               className="w-full h-full object-contain"
               onError={(e) => {
                 e.target.onerror = null;
@@ -184,11 +184,11 @@ export default function LoginView() {
                 if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
               }} 
             />
-            <span className="hidden w-full h-full font-black text-white text-xl flex items-center justify-center">A</span>
+            <span className="hidden w-full h-full font-black text-white text-xl flex items-center justify-center">W</span>
           </div>
           <div>
             <h1 className="font-['Outfit',sans-serif] text-2xl font-extrabold tracking-tight text-white">
-              ALPHA 고객관리Tool
+              WBL CRM TOOL
             </h1>
             <p className="text-slate-400 text-xs mt-1">
               안전한 로그인 후 CRM 시스템에 접속하세요

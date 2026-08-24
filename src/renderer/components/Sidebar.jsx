@@ -106,10 +106,10 @@ export default function Sidebar() {
       <div>
         {/* App Logo & Header */}
         <div className="p-5 border-b border-slate-800/60 flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 p-1 border border-indigo-400/30 flex items-center justify-center shadow-lg shadow-indigo-950/50 overflow-hidden shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-black p-1 border border-slate-700/80 flex items-center justify-center shadow-lg shadow-black/60 overflow-hidden shrink-0">
             <img 
               src={logoIcon} 
-              alt="ALPHA Logo" 
+              alt="WBL Logo" 
               className="w-full h-full object-contain"
               onError={(e) => {
                 e.target.onerror = null;
@@ -117,11 +117,11 @@ export default function Sidebar() {
                 if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
               }} 
             />
-            <span className="hidden w-full h-full font-black text-white text-base flex items-center justify-center">A</span>
+            <span className="hidden w-full h-full font-black text-white text-base flex items-center justify-center">W</span>
           </div>
           <div className="overflow-hidden">
             <h1 className="font-['Outfit',sans-serif] text-base font-extrabold tracking-tight text-white truncate">
-              ALPHA 고객관리Tool
+              WBL CRM TOOL
             </h1>
             <span className="inline-flex items-center text-[10px] uppercase font-semibold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/50 mt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span>

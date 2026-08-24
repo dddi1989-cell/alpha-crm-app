@@ -14,9 +14,11 @@ let isQuitting = false;
 function getAppIcon() {
   // Try bundled asset path first (works in both dev and packaged app)
   const candidates = [
-    path.join(__dirname, 'assets', 'icon.jpg'),
+    path.join(__dirname, 'assets', 'icon.ico'),
+    path.join(__dirname, 'assets', 'icon.png'),
+    path.join(__dirname, '..', '..', 'build', 'icon.ico'),
     path.join(__dirname, '..', '..', 'build', 'icon.png'),
-    path.join(__dirname, '..', '..', 'build', 'icon.jpg'),
+    path.join(__dirname, 'assets', 'icon.jpg'),
     path.join(__dirname, '..', '..', 'public', 'icon.png')
   ];
 
@@ -67,11 +69,11 @@ if (!gotTheLock) {
     try {
       const icon = getTrayIcon();
       tray = new Tray(icon);
-      tray.setToolTip('ALPHA 고객관리Tool');
+      tray.setToolTip('WBL CRM TOOL');
 
       const contextMenu = Menu.buildFromTemplate([
         {
-          label: 'ALPHA 고객관리Tool 열기',
+          label: 'WBL CRM TOOL 열기',
           click: () => {
             if (mainWindow) {
               if (mainWindow.isMinimized()) mainWindow.restore();
@@ -195,7 +197,7 @@ if (!gotTheLock) {
       height: 830,
       minWidth: 1024,
       minHeight: 700,
-      title: 'ALPHA 고객관리Tool',
+      title: 'WBL CRM TOOL',
       backgroundColor: '#0b0f19',
       autoHideMenuBar: true,
       show: false,

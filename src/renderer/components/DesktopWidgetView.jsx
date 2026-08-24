@@ -236,7 +236,7 @@ export default function DesktopWidgetView() {
           <div className="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-sm">
             <CalendarIcon className="w-3.5 h-3.5" />
           </div>
-          <span className="font-['Outfit',sans-serif] font-bold text-xs tracking-wide text-white">ALPHA 캘린더 위젯</span>
+          <span className="font-['Outfit',sans-serif] font-bold text-xs tracking-wide text-white">WBL CRM 캘린더 위젯</span>
         </div>
         <div className="flex items-center space-x-1" style={{ WebkitAppRegion: 'no-drag' }}>
           <button onClick={() => setShowOpacitySlider(!showOpacitySlider)}
