@@ -385,28 +385,26 @@ export default function CustomerModal() {
 
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                그룹 선택 (Group Tier)
+                그룹 선택
               </label>
-              <div className="grid grid-cols-4 gap-1.5">
+              <div className="grid grid-cols-4 gap-2">
                 {[
-                  { key: 'A', label: 'A그룹', desc: '최우선 집중', color: 'border-rose-500 text-rose-300 bg-rose-950/60' },
-                  { key: 'B', label: 'B그룹', desc: '정기 관리', color: 'border-amber-500 text-amber-300 bg-amber-950/60' },
-                  { key: 'C', label: 'C그룹', desc: '잠재 가능', color: 'border-emerald-500 text-emerald-300 bg-emerald-950/60' },
-                  { key: 'D', label: 'D그룹', desc: '일반 관찰', color: 'border-blue-500 text-blue-300 bg-blue-950/60' }
+                  { key: 'A', color: 'border-rose-500 text-rose-300 bg-rose-950/60' },
+                  { key: 'B', color: 'border-amber-500 text-amber-300 bg-amber-950/60' },
+                  { key: 'C', color: 'border-emerald-500 text-emerald-300 bg-emerald-950/60' },
+                  { key: 'D', color: 'border-blue-500 text-blue-300 bg-blue-950/60' }
                 ].map(grp => (
                   <button
                     key={grp.key}
                     type="button"
                     onClick={() => setFormData({ ...formData, pool_group: grp.key })}
-                    className={`py-2 px-1 rounded-xl text-center border font-bold text-xs transition-all ${
+                    className={`py-2 rounded-xl text-center border font-bold text-sm transition-all ${
                       formData.pool_group === grp.key
                         ? `${grp.color} ring-2 ring-indigo-400 scale-[1.02] shadow-md`
                         : 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700 hover:text-slate-200'
                     }`}
-                    title={grp.desc}
                   >
-                    <div>{grp.key}</div>
-                    <div className="text-[9px] font-normal opacity-80">{grp.desc}</div>
+                    {grp.key}
                   </button>
                 ))}
               </div>

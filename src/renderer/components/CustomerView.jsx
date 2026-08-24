@@ -112,7 +112,8 @@ export default function CustomerView() {
   const organizations = useCrmStore((state) => state.organizations);
   const accessibleUsers = useCrmStore((state) => state.accessibleUsers);
 
-  const [activeSubTab, setActiveSubTab] = useState('directory');
+  // Sub-tab: 'pool' (POOL LIST 가망고객 풀 - 기본) | 'directory' (전체 고객 디렉토리)
+  const [activeSubTab, setActiveSubTab] = useState('pool');
   const [globalFilter, setGlobalFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [poolGroupFilter, setPoolGroupFilter] = useState('');
@@ -179,10 +180,10 @@ export default function CustomerView() {
 
   const getGroupBadge = (grp) => {
     switch (grp) {
-      case 'A': return { label: 'A그룹 (최우선)', style: 'bg-rose-950/80 text-rose-300 border-rose-700/60' };
-      case 'B': return { label: 'B그룹 (정기관리)', style: 'bg-amber-950/80 text-amber-300 border-amber-700/60' };
-      case 'C': return { label: 'C그룹 (잠재가능)', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-700/60' };
-      case 'D': default: return { label: 'D그룹 (일반관찰)', style: 'bg-blue-950/80 text-blue-300 border-blue-700/60' };
+      case 'A': return { label: 'A', style: 'bg-rose-950/80 text-rose-300 border-rose-700/60' };
+      case 'B': return { label: 'B', style: 'bg-amber-950/80 text-amber-300 border-amber-700/60' };
+      case 'C': return { label: 'C', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-700/60' };
+      case 'D': default: return { label: 'D', style: 'bg-blue-950/80 text-blue-300 border-blue-700/60' };
     }
   };
 
@@ -324,11 +325,11 @@ export default function CustomerView() {
       {activeSubTab === 'pool' && (
         <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
           <div className="glass-panel p-3.5 rounded-2xl border border-slate-800 bg-slate-900/60"><span className="text-[11px] text-slate-400 font-bold">전체 POOL</span><div className="text-xl font-extrabold text-white">{poolStats.total}명</div></div>
-          <div className="glass-panel p-3.5 rounded-2xl border border-rose-900/40 bg-rose-950/20"><span className="text-[11px] text-rose-400 font-bold">A그룹</span><div className="text-xl font-extrabold text-rose-300">{poolStats.groupA}명</div></div>
-          <div className="glass-panel p-3.5 rounded-2xl border border-amber-900/40 bg-amber-950/20"><span className="text-[11px] text-amber-400 font-bold">B그룹</span><div className="text-xl font-extrabold text-amber-300">{poolStats.groupB}명</div></div>
-          <div className="glass-panel p-3.5 rounded-2xl border border-emerald-900/40 bg-emerald-950/20"><span className="text-[11px] text-emerald-400 font-bold">C그룹</span><div className="text-xl font-extrabold text-emerald-300">{poolStats.groupC}명</div></div>
-          <div className="glass-panel p-3.5 rounded-2xl border border-blue-900/40 bg-blue-950/20"><span className="text-[11px] text-blue-400 font-bold">D그룹</span><div className="text-xl font-extrabold text-blue-300">{poolStats.groupD}명</div></div>
-          <div className="glass-panel p-3.5 rounded-2xl border border-indigo-900/40 bg-indigo-950/20"><span className="text-[11px] text-indigo-400 font-bold">승격</span><div className="text-xl font-extrabold text-indigo-300">{poolStats.actives}명</div></div>
+          <div className="glass-panel p-3.5 rounded-2xl border border-rose-900/40 bg-rose-950/20"><span className="text-[11px] text-rose-400 font-bold">A</span><div className="text-xl font-extrabold text-rose-300">{poolStats.groupA}명</div></div>
+          <div className="glass-panel p-3.5 rounded-2xl border border-amber-900/40 bg-amber-950/20"><span className="text-[11px] text-amber-400 font-bold">B</span><div className="text-xl font-extrabold text-amber-300">{poolStats.groupB}명</div></div>
+          <div className="glass-panel p-3.5 rounded-2xl border border-emerald-900/40 bg-emerald-950/20"><span className="text-[11px] text-emerald-400 font-bold">C</span><div className="text-xl font-extrabold text-emerald-300">{poolStats.groupC}명</div></div>
+          <div className="glass-panel p-3.5 rounded-2xl border border-blue-900/40 bg-blue-950/20"><span className="text-[11px] text-blue-400 font-bold">D</span><div className="text-xl font-extrabold text-blue-300">{poolStats.groupD}명</div></div>
+          <div className="glass-panel p-3.5 rounded-2xl border border-indigo-900/40 bg-indigo-950/20"><span className="text-[11px] text-indigo-400 font-bold">보유 승격</span><div className="text-xl font-extrabold text-indigo-300">{poolStats.actives}명</div></div>
         </div>
       )}
 
@@ -350,11 +351,11 @@ export default function CustomerView() {
           {activeSubTab === 'pool' && (
             <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
               {[
-                { key: '', label: '전체 그룹' },
-                { key: 'A', label: 'A그룹' },
-                { key: 'B', label: 'B그룹' },
-                { key: 'C', label: 'C그룹' },
-                { key: 'D', label: 'D그룹' }
+                { key: '', label: '전체' },
+                { key: 'A', label: 'A' },
+                { key: 'B', label: 'B' },
+                { key: 'C', label: 'C' },
+                { key: 'D', label: 'D' }
               ].map((grp) => (
                 <button
                   key={grp.key}

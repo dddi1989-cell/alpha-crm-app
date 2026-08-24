@@ -201,7 +201,7 @@ export default function CustomerDetailModal() {
                     </span>
                     {customer.pool_group && (
                       <span className="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 font-bold text-[10px]">
-                        {customer.pool_group}그룹
+                        {customer.pool_group}
                       </span>
                     )}
                   </div>
