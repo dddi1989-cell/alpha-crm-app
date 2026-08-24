@@ -291,11 +291,11 @@ export default function OrgMonitoringView() {
               className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
             >
               <option value="">전체 직급</option>
-              <option value="FA">FA (자산관리사)</option>
+              <option value="FA">FA (설계사)</option>
               <option value="SM">SM (팀장)</option>
               <option value="BM">BM (지점장)</option>
               <option value="RM">RM (본부장)</option>
-              <option value="COO">COO (총괄이사)</option>
+              <option value="COO">COO (사업단장)</option>
               <option value="CEO">CEO (대표이사)</option>
               <option value="Admin">Admin (최고관리자)</option>
             </select>

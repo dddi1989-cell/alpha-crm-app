@@ -405,7 +405,7 @@ export default function OrganizationManagementView() {
       case 'CEO':
         return { label: '🏢 CEO (L6 대표이사)', style: 'bg-rose-100 text-rose-900 border-rose-300' };
       case 'COO':
-        return { label: '🏛️ COO (L5 총괄이사)', style: 'bg-orange-100 text-orange-900 border-orange-300' };
+        return { label: '🏛️ COO (L5 사업단장)', style: 'bg-orange-100 text-orange-900 border-orange-300' };
       case 'RM':
         return { label: '🏬 RM (L4 본부장)', style: 'bg-amber-100 text-amber-900 border-amber-300' };
       case 'BM':
@@ -416,7 +416,7 @@ export default function OrganizationManagementView() {
       case 'FA':
       case 'Agent':
       default:
-        return { label: '💼 FA (L1 자산관리사)', style: 'bg-blue-100 text-blue-900 border-blue-300' };
+        return { label: '💼 FA (L1 설계사)', style: 'bg-blue-100 text-blue-900 border-blue-300' };
     }
   };
 
@@ -791,11 +791,11 @@ export default function OrganizationManagementView() {
                     className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
                   >
                     <option value="">전체 직급</option>
-                    <option value="FA">FA (자산관리사)</option>
+                    <option value="FA">FA (설계사)</option>
                     <option value="SM">SM (팀장)</option>
                     <option value="BM">BM (지점장)</option>
                     <option value="RM">RM (본부장)</option>
-                    <option value="COO">COO (총괄이사)</option>
+                    <option value="COO">COO (사업단장)</option>
                     <option value="CEO">CEO (대표이사)</option>
                     <option value="Admin">Admin (최고관리자)</option>
                   </select>
@@ -1779,11 +1779,11 @@ export default function OrganizationManagementView() {
                     onChange={(e) => setUserFormData({ ...userFormData, role: e.target.value })}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-500"
                   >
-                    <option value="FA">FA (L1 자산관리사)</option>
+                    <option value="FA">FA (L1 설계사)</option>
                     <option value="SM">SM (L2 팀장)</option>
                     <option value="BM">BM (L3 지점장)</option>
                     <option value="RM">RM (L4 본부장)</option>
-                    <option value="COO">COO (L5 총괄이사)</option>
+                    <option value="COO">COO (L5 사업단장)</option>
                     <option value="CEO">CEO (L6 대표이사)</option>
                     <option value="Admin">Admin (L7 최고관리자)</option>
                   </select>

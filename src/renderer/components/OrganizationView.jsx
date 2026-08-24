@@ -225,7 +225,7 @@ export default function OrganizationView() {
 
         <div className="glass-panel p-5 rounded-2xl border border-slate-800 flex items-center justify-between">
           <div>
-            <span className="text-xs font-semibold text-slate-400">자산관리사 (FA)</span>
+            <span className="text-xs font-semibold text-slate-400">설계사 (FA)</span>
             <h3 className="text-2xl font-bold text-emerald-400 mt-1">
               {users.filter(u => ['FA', 'Agent'].includes(u.role)).length}명
             </h3>
@@ -269,7 +269,7 @@ export default function OrganizationView() {
                     case 'CEO':
                       return { label: '🏢 CEO (L6 대표이사)', style: 'bg-rose-950/80 text-rose-300 border-rose-800' };
                     case 'COO':
-                      return { label: '🏛️ COO (L5 총괄이사)', style: 'bg-orange-950/80 text-orange-300 border-orange-800' };
+                      return { label: '🏛️ COO (L5 사업단장)', style: 'bg-orange-950/80 text-orange-300 border-orange-800' };
                     case 'RM':
                       return { label: '🏬 RM (L4 본부장)', style: 'bg-amber-950/80 text-amber-300 border-amber-800' };
                     case 'BM':
@@ -280,7 +280,7 @@ export default function OrganizationView() {
                     case 'FA':
                     case 'Agent':
                     default:
-                      return { label: '👤 FA (L1 자산관리사)', style: 'bg-slate-900 text-slate-300 border-slate-700' };
+                      return { label: '👤 FA (L1 설계사)', style: 'bg-slate-900 text-slate-300 border-slate-700' };
                   }
                 };
                 const badge = getRoleBadge(u.role);
@@ -406,11 +406,11 @@ export default function OrganizationView() {
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                     className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500 font-bold"
                   >
-                    <option value="FA">👤 FA (Level 1 - 자산관리사 / 영업담당)</option>
+                    <option value="FA">👤 FA (Level 1 - 설계사 / 영업담당)</option>
                     <option value="SM">👔 SM (Level 2 - Sub Manager / 팀장)</option>
                     <option value="BM">🏢 BM (Level 3 - Branch Manager / 지점장)</option>
                     <option value="RM">🏬 RM (Level 4 - Regional Manager / 본부장)</option>
-                    <option value="COO">🏛️ COO (Level 5 - Chief Operating Officer / 총괄이사)</option>
+                    <option value="COO">🏛️ COO (Level 5 - Chief Operating Officer / 사업단장)</option>
                     <option value="CEO">🏢 CEO (Level 6 - Chief Executive Officer / 대표이사)</option>
                     <option value="admin">👑 admin (Level 7 - System Admin / 최고관리자)</option>
                   </select>
