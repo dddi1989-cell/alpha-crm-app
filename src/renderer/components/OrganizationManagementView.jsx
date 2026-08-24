@@ -137,6 +137,14 @@ export default function OrganizationManagementView() {
     return currentUser?.role === 'Admin' || currentUser?.role === 'admin' || (accessibleUsers && accessibleUsers.length > 1) || roleRank >= 2;
   }, [currentUser, accessibleUsers, roleRank]);
 
+  const visibleUsersList = useMemo(() => {
+    if (currentUser?.role === 'Admin' || currentUser?.role === 'admin') {
+      return allUsersList;
+    }
+    // Only show self and editable subordinates (superior managers completely hidden)
+    return allUsersList.filter(u => u.canEdit || Number(u.id) === Number(currentUser?.id));
+  }, [allUsersList, currentUser]);
+
   // Load organizations list (filtered by user's organization scope)
   const loadOrganizations = async () => {
     try {
@@ -1515,7 +1523,7 @@ export default function OrganizationManagementView() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
-                  {allUsersList.map((u) => {
+                  {visibleUsersList.map((u) => {
                     const badge = getRoleBadge(u.role);
                     const canEditUser = (currentUser?.role === 'Admin' || currentUser?.role === 'admin' || u.canEdit);
 

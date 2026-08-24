@@ -406,7 +406,18 @@ function registerAuthHandlers(mainWindow, triggerDualBackup) {
         END, u.id ASC
       `).all();
 
-      const enrichedUsers = users.map(u => ({
+      let targetUsers = users;
+      if (currentUserId) {
+        const actor = db.prepare('SELECT id, username, role FROM users WHERE id = ?').get(Number(currentUserId));
+        const isTopAdmin = actor && (actor.role === 'Admin' || actor.role === 'admin' || actor.username === 'admin' || getRoleRank(actor.role) >= 6);
+
+        if (!isTopAdmin) {
+          // Managers only see themselves and their subordinates (superior managers are completely hidden)
+          targetUsers = users.filter(u => Number(u.id) === Number(currentUserId) || isUserDescendant(db, u.id, currentUserId));
+        }
+      }
+
+      const enrichedUsers = targetUsers.map(u => ({
         ...u,
         canEdit: currentUserId ? canManageTargetUser(db, currentUserId, u.id) : true
       }));
