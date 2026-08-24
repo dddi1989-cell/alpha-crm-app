@@ -3,6 +3,7 @@ import { Calendar as CalendarIcon, Clock, CheckCircle2, X, RefreshCw, ChevronLef
 import { useCrmStore } from '../store/useCrmStore';
 import { api } from '../utils/api';
 import { getDescendantOrgAndUserIds, matchesOrgFilter } from '../utils/orgHierarchy';
+import { isCustomerBirthdayOnDate } from '../utils/lunarSolar';
 
 export default function DesktopWidgetView() {
   const schedules = useCrmStore((state) => state.schedules);
@@ -118,6 +119,11 @@ export default function DesktopWidgetView() {
     const d = new Date(s.scheduled_at);
     return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
   });
+
+  const getBirthdaysForDay = (day) => {
+    if (!Array.isArray(customers)) return [];
+    return customers.filter(c => isCustomerBirthdayOnDate(c, year, month, day));
+  };
 
   const getSchedulesForDate = (date) => visibleSchedules.filter((s) => {
     const d = new Date(s.scheduled_at);
@@ -444,12 +450,26 @@ export default function DesktopWidgetView() {
                     }`}>
                     <div className="flex items-center justify-between w-full shrink-0">
                       <span className={`text-[11px] font-bold ${isTodayDay ? 'text-amber-300' : isPopupDay ? 'text-indigo-300' : 'text-slate-300'}`}>{day}</span>
-                      {daySchedules.length > 0 && (
-                        <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1 rounded font-bold">{daySchedules.length}</span>
-                      )}
+                      <div className="flex items-center space-x-1">
+                        {(() => {
+                          const bdays = getBirthdaysForDay(day);
+                          if (bdays.length > 0) {
+                            return <span className="text-[8px] bg-pink-500/20 text-pink-300 border border-pink-500/30 px-0.5 rounded font-bold">🎂{bdays.length}</span>;
+                          }
+                          return null;
+                        })()}
+                        {daySchedules.length > 0 && (
+                          <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1 rounded font-bold">{daySchedules.length}</span>
+                        )}
+                      </div>
                     </div>
                     <div className="w-full space-y-0.5 mt-0.5 overflow-hidden flex-1 min-h-0">
-                      {daySchedules.slice(0, 3).map((s) => (
+                      {getBirthdaysForDay(day).slice(0, 1).map(c => (
+                        <div key={`wbday-${c.id}`} className="w-full px-1 py-0.5 rounded text-[8px] leading-tight truncate border bg-pink-950/80 text-pink-200 border-pink-700/60 font-bold">
+                          🎂 {c.name}
+                        </div>
+                      ))}
+                      {daySchedules.slice(0, 2).map((s) => (
                         <div key={s.id}
                           className={`w-full px-1 py-0.5 rounded text-[9px] leading-tight truncate border ${
                             s.status === 'Completed' ? 'bg-slate-900/80 text-slate-500 border-slate-800 line-through' : 'bg-indigo-950/90 text-indigo-200 border-indigo-700/60 font-medium'
@@ -458,7 +478,7 @@ export default function DesktopWidgetView() {
                           {s.customer_name && <span className="text-[8px] text-amber-300 ml-0.5">({s.customer_name})</span>}
                         </div>
                       ))}
-                      {daySchedules.length > 3 && <div className="text-[8px] text-slate-400 font-bold text-center">+{daySchedules.length - 3}건</div>}
+                      {daySchedules.length > 2 && <div className="text-[8px] text-slate-400 font-bold text-center">+{daySchedules.length - 2}건</div>}
                     </div>
                   </button>
                 );
@@ -470,7 +490,7 @@ export default function DesktopWidgetView() {
               <div className="bg-slate-900/95 border border-indigo-500/40 rounded-2xl p-3 space-y-2 shadow-lg shadow-indigo-950/30 shrink-0">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-amber-400">
-                    📅 {popupDate.getMonth() + 1}월 {popupDate.getDate()}일 일정 ({popupSchedules.length}건)
+                    📅 {popupDate.getMonth() + 1}월 {popupDate.getDate()}일 ({popupSchedules.length}건)
                   </span>
                   <div className="flex items-center space-x-1">
                     <button onClick={() => openNewSchedule(popupDate)}
@@ -480,6 +500,24 @@ export default function DesktopWidgetView() {
                     <button onClick={() => setPopupDate(null)} className="p-0.5 rounded text-slate-400 hover:text-red-400"><X className="w-3.5 h-3.5" /></button>
                   </div>
                 </div>
+
+                {/* Birthday in Popup */}
+                {(() => {
+                  const bdays = getBirthdaysForDay(popupDate.getDate());
+                  if (bdays.length > 0) {
+                    return (
+                      <div className="space-y-1">
+                        {bdays.map(c => (
+                          <div key={`p-bday-${c.id}`} className="bg-pink-950/80 border border-pink-500/40 rounded-xl p-2 flex items-center justify-between text-xs text-pink-200">
+                            <span className="font-bold">🎂 {c.name} ({c.birth_type === 'lunar' ? '음력' : '양력'})</span>
+                            <span className="text-[10px] text-pink-300 font-mono">{c.phone || ''}</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
                 {popupSchedules.length === 0 ? (
                   <p className="text-[11px] text-slate-500 py-1">이 날짜에 등록된 일정이 없습니다.</p>
                 ) : (

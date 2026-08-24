@@ -112,13 +112,16 @@ function registerOrgHandlers(mainWindow, triggerDualBackup) {
                 }
               }
 
-              const filtered = enrichedOrgs.map(o => ({
-                ...o,
-                canEdit: allowedOrgIds.has(o.id)
-              }));
+              // Only return current user's org and its sub-organizations (superiors are completely hidden)
+              const filtered = enrichedOrgs
+                .filter(o => allowedOrgIds.has(o.id))
+                .map(o => ({
+                  ...o,
+                  canEdit: true
+                }));
               return { success: true, organizations: filtered };
             } else {
-              return { success: true, organizations: enrichedOrgs.map(o => ({ ...o, canEdit: false })) };
+              return { success: true, organizations: [] };
             }
           }
         }

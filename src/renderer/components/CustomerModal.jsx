@@ -35,6 +35,7 @@ export default function CustomerModal() {
     name: '',
     phone: '',
     birth_date: '',
+    birth_type: 'solar',
     relationship: '지인',
     pool_group: 'A',
     is_pool: 0,
@@ -82,6 +83,7 @@ export default function CustomerModal() {
         name: editingCustomer.name || '',
         phone: editingCustomer.phone || '',
         birth_date: editingCustomer.birth_date || '',
+        birth_type: editingCustomer.birth_type || 'solar',
         relationship: isCustomRel ? '기타' : rel,
         pool_group: editingCustomer.pool_group || 'A',
         is_pool: editingCustomer.is_pool ? 1 : 0,
@@ -117,6 +119,7 @@ export default function CustomerModal() {
         name: '',
         phone: '',
         birth_date: '',
+        birth_type: 'solar',
         relationship: '지인',
         pool_group: 'A',
         is_pool: isPoolCustomerModal ? 1 : 0,
@@ -266,6 +269,7 @@ export default function CustomerModal() {
       email: (formData.email || '').trim(),
       phone: (formData.phone || '').trim(),
       birth_date: (formData.birth_date || '').trim(),
+      birth_type: formData.birth_type || 'solar',
       relationship: resolvedRelationship,
       pool_group: formData.pool_group || 'A',
       is_pool: isPoolCustomerModal ? 1 : (formData.is_pool ? 1 : 0),
@@ -413,9 +417,35 @@ export default function CustomerModal() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5 flex items-center gap-1">
-                <span>🎂 생년월일</span>
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-medium text-slate-400 flex items-center gap-1">
+                  <span>🎂 생년월일</span>
+                </label>
+                <div className="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[11px] font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, birth_type: 'solar' })}
+                    className={`px-2 py-0.5 rounded-md transition-all ${
+                      formData.birth_type !== 'lunar'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-slate-500 hover:text-slate-300'
+                    }`}
+                  >
+                    양력
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, birth_type: 'lunar' })}
+                    className={`px-2 py-0.5 rounded-md transition-all ${
+                      formData.birth_type === 'lunar'
+                        ? 'bg-purple-600 text-white shadow-sm'
+                        : 'text-slate-500 hover:text-slate-300'
+                    }`}
+                  >
+                    음력
+                  </button>
+                </div>
+              </div>
               <input
                 type="date"
                 placeholder="YYYY-MM-DD"

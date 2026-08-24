@@ -304,6 +304,7 @@ function registerCustomerHandlers(mainWindow, triggerDualBackup, broadcastSchedu
     const isPool = customerData.is_pool ? 1 : 0;
     const relationship = customerData.relationship || null;
     const poolGroup = customerData.pool_group || (isPool ? 'A' : null);
+    const birthType = customerData.birth_type || 'solar';
 
     // Auto-Transition Rule 1:
     // If insurance contracts exist or report attached -> Active (보유고객)
@@ -317,8 +318,8 @@ function registerCustomerHandlers(mainWindow, triggerDualBackup, broadcastSchedu
 
     const executeInsert = () => {
       const stmt = db.prepare(`
-        INSERT INTO customers (user_id, name, email, phone, birth_date, insurance_provider, insurance_details, insurances, referrer_id, status, notes, report_pdf_path, report_excel_path, relationship, pool_group, is_pool, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO customers (user_id, name, email, phone, birth_date, birth_type, insurance_provider, insurance_details, insurances, referrer_id, status, notes, report_pdf_path, report_excel_path, relationship, pool_group, is_pool, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       return stmt.run(
@@ -327,6 +328,7 @@ function registerCustomerHandlers(mainWindow, triggerDualBackup, broadcastSchedu
         customerData.email || '',
         customerData.phone || '',
         customerData.birth_date || '',
+        birthType,
         primaryProvider,
         primaryDetails,
         insurancesJson,
@@ -377,6 +379,7 @@ function registerCustomerHandlers(mainWindow, triggerDualBackup, broadcastSchedu
       user_id: ownerUserId,
       ...customerData,
       status: resolvedStatus,
+      birth_type: birthType,
       relationship,
       pool_group: poolGroup,
       is_pool: isPool,
@@ -418,6 +421,7 @@ function registerCustomerHandlers(mainWindow, triggerDualBackup, broadcastSchedu
     const isPool = customerData.is_pool !== undefined ? (customerData.is_pool ? 1 : 0) : (existing.is_pool || 0);
     const relationship = customerData.relationship !== undefined ? customerData.relationship : existing.relationship;
     const poolGroup = customerData.pool_group !== undefined ? customerData.pool_group : existing.pool_group;
+    const birthType = customerData.birth_type !== undefined ? customerData.birth_type : (existing.birth_type || 'solar');
 
     // Auto-Transition Rule: If insurance / analysis report is entered, promote status to 'Active' (보유고객)
     let resolvedStatus = customerData.status || existing.status || 'Active';
@@ -429,7 +433,7 @@ function registerCustomerHandlers(mainWindow, triggerDualBackup, broadcastSchedu
     const executeUpdate = () => {
       const stmt = db.prepare(`
         UPDATE customers 
-        SET user_id = ?, name = ?, email = ?, phone = ?, birth_date = ?, insurance_provider = ?, insurance_details = ?, insurances = ?, referrer_id = ?, status = ?, notes = ?, report_pdf_path = ?, report_excel_path = ?, relationship = ?, pool_group = ?, is_pool = ?, updated_at = ?
+        SET user_id = ?, name = ?, email = ?, phone = ?, birth_date = ?, birth_type = ?, insurance_provider = ?, insurance_details = ?, insurances = ?, referrer_id = ?, status = ?, notes = ?, report_pdf_path = ?, report_excel_path = ?, relationship = ?, pool_group = ?, is_pool = ?, updated_at = ?
         WHERE id = ?
       `);
 
@@ -439,10 +443,11 @@ function registerCustomerHandlers(mainWindow, triggerDualBackup, broadcastSchedu
         customerData.email !== undefined ? customerData.email : existing.email,
         customerData.phone !== undefined ? customerData.phone : existing.phone,
         customerData.birth_date !== undefined ? customerData.birth_date : existing.birth_date,
-        primaryProvider || existing.insurance_provider,
-        primaryDetails || existing.insurance_details,
+        birthType,
+        primaryProvider,
+        primaryDetails,
         insurancesJson,
-        referrerId !== undefined ? referrerId : existing.referrer_id,
+        referrerId,
         resolvedStatus,
         customerData.notes !== undefined ? customerData.notes : existing.notes,
         reportPdfPath,

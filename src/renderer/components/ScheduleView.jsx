@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { useCrmStore } from '../store/useCrmStore';
 import { getDescendantOrgAndUserIds, matchesOrgFilter } from '../utils/orgHierarchy';
+import { isCustomerBirthdayOnDate, getSolarBirthdayInYear } from '../utils/lunarSolar';
 
 const columnHelper = createColumnHelper();
 
@@ -42,6 +43,7 @@ function formatDateKey(date) {
 
 export default function ScheduleView() {
   const schedules = useCrmStore((state) => state.schedules);
+  const customers = useCrmStore((state) => state.customers);
   const openScheduleModal = useCrmStore((state) => state.openScheduleModal);
   const deleteSchedule = useCrmStore((state) => state.deleteSchedule);
   const toggleScheduleStatus = useCrmStore((state) => state.toggleScheduleStatus);
@@ -161,6 +163,27 @@ export default function ScheduleView() {
   const selectedDateSchedules = useMemo(() => {
     return schedulesByDate.get(selectedDateStr) || [];
   }, [schedulesByDate, selectedDateStr]);
+
+  // Accessible customers for birthday checks
+  const visibleCustomers = useMemo(() => {
+    if (!Array.isArray(customers)) return [];
+    if (scheduleViewScope === 'personal') {
+      const myId = currentUser ? Number(currentUser.id) : 1;
+      return customers.filter(c => (c.user_id !== null && c.user_id !== undefined ? Number(c.user_id) : 1) === myId);
+    }
+    return customers.filter(c => matchesOrgFilter(c, hierarchyInfo));
+  }, [customers, scheduleViewScope, hierarchyInfo, currentUser]);
+
+  // Selected date birthdays
+  const selectedDateBirthdays = useMemo(() => {
+    if (!selectedDateStr) return [];
+    const parts = selectedDateStr.split('-');
+    if (parts.length < 3) return [];
+    const selY = parseInt(parts[0], 10);
+    const selM = parseInt(parts[1], 10) - 1;
+    const selD = parseInt(parts[2], 10);
+    return visibleCustomers.filter(c => isCustomerBirthdayOnDate(c, selY, selM, selD));
+  }, [visibleCustomers, selectedDateStr]);
 
   // Total this month stats
   const monthStats = useMemo(() => {
@@ -574,15 +597,43 @@ export default function ScheduleView() {
                           {dayNum}
                         </span>
 
-                        {daySchedules.length > 0 && (
-                          <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-indigo-950 text-indigo-300 border border-indigo-800">
-                            {daySchedules.length}
-                          </span>
-                        )}
+                        <div className="flex items-center space-x-1">
+                          {(() => {
+                            const dayBirthdays = visibleCustomers.filter(c => isCustomerBirthdayOnDate(c, year, month, dayNum));
+                            if (dayBirthdays.length > 0) {
+                              return (
+                                <span className="text-[10px] px-1 py-0.2 rounded font-bold bg-pink-950/80 text-pink-300 border border-pink-800" title={`생일: ${dayBirthdays.map(c => c.name).join(', ')}`}>
+                                  🎂{dayBirthdays.length}
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
+                          {daySchedules.length > 0 && (
+                            <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-indigo-950 text-indigo-300 border border-indigo-800">
+                              {daySchedules.length}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {/* Schedule Chips inside cell */}
                       <div className="space-y-1 overflow-hidden flex-1">
+                        {/* Birthday Chips */}
+                        {visibleCustomers
+                          .filter(c => isCustomerBirthdayOnDate(c, year, month, dayNum))
+                          .slice(0, 1)
+                          .map(c => (
+                            <div
+                              key={`bday-${c.id}`}
+                              className="px-1.5 py-0.5 rounded text-[10px] font-bold truncate flex items-center space-x-1 border bg-pink-950/90 text-pink-200 border-pink-800/80"
+                              title={`🎂 ${c.name} 고객님 생일 (${c.birth_type === 'lunar' ? '음력' : '양력'})`}
+                            >
+                              <span>🎂</span>
+                              <span className="truncate">{c.name} 생일</span>
+                            </div>
+                          ))}
+
                         {daySchedules.slice(0, 2).map((s) => {
                           const isCompleted = s.status === 'Completed';
                           const timeStr = s.time || (s.scheduled_at ? s.scheduled_at.slice(11, 16) : '');
@@ -644,9 +695,51 @@ export default function ScheduleView() {
                     </h4>
                   </div>
                   <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-slate-800 text-slate-300 border border-slate-700">
-                    총 {selectedDateSchedules.length}건
+                    일정 {selectedDateSchedules.length}건 {selectedDateBirthdays.length > 0 && `· 생일 ${selectedDateBirthdays.length}명`}
                   </span>
                 </div>
+
+                {/* Birthday Alert Banner for Selected Date */}
+                {selectedDateBirthdays.length > 0 && (
+                  <div className="space-y-1.5">
+                    {selectedDateBirthdays.map((c) => (
+                      <div
+                        key={`bday-alert-${c.id}`}
+                        className="bg-gradient-to-r from-pink-950/80 to-purple-950/80 border border-pink-500/40 rounded-xl p-2.5 flex items-center justify-between shadow-sm animate-fadeIn"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <span className="text-base">🎂</span>
+                          <div>
+                            <div className="flex items-center space-x-1.5">
+                              <span className="text-xs font-bold text-pink-200">{c.name} 고객님 생일</span>
+                              <span className={`text-[9px] px-1 py-0.2 rounded font-bold ${
+                                c.birth_type === 'lunar' ? 'bg-purple-900 text-purple-200' : 'bg-blue-900 text-blue-200'
+                              }`}>
+                                {c.birth_type === 'lunar' ? '음력' : '양력'}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-pink-300/80">
+                              {c.phone ? `연락처: ${c.phone}` : '생일 축하 메시지를 전송해 보세요!'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            openScheduleModal(null, {
+                              date: selectedDateStr,
+                              customer_id: c.id,
+                              title: `🎂 [생일 축하] ${c.name} 고객님 생일 연락`
+                            });
+                          }}
+                          className="px-2 py-1 bg-pink-600 hover:bg-pink-500 text-white rounded-lg text-[10px] font-bold transition-all shadow shrink-0"
+                        >
+                          축하일정 등록
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Schedule Items for Selected Date */}
                 {selectedDateSchedules.length === 0 ? (

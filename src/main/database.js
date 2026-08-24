@@ -65,6 +65,7 @@ function initDatabase(dbPath = null) {
       email TEXT,
       phone TEXT,
       birth_date TEXT,
+      birth_type TEXT DEFAULT 'solar',
       insurance_provider TEXT,
       insurance_details TEXT,
       insurances TEXT,
@@ -152,7 +153,7 @@ function initDatabase(dbPath = null) {
   // Robust column migration for customers table
   const customerColumns = [
     'user_id', 'insurance_provider', 'insurance_details', 'insurances', 'referrer_id', 
-    'company', 'report_pdf_path', 'report_excel_path', 'birth_date',
+    'company', 'report_pdf_path', 'report_excel_path', 'birth_date', 'birth_type',
     'relationship', 'pool_group', 'is_pool'
   ];
   customerColumns.forEach(col => {
@@ -163,6 +164,7 @@ function initDatabase(dbPath = null) {
         let type = 'TEXT';
         if (col === 'referrer_id' || col === 'user_id') type = 'INTEGER DEFAULT 1';
         if (col === 'is_pool') type = 'INTEGER DEFAULT 0';
+        if (col === 'birth_type') type = "TEXT DEFAULT 'solar'";
         dbInstance.exec(`ALTER TABLE customers ADD COLUMN ${col} ${type};`);
       }
     } catch (colErr) {}

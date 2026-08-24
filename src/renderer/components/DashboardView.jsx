@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Users, User, Calendar, Clock, UserPlus, CalendarPlus, Bell, CheckCircle2, ArrowRight, ChevronLeft, ChevronRight, UserCheck, Shield, Plus, Eye, Mail, Phone, AlertTriangle, Building2, Filter } from 'lucide-react';
 import { useCrmStore } from '../store/useCrmStore';
 import { getDescendantOrgAndUserIds, matchesOrgFilter } from '../utils/orgHierarchy';
+import { isCustomerBirthdayOnDate, getSolarBirthdayInYear } from '../utils/lunarSolar';
 
 function calculateElapsedMonths(startDateStr) {
   if (!startDateStr) return null;
@@ -143,18 +144,7 @@ export default function DashboardView() {
   };
 
   const getBirthdaysForDay = (day) => {
-    return visibleCustomers.filter((c) => {
-      if (!c.birth_date) return false;
-      const parts = c.birth_date.split('-');
-      if (parts.length >= 3) {
-        const m = parseInt(parts[1], 10) - 1;
-        const d = parseInt(parts[2], 10);
-        return m === month && d === day;
-      }
-      const bd = new Date(c.birth_date);
-      if (isNaN(bd.getTime())) return false;
-      return bd.getMonth() === month && bd.getDate() === day;
-    });
+    return visibleCustomers.filter((c) => isCustomerBirthdayOnDate(c, year, month, day));
   };
 
   const selectedDaySchedules = visibleSchedules.filter((s) => {
@@ -513,7 +503,7 @@ export default function DashboardView() {
                           {customer.birth_date && (
                             <span className="inline-flex items-center text-xs text-indigo-300 bg-indigo-950/60 px-2 py-0.5 rounded-md border border-indigo-800/60 font-medium">
                               <span className="mr-1">🎂</span>
-                              {customer.birth_date}
+                              {customer.birth_type === 'lunar' ? `[음력] ${customer.birth_date}` : customer.birth_date}
                             </span>
                           )}
                         </div>

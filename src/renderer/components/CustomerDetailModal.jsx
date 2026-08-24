@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { X, User, Phone, Mail, Shield, Calendar, Clock, CheckCircle2, Plus, Edit2, UserCheck, AlertCircle, FileText, Zap } from 'lucide-react';
 import { useCrmStore } from '../store/useCrmStore';
 import { api } from '../utils/api';
+import { getSolarBirthdayInYear } from '../utils/lunarSolar';
 
 function calculateElapsedMonths(startDateStr) {
   if (!startDateStr) return null;
@@ -191,7 +192,28 @@ export default function CustomerDetailModal() {
                 </div>
                 <div className="flex items-center justify-between py-1 border-b border-slate-800/60">
                   <span className="text-slate-500">생년월일</span>
-                  <span className="text-indigo-300 font-bold">{customer.birth_date ? `🎂 ${customer.birth_date}` : '미등록'}</span>
+                  {customer.birth_date ? (
+                    <div className="flex items-center space-x-1.5">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                        customer.birth_type === 'lunar' ? 'bg-purple-950 text-purple-300 border border-purple-800' : 'bg-blue-950 text-blue-300 border border-blue-800'
+                      }`}>
+                        {customer.birth_type === 'lunar' ? '음력' : '양력'}
+                      </span>
+                      <span className="text-indigo-300 font-bold">
+                        🎂 {customer.birth_date}
+                      </span>
+                      {customer.birth_type === 'lunar' && (() => {
+                        const bInfo = getSolarBirthdayInYear(customer);
+                        return bInfo ? (
+                          <span className="text-[11px] text-purple-300 bg-purple-950/40 px-1.5 py-0.5 rounded">
+                            (올해 양력: {bInfo.month + 1}월 {bInfo.day}일)
+                          </span>
+                        ) : null;
+                      })()}
+                    </div>
+                  ) : (
+                    <span className="text-slate-500 font-medium">미등록</span>
+                  )}
                 </div>
                 <div className="flex items-center justify-between py-1 border-b border-slate-800/60">
                   <span className="text-slate-500">관계 / POOL 그룹</span>

@@ -11,6 +11,7 @@ import {
 import { Users, User, Search, Plus, Edit2, Trash2, Mail, Phone, Shield, Filter, UserCheck, ArrowUpDown, ChevronLeft, ChevronRight, Calendar, Eye, ChevronDown, ChevronUp } from 'lucide-react';
 import { useCrmStore } from '../store/useCrmStore';
 import { getDescendantOrgAndUserIds, matchesOrgFilter } from '../utils/orgHierarchy';
+import { getSolarBirthdayInYear } from '../utils/lunarSolar';
 
 const columnHelper = createColumnHelper();
 
@@ -215,6 +216,29 @@ export default function CustomerView() {
                 </div>
                 {customer.user_name && <div className="text-[11px] text-indigo-300">담당: {customer.user_name}</div>}
               </div>
+            </div>
+          );
+        }
+      }),
+      columnHelper.accessor('phone', {
+        header: '연락처 & 생년월일',
+        cell: (info) => {
+          const customer = info.row.original;
+          if (customer.is_subordinate_masked) return <span className="text-xs text-slate-500 font-mono">***-****-****</span>;
+          const bInfo = customer.birth_date ? getSolarBirthdayInYear(customer) : null;
+          return (
+            <div className="space-y-0.5 text-xs">
+              <div className="font-mono text-slate-200">{customer.phone || '—'}</div>
+              {customer.birth_date && (
+                <div className="flex items-center space-x-1 text-[11px]">
+                  <span className={`text-[9px] px-1 py-0.2 rounded font-bold ${
+                    customer.birth_type === 'lunar' ? 'bg-purple-950 text-purple-300 border border-purple-800' : 'bg-blue-950 text-blue-300 border border-blue-800'
+                  }`}>
+                    {customer.birth_type === 'lunar' ? '음' : '양'}
+                  </span>
+                  <span className="text-indigo-300 font-medium">🎂 {customer.birth_date}</span>
+                </div>
+              )}
             </div>
           );
         }
