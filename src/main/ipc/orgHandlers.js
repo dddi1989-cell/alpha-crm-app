@@ -265,9 +265,11 @@ function registerOrgHandlers(mainWindow, triggerDualBackup) {
       // 1. Fetch Target User Profile
       const targetUser = db.prepare(`
         SELECT u.id, u.username, u.name, u.role, u.parent_id, u.org_id, u.org_name, u.phone,
-               o.name as organization_name, o.type as organization_type
+               o.name as organization_name, o.type as organization_type,
+               p.name as parent_name, p.role as parent_role
         FROM users u
         LEFT JOIN organizations o ON u.org_id = o.id
+        LEFT JOIN users p ON u.parent_id = p.id
         WHERE u.id = ?
       `).get(actingTargetId);
 

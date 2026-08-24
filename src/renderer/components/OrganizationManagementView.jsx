@@ -119,7 +119,8 @@ export default function OrganizationManagementView() {
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [activeSubTab, setActiveSubTab] = useState('longtouch'); // 'longtouch' | 'schedules' | 'all-customers'
+  const [activeSubTab, setActiveSubTab] = useState('pool'); // 'pool' | 'schedules' | 'longtouch' | 'all-customers'
+  const [poolGroupFilter, setPoolGroupFilter] = useState('');
 
   // Calendar state for schedules tab
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -320,6 +321,19 @@ export default function OrganizationManagementView() {
   }, [organizations, selectedOrgId, selectedOrgName]);
 
   const targetUser = subordinateData?.targetUser;
+
+  const parentInfo = useMemo(() => {
+    if (targetUser?.parent_name) {
+      return `${targetUser.parent_name} (${targetUser.parent_role || '상위자'})`;
+    }
+    if (targetUser?.parent_id) {
+      const parentUser = allUsersList.find(u => Number(u.id) === Number(targetUser.parent_id)) || accessibleUsers.find(u => Number(u.id) === Number(targetUser.parent_id));
+      if (parentUser) {
+        return `${parentUser.name} (${parentUser.role || '상위자'})`;
+      }
+    }
+    return '최상위 관리자';
+  }, [targetUser, allUsersList, accessibleUsers]);
   const stats = activeDataset?.stats || {
     memberCount: 0,
     totalCustomers: 0,
@@ -331,6 +345,42 @@ export default function OrganizationManagementView() {
     completedSchedules: 0,
     upcomingThisMonth: 0
   };
+
+  // Filtered POOL Customers
+  const subordinatePoolCustomers = useMemo(() => {
+    const list = activeDataset?.poolCustomers || activeDataset?.poolList || activeDataset?.customers?.filter(c => c.is_pool === 1 || c.pool_group || c.relationship) || [];
+    return Array.isArray(list) ? list : [];
+  }, [activeDataset]);
+
+  const poolStats = useMemo(() => {
+    const list = subordinatePoolCustomers;
+    const total = list.length;
+    const groupA = list.filter(c => (c.pool_group || 'A') === 'A').length;
+    const groupB = list.filter(c => c.pool_group === 'B').length;
+    const groupC = list.filter(c => c.pool_group === 'C').length;
+    const groupD = list.filter(c => c.pool_group === 'D').length;
+    const actives = list.filter(c => c.status === 'Active').length;
+    const conversionRate = total > 0 ? Math.round((actives / total) * 100) : 0;
+    return { total, groupA, groupB, groupC, groupD, actives, conversionRate };
+  }, [subordinatePoolCustomers]);
+
+  const filteredPoolCustomers = useMemo(() => {
+    let list = subordinatePoolCustomers;
+    if (poolGroupFilter) {
+      list = list.filter(c => (c.pool_group || 'A') === poolGroupFilter);
+    }
+    if (customerSearchFilter) {
+      const term = customerSearchFilter.toLowerCase();
+      list = list.filter(c =>
+        c.name.toLowerCase().includes(term) ||
+        (c.phone && c.phone.includes(term)) ||
+        (c.relationship && c.relationship.toLowerCase().includes(term)) ||
+        (c.notes && c.notes.toLowerCase().includes(term)) ||
+        (c.user_name && c.user_name.toLowerCase().includes(term))
+      );
+    }
+    return list;
+  }, [subordinatePoolCustomers, poolGroupFilter, customerSearchFilter]);
 
   const filteredLongTouchCustomers = useMemo(() => {
     if (!activeDataset?.longTouchList) return [];
@@ -950,7 +1000,7 @@ export default function OrganizationManagementView() {
                         </div>
                         <div className="flex justify-between text-slate-600 dark:text-slate-400">
                           <span>직속 상위자:</span>
-                          <strong className="text-slate-800 dark:text-slate-200">{targetUser?.parent_name ? `${targetUser.parent_name} (${targetUser.parent_role})` : '최상위 관리자'}</strong>
+                          <strong className="text-slate-800 dark:text-slate-200">{parentInfo}</strong>
                         </div>
                       </div>
                     </>
@@ -1032,9 +1082,23 @@ export default function OrganizationManagementView() {
               </div>
 
               {/* ========================================================================= */}
-              {/* Sub-tab Navigation (Only Schedules & Long-touch customers) */}
+              {/* Sub-tab Navigation (POOL LIST 1st Priority, Schedules, Long-touch) */}
               {/* ========================================================================= */}
               <div className="flex border-b border-slate-200 dark:border-slate-800 space-x-6">
+                <button
+                  onClick={() => {
+                    setActiveSubTab('pool');
+                    setPoolGroupFilter('');
+                  }}
+                  className={`pb-3 text-xs font-extrabold flex items-center space-x-2 border-b-2 transition-all ${
+                    activeSubTab === 'pool'
+                      ? 'border-amber-500 text-amber-700 dark:text-amber-400'
+                      : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <span>📋 POOL LIST ({poolStats.total}명)</span>
+                </button>
+
                 <button
                   onClick={() => setActiveSubTab('schedules')}
                   className={`pb-3 text-xs font-extrabold flex items-center space-x-2 border-b-2 transition-all ${
@@ -1051,7 +1115,7 @@ export default function OrganizationManagementView() {
                   onClick={() => setActiveSubTab('longtouch')}
                   className={`pb-3 text-xs font-extrabold flex items-center space-x-2 border-b-2 transition-all ${
                     activeSubTab === 'longtouch'
-                      ? 'border-amber-500 text-amber-700 dark:text-amber-400'
+                      ? 'border-rose-500 text-rose-700 dark:text-rose-400'
                       : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
@@ -1059,6 +1123,164 @@ export default function OrganizationManagementView() {
                   <span>⏳ 장기 미터치 고객 현황 ({filteredLongTouchCustomers.length}명)</span>
                 </button>
               </div>
+
+              {/* Sub-tab 0: POOL LIST (가망고객 풀 현황 - 1순위) */}
+              {activeSubTab === 'pool' && (
+                <div className="space-y-4">
+                  {/* POOL Statistics Banner */}
+                  <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+                    <div className="glass-panel p-3.5 rounded-2xl border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60"><span className="text-[11px] text-slate-500 dark:text-slate-400 font-bold">전체 POOL</span><div className="text-xl font-extrabold text-slate-900 dark:text-white">{poolStats.total}명</div></div>
+                    <div className="glass-panel p-3.5 rounded-2xl border border-rose-300 dark:border-rose-900/40 bg-rose-50 dark:bg-rose-950/20"><span className="text-[11px] text-rose-600 dark:text-rose-400 font-bold">A</span><div className="text-xl font-extrabold text-rose-700 dark:text-rose-300">{poolStats.groupA}명</div></div>
+                    <div className="glass-panel p-3.5 rounded-2xl border border-amber-300 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/20"><span className="text-[11px] text-amber-600 dark:text-amber-400 font-bold">B</span><div className="text-xl font-extrabold text-amber-700 dark:text-amber-300">{poolStats.groupB}명</div></div>
+                    <div className="glass-panel p-3.5 rounded-2xl border border-emerald-300 dark:border-emerald-900/40 bg-emerald-50 dark:bg-emerald-950/20"><span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">C</span><div className="text-xl font-extrabold text-emerald-700 dark:text-emerald-300">{poolStats.groupC}명</div></div>
+                    <div className="glass-panel p-3.5 rounded-2xl border border-blue-300 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-950/20"><span className="text-[11px] text-blue-600 dark:text-blue-400 font-bold">D</span><div className="text-xl font-extrabold text-blue-700 dark:text-blue-300">{poolStats.groupD}명</div></div>
+                    <div className="glass-panel p-3.5 rounded-2xl border border-indigo-300 dark:border-indigo-900/40 bg-indigo-50 dark:bg-indigo-950/20"><span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold">보유 승격</span><div className="text-xl font-extrabold text-indigo-700 dark:text-indigo-300">{poolStats.actives}명 ({poolStats.conversionRate}%)</div></div>
+                  </div>
+
+                  {/* Filter & Search Bar */}
+                  <div className="glass-panel p-4 rounded-2xl border flex flex-col sm:flex-row gap-3 items-center justify-between">
+                    <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto flex-1">
+                      <div className="relative w-full sm:w-72">
+                        <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                        <input
+                          type="text"
+                          placeholder="이름, 연락처, 관계, 메모 검색..."
+                          value={customerSearchFilter}
+                          onChange={(e) => setCustomerSearchFilter(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-amber-500"
+                        />
+                      </div>
+
+                      {/* Group Filter for POOL */}
+                      <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-300 dark:border-slate-800 text-xs">
+                        {[
+                          { key: '', label: '전체' },
+                          { key: 'A', label: 'A' },
+                          { key: 'B', label: 'B' },
+                          { key: 'C', label: 'C' },
+                          { key: 'D', label: 'D' }
+                        ].map((grp) => (
+                          <button
+                            key={grp.key}
+                            onClick={() => setPoolGroupFilter(grp.key)}
+                            className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                              poolGroupFilter === grp.key
+                                ? 'bg-amber-600 text-white shadow-md'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                            }`}
+                          >
+                            {grp.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="text-xs text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800/60 px-3.5 py-1.5 rounded-xl flex items-center space-x-1.5">
+                      <span>🔒 <strong>{targetUser?.name || '조직원'}</strong> 님의 POOL LIST (조회 전용 모드)</span>
+                    </div>
+                  </div>
+
+                  {/* POOL Table */}
+                  <div className="glass-panel rounded-2xl border overflow-hidden shadow-xl">
+                    {filteredPoolCustomers.length === 0 ? (
+                      <div className="p-16 text-center space-y-3">
+                        <Users className="w-12 h-12 mx-auto text-slate-400 dark:text-slate-600" />
+                        <h4 className="text-base font-semibold text-slate-700 dark:text-slate-300">등록된 POOL LIST 고객이 없습니다</h4>
+                        <p className="text-xs text-slate-500">
+                          해당 조직원이 등록한 가망고객 풀 데이터가 없거나 검색 조건에 일치하지 않습니다.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs text-slate-800 dark:text-slate-300">
+                          <thead className="bg-slate-50 dark:bg-slate-950/80 text-slate-600 dark:text-slate-400 uppercase text-[10px] font-bold tracking-wider border-b border-slate-200 dark:border-slate-800">
+                            <tr>
+                              <th className="px-5 py-3.5">고객명</th>
+                              <th className="px-5 py-3.5">연락처 & 생년월일</th>
+                              <th className="px-5 py-3.5">관계 & 그룹</th>
+                              <th className="px-5 py-3.5">고객 상태</th>
+                              <th className="px-5 py-3.5">보장분석 & 가입보험</th>
+                              <th className="px-5 py-3.5 text-right">조회</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+                            {filteredPoolCustomers.map((cust) => {
+                              const grp = cust.pool_group || 'A';
+                              let grpStyle = 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950/80 dark:text-rose-300 dark:border-rose-700/60';
+                              if (grp === 'B') grpStyle = 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-700/60';
+                              if (grp === 'C') grpStyle = 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-700/60';
+                              if (grp === 'D') grpStyle = 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-950/80 dark:text-blue-300 dark:border-blue-700/60';
+
+                              const statusText = cust.status === 'Active' ? '보유고객' : cust.status === 'Lead' ? '가망고객' : '장기미터치';
+
+                              return (
+                                <tr key={cust.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                                  <td className="px-5 py-3.5">
+                                    <div className="flex items-center space-x-2.5">
+                                      <div className="w-7 h-7 rounded-lg bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 font-bold flex items-center justify-center text-xs">
+                                        {cust.name ? cust.name.charAt(0) : 'C'}
+                                      </div>
+                                      <div>
+                                        <span className="font-bold text-slate-900 dark:text-white block">{cust.name}</span>
+                                        {cust.notes && <span className="text-[11px] text-slate-500 line-clamp-1">{cust.notes}</span>}
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="px-5 py-3.5 font-mono">
+                                    <div className="space-y-0.5">
+                                      <div>{cust.phone || '미등록'}</div>
+                                      {cust.birth_date && <div className="text-indigo-600 dark:text-indigo-300 text-[11px]">🎂 {cust.birth_date}</div>}
+                                    </div>
+                                  </td>
+                                  <td className="px-5 py-3.5">
+                                    <div className="flex items-center space-x-1.5">
+                                      <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-[11px]">
+                                        {cust.relationship || '지인'}
+                                      </span>
+                                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${grpStyle}`}>
+                                        {grp}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="px-5 py-3.5">
+                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                      cust.status === 'Active'
+                                        ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-400 dark:border-emerald-800/60'
+                                        : cust.status === 'Lead'
+                                        ? 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-950/80 dark:text-blue-400 dark:border-blue-800/60'
+                                        : 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950/80 dark:text-rose-300 dark:border-rose-800/60'
+                                    }`}>
+                                      {statusText}
+                                    </span>
+                                  </td>
+                                  <td className="px-5 py-3.5">
+                                    {Array.isArray(cust.insurances) && cust.insurances.length > 0 ? (
+                                      <span className="text-indigo-600 dark:text-indigo-300 font-semibold">{cust.insurances.length}건 등록됨</span>
+                                    ) : (cust.report_pdf_path || cust.report_excel_path) ? (
+                                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold">📄 리포트 첨부</span>
+                                    ) : (
+                                      <span className="text-slate-400">미등록</span>
+                                    )}
+                                  </td>
+                                  <td className="px-5 py-3.5 text-right">
+                                    <button
+                                      onClick={() => openCustomerDetailModal(cust)}
+                                      className="p-1 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors"
+                                      title="고객 상세 정보 열람 (조회 전용)"
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Sub-tab 1: 6-Month Long Touch Customers Table */}
               {activeSubTab === 'longtouch' && (
