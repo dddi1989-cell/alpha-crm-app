@@ -303,7 +303,7 @@ async function fetchCuratedNews() {
     console.error('Domestic news fetch error:', err);
   }
 
-  // (2) Fetch 3 Global News from Yahoo Finance & Translate to Korean
+  // (2) Fetch 3 Global News from Yahoo Finance as Overseas Breaking News
   try {
     const yfRes = await fetchJsonFromUrl('https://query1.finance.yahoo.com/v1/finance/search?q=stock%20market&newsCount=5');
     const newsList = yfRes?.news || [];
@@ -314,19 +314,15 @@ async function fetchCuratedNews() {
       const publisher = n.publisher || 'Yahoo Finance';
 
       if (rawTitle) {
-        // Direct Korean translation for overseas news
-        const koTitle = await translateToKorean(rawTitle);
-        const koSummary = `[${publisher} 외신] ${koTitle} - 글로벌 금융시장 실시간 경제 뉴스 요약입니다.`;
-
         globalNews.push({
-          source_type: '글로벌시황',
-          title: koTitle,
+          source_type: '해외증시',
+          title: rawTitle,
           original_title: rawTitle,
-          summary: koSummary,
-          body_excerpt: `[원문 기사 발췌 - ${publisher}]
+          summary: `[${publisher} 외신] ${rawTitle}`,
+          body_excerpt: `[해외 증시 속보 - ${publisher}]
 ${rawTitle}
 
-상세 기사 원문은 아래 '원문 기사 읽기'를 통해 외신 사이트에서 바로 확인하실 수 있습니다.`,
+상세 기사 전문은 아래 '원문 언론사 기사 열기'를 통해 외신 사이트에서 직접 확인하실 수 있습니다.`,
           url: link,
           press: publisher + ' (외신)'
         });

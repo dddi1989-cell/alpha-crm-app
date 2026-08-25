@@ -489,16 +489,16 @@ export default function TodayMarketView() {
         </div>
       </div>
 
-      {/* 5. Bottom News Curation: 3 Domestic + 3 Global (Korean Translated) */}
+      {/* 5. Bottom News Curation: 3 Domestic + 3 Global Breaking News */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
           <div>
             <h3 className="font-bold text-sm text-white flex items-center space-x-2">
               <Newspaper className="w-4 h-4 text-indigo-400" />
-              <span>오늘의 핵심 증시 & 글로벌 경제 뉴스 (국내 3선 + 해외 번역 3선)</span>
+              <span>오늘의 핵심 증시 & 글로벌 경제 뉴스 (국내 3선 + 해외 증시 속보 3선)</span>
             </h3>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              카드를 클릭하면 <span className="text-amber-300 font-bold">한국어 번역문 및 원문 발췌 리포트</span>를 바로 열람하실 수 있습니다.
+              카드를 클릭하면 <span className="text-amber-300 font-bold">기사 요약 및 원문 발췌 리포트</span>를 바로 열람하실 수 있습니다.
             </p>
           </div>
 
@@ -520,7 +520,7 @@ export default function TodayMarketView() {
               onClick={() => setNewsTab('global')}
               className={'px-3 py-1 rounded-lg font-bold transition-colors ' + (newsTab === 'global' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200')}
             >
-              🌐 해외 번역 뉴스 ({globalNews.length})
+              🌐 해외 증시 속보 ({globalNews.length})
             </button>
           </div>
         </div>
@@ -528,7 +528,7 @@ export default function TodayMarketView() {
         {/* News Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredNews.map((item, idx) => {
-            const isGlobal = item.source_type === '글로벌시황';
+            const isGlobal = item.source_type === '해외증시' || item.source_type === '글로벌시황';
 
             return (
               <div
@@ -543,13 +543,13 @@ export default function TodayMarketView() {
                       (isGlobal 
                         ? 'bg-sky-950/80 text-sky-300 border-sky-800/60' 
                         : 'bg-emerald-950/80 text-emerald-300 border-emerald-800/60')}>
-                      {isGlobal ? <Languages className="w-3 h-3 text-sky-400" /> : <Sparkles className="w-3 h-3 text-emerald-400" />}
-                      <span>{isGlobal ? '해외 외신 한국어 번역' : '국내 증시 속보'}</span>
+                      {isGlobal ? <Globe className="w-3 h-3 text-sky-400" /> : <Sparkles className="w-3 h-3 text-emerald-400" />}
+                      <span>{isGlobal ? '해외 증시 속보' : '국내 증시 속보'}</span>
                     </span>
                     <span className="text-[11px] font-bold text-slate-400">{item.press || '경제뉴스'}</span>
                   </div>
 
-                  {/* Title (Korean Translated for Global News) */}
+                  {/* Title */}
                   <h4 className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors leading-snug">
                     {item.title}
                   </h4>
@@ -558,7 +558,7 @@ export default function TodayMarketView() {
                   <div className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1">
                     <p className="text-[10px] font-extrabold text-indigo-400 flex items-center space-x-1">
                       <Sparkles className="w-3 h-3" />
-                      <span>{isGlobal ? '외신 한국어 핵심 요약' : '핵심 요약'}</span>
+                      <span>{isGlobal ? '외신 주요 속보' : '핵심 요약'}</span>
                     </p>
                     <p className="text-xs text-slate-200 leading-relaxed font-medium line-clamp-3">
                       {item.summary}
@@ -570,7 +570,7 @@ export default function TodayMarketView() {
                 <div className="flex items-center justify-between pt-2.5 border-t border-slate-800/60 text-xs">
                   <span className="text-[11px] font-bold text-amber-400 flex items-center space-x-1">
                     <BookOpen className="w-3.5 h-3.5" />
-                    <span>{isGlobal ? '번역 리포트 보기' : '원문 발췌 보기'}</span>
+                    <span>원문 발췌 보기</span>
                   </span>
                   <div className="flex items-center space-x-1 text-[11px] font-bold text-indigo-400 group-hover:translate-x-0.5 transition-all">
                     <span>상세 읽기</span>
@@ -583,7 +583,7 @@ export default function TodayMarketView() {
         </div>
       </div>
 
-      {/* 6. Interactive News Detail & Translation Reader Modal */}
+      {/* 6. Interactive News Detail & Reader Modal */}
       {selectedNewsForModal && (
         <NewsDetailModal 
           news={selectedNewsForModal} 
@@ -597,7 +597,7 @@ export default function TodayMarketView() {
 
 // Interactive News Reader Modal Component
 function NewsDetailModal({ news, onClose, onOpenExternal }) {
-  const isGlobal = news.source_type === '글로벌시황';
+  const isGlobal = news.source_type === '해외증시' || news.source_type === '글로벌시황';
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -622,13 +622,13 @@ ${news.body_excerpt || ''}
           <div className="flex items-center space-x-2.5">
             <div className={'w-9 h-9 rounded-2xl flex items-center justify-center ' + 
               (isGlobal ? 'bg-sky-950 border border-sky-600/40 text-sky-300' : 'bg-emerald-950 border border-emerald-600/40 text-emerald-300')}>
-              {isGlobal ? <Languages className="w-5 h-5" /> : <Newspaper className="w-5 h-5" />}
+              {isGlobal ? <Globe className="w-5 h-5" /> : <Newspaper className="w-5 h-5" />}
             </div>
             <div>
               <div className="flex items-center space-x-2">
                 <span className={'text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ' + 
                   (isGlobal ? 'bg-sky-950/80 text-sky-300 border-sky-800/60' : 'bg-emerald-950/80 text-emerald-300 border-emerald-800/60')}>
-                  {isGlobal ? '🌐 외신 한국어 번역 리포트' : '🇰🇷 국내 증시 뉴스'}
+                  {isGlobal ? '🌐 해외 증시 속보' : '🇰🇷 국내 증시 뉴스'}
                 </span>
                 <span className="text-xs font-bold text-slate-400">{news.press}</span>
               </div>
