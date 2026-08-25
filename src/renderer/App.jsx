@@ -8,6 +8,7 @@ import ClaimsView from './components/ClaimsView';
 import OrganizationManagementView from './components/OrganizationManagementView';
 import ProductStrategyBoardView from './components/ProductStrategyBoardView';
 import TodayMarketView from './components/TodayMarketView';
+import PlannerToolsView from './components/PlannerToolsView';
 import SystemView from './components/SystemView';
 import LoginView from './components/LoginView';
 
@@ -176,6 +177,7 @@ export default function App() {
           {activeTab === 'customers' && <CustomerView />}
           {activeTab === 'schedules' && <ScheduleView />}
           {activeTab === 'market' && <TodayMarketView />}
+          {activeTab === 'tools' && <PlannerToolsView />}
           {activeTab === 'board' && <ProductStrategyBoardView />}
           {activeTab === 'org' && <OrganizationManagementView />}
           {activeTab === 'reports' && <ReportsView />}
