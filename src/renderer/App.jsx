@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Sidebar from './components/Sidebar';
-import MobileHeader from './components/MobileHeader';
-import MobileBottomNav from './components/MobileBottomNav';
-import PwaInstallPrompt from './components/PwaInstallPrompt';
+import MobileHeader from './components/mobile/MobileHeader';
+import MobileBottomNav from './components/mobile/MobileBottomNav';
+import MobileDrawer from './components/mobile/MobileDrawer';
+import PwaInstallPrompt from './components/mobile/PwaInstallPrompt';
 
 import DashboardView from './components/DashboardView';
 import CustomerView from './components/CustomerView';
@@ -67,6 +68,7 @@ class ErrorBoundary extends React.Component {
               onClick={() => {
                 localStorage.removeItem('alpha_crm_active_user');
                 localStorage.removeItem('wlb_active_user');
+                sessionStorage.removeItem('alpha_crm_active_user');
                 this.setState({ hasError: false, error: null });
                 window.location.reload();
               }}
@@ -93,6 +95,8 @@ export default function App() {
   const checkRollbackStatus = useCrmStore((state) => state.checkRollbackStatus);
   const addDueScheduleAlert = useCrmStore((state) => state.addDueScheduleAlert);
   const setUpdateAvailableInfo = useCrmStore((state) => state.setUpdateAvailableInfo);
+
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
   useEffect(() => {
     // Initial Load & Rollback Check
@@ -172,7 +176,7 @@ export default function App() {
         className="flex flex-col md:flex-row h-screen w-screen overflow-hidden app-main-bg bg-[#090d16] text-slate-100 font-['Inter',sans-serif] select-none transition-colors duration-300"
       >
         {/* Mobile Header (Hidden on md/desktop) */}
-        <MobileHeader />
+        <MobileHeader onOpenDrawer={() => setIsMobileDrawerOpen(true)} />
 
         {/* Mobile PWA Install Prompt Banner */}
         <PwaInstallPrompt />
@@ -185,7 +189,7 @@ export default function App() {
           {/* Startup Rollback Alert Banner */}
           {showRollbackAlert && <RollbackBanner />}
 
-          {/* View Switcher */}
+          {/* View Switcher: 10 Full Major Modules */}
           {activeTab === 'dashboard' && <DashboardView />}
           {activeTab === 'customers' && <CustomerView />}
           {activeTab === 'schedules' && <ScheduleView />}
@@ -199,7 +203,13 @@ export default function App() {
         </main>
 
         {/* Mobile Bottom Navigation Bar (Fixed on mobile) */}
-        <MobileBottomNav />
+        <MobileBottomNav onOpenDrawer={() => setIsMobileDrawerOpen(true)} />
+
+        {/* Mobile Full 10-Menu Drawer */}
+        <MobileDrawer 
+          isOpen={isMobileDrawerOpen} 
+          onClose={() => setIsMobileDrawerOpen(false)} 
+        />
 
         {/* Global Modals */}
         <CustomerModal />
