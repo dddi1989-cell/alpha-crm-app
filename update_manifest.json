@@ -1,11 +1,9 @@
 {
-  "latestVersion": "1.6.6",
-  "minRequiredVersion": "1.0.0",
-  "title": "v1.6.6 WLB CRM TOOL 공식 정식 배포 버전",
-  "releaseDate": "2026-08-25",
-  "downloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.6/ALPHA_CRM_MicroPatch_v1.6.6.asar",
-  "installerUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.6/WLB_CRM_Setup_1.6.6.exe",
-  "releaseNotes": "설계사도구(연금계산기 및 가로형 PDF 제안서 생성), 매월 공시이율 자동갱신 및 WLB CRM TOOL 리브랜딩",
-  "forceUpdate": false,
-  "targetFile": "resources/app.asar"
+  "version": "1.6.7",
+  "releaseDate": "2026-08-25T07:28:59.169Z",
+  "releaseNotes": "v1.6.7 정식 버전 (모바일 구글캘린더 / 위젯 하위조직 정상화)",
+  "downloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.7/WLB_CRM_Setup_1.6.7.exe",
+  "fixedDownloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/latest/download/WLB_CRM_Setup.exe",
+  "patchUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.7/ALPHA_CRM_MicroPatch_v1.6.7.asar",
+  "mandatory": false
 }
