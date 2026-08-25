@@ -251,7 +251,7 @@ export default function LoginView() {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="사번 또는 ID (예: admin)"
+              placeholder="사번 또는 아이디를 입력하세요"
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck="false"
@@ -281,7 +281,7 @@ export default function LoginView() {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="비밀번호 (최초: admin 또는 본인 사번)"
+                placeholder="비밀번호를 입력하세요"
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck="false"
