@@ -374,11 +374,11 @@ export default function ClaimsView() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-['Outfit',sans-serif] text-2xl font-bold text-white tracking-tight">
-            보험사별 청구 FAX & 공식홈페이지 및 상품공시실 약관 ({INSURANCE_COMPANIES.length}개 보험사)
+          <h2 className="font-['Outfit',sans-serif] text-xl sm:text-2xl font-bold text-white tracking-tight">
+            {isElectron ? `보험사별 청구 FAX & 공식홈페이지 및 약관 (${INSURANCE_COMPANIES.length}개 보험사)` : `보험사 정보 & 대표 콜센터 안내 (${INSURANCE_COMPANIES.length}개사)`}
           </h2>
-          <p className="text-slate-400 text-sm mt-1">
-            국내 주요 보험사의 고객센터, 클릭 시 즉시 연결되는 공식 홈페이지, 상품공시실(약관) 및 청구 FAX 번호를 제공합니다.
+          <p className="text-slate-400 text-xs sm:text-sm mt-1">
+            국내 주요 보험사의 대표 고객센터 통화 연결, 공식 홈페이지, 상품공시실(약관) 및 청구 FAX 번호를 제공합니다.
           </p>
         </div>
       </div>

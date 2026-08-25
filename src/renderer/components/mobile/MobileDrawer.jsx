@@ -31,13 +31,13 @@ export default function MobileDrawer({ isOpen, onClose }) {
     { id: 'dashboard', label: '대시보드 개요', icon: LayoutDashboard, desc: '전체 현황 및 장기미터치 모니터링' },
     { id: 'customers', label: '고객 관리', icon: Users, desc: '내 고객 및 가망고객 POOL 리스트' },
     { id: 'schedules', label: '일정 관리', icon: Calendar, desc: '상담 및 미팅 캘린더' },
-    { id: 'tools', label: '설계사도구 (연금계산기)', icon: Calculator, badge: 'HOT', desc: '4대 보험사 대조 연금설계 및 제안서' },
+    { id: 'tools', label: '설계사도구 (연금계산기)', icon: Calculator, badge: 'HOT', desc: '4대 보험사 대조 연금설계 및 시뮬레이션' },
     { id: 'market', label: '오늘의 증시/시황', icon: TrendingUp, desc: '국내/해외 증시 및 속보' },
     { id: 'board', label: '상품전략자료실', icon: BookOpen, desc: '보험사별 전략 및 약관 자료실' },
     { id: 'org', label: '조직 관리', icon: Building2, desc: '사업단/지점/팀 조직원 현황' },
     { id: 'reports', label: '보장분석', icon: FileCheck, desc: '고객 증권 보장분석 리포트' },
-    { id: 'claims', label: '보험금 청구', icon: FileText, desc: '30대 보험사 청구서 양식' },
-    { id: 'system', label: '백업 & 복원', icon: Database, desc: '클라우드 동기화 및 시스템 정보' }
+    { id: 'claims', label: '보험사 정보', icon: FileText, desc: '30대 보험사 콜센터 & 약관 정보' },
+    { id: 'system', label: '클라우드 동기화', icon: Database, desc: '실시간 DB 동기화 및 계정 정보' }
   ];
 
   const handleSelectTab = (tabId) => {
@@ -82,22 +82,11 @@ export default function MobileDrawer({ isOpen, onClose }) {
                     {currentUser?.role || 'FA'}
                   </span>
                 </div>
-                <p className="text-[10px] text-slate-400 truncate max-w-[150px]">
+                <p className="text-[10px] text-slate-400 truncate max-w-[170px]">
                   {currentUser?.org_name || '본사 총괄 사업단'}
                 </p>
               </div>
             </div>
-
-            <button
-              onClick={() => {
-                onClose();
-                openThemeModal();
-              }}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold flex items-center space-x-1"
-              title="테마 설정"
-            >
-              <Palette className="w-3.5 h-3.5" />
-            </button>
           </div>
 
           {/* 10 Major Menu Items */}

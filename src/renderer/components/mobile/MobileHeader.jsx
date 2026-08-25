@@ -42,13 +42,6 @@ export default function MobileHeader({ onOpenDrawer }) {
 
       <div className="flex items-center space-x-1.5">
         <button
-          onClick={openThemeModal}
-          title="색상 테마"
-          className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-amber-400 active:scale-95 transition-all"
-        >
-          <Palette className="w-4 h-4" />
-        </button>
-        <button
           onClick={logout}
           title="로그아웃"
           className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-red-400 active:scale-95 transition-all"

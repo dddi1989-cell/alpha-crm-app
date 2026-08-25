@@ -145,14 +145,6 @@ export default function SystemView() {
                 <span className="font-mono text-slate-200">{currentUser?.phone || '미등록'}</span>
               </div>
             </div>
-
-            <button
-              onClick={() => useCrmStore.getState().openThemeModal()}
-              className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl flex items-center justify-center space-x-1.5 transition-all"
-            >
-              <Palette className="w-4 h-4 text-amber-400" />
-              <span>프로그램 색상 테마 변경하기</span>
-            </button>
           </div>
         </div>
       </div>
