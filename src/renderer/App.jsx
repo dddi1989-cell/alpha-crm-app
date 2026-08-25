@@ -99,6 +99,14 @@ export default function App() {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
   useEffect(() => {
+    // If running on web/mobile and current tab is not in allowed 6 tabs, switch to customers
+    if (!isElectron) {
+      const allowed = ['customers', 'schedules', 'market', 'tools', 'board', 'claims'];
+      if (!allowed.includes(activeTab)) {
+        useCrmStore.getState().setActiveTab('customers');
+      }
+    }
+
     // Initial Load & Rollback Check
     loadAllData();
     checkRollbackStatus();

@@ -13,9 +13,9 @@ export default function MobileBottomNav({ onOpenDrawer }) {
   const setActiveTab = useCrmStore((state) => state.setActiveTab);
 
   const mainTabs = [
-    { id: 'customers', label: '고객관리', icon: Users },
+    { id: 'customers', label: '고객정보', icon: Users },
     { id: 'schedules', label: '일정관리', icon: Calendar },
-    { id: 'tools', label: '연금설계', icon: Calculator, badge: 'HOT' },
+    { id: 'tools', label: '설계사도구', icon: Calculator, badge: 'HOT' },
     { id: 'market', label: '증시시황', icon: TrendingUp },
   ];
 

@@ -133,7 +133,7 @@ export default function Sidebar() {
 
         {/* Navigation Menu */}
         <nav className="p-4 space-y-1.5">
-          {menuItems.map((item) => {
+          {(isElectron ? menuItems : menuItems.filter(item => ['customers', 'schedules', 'market', 'tools', 'board', 'claims'].includes(item.id))).map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             return (

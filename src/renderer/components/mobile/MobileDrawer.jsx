@@ -28,16 +28,12 @@ export default function MobileDrawer({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   const menuItems = [
-    { id: 'dashboard', label: '대시보드 개요', icon: LayoutDashboard, desc: '전체 현황 및 장기미터치 모니터링' },
-    { id: 'customers', label: '고객 관리', icon: Users, desc: '내 고객 및 가망고객 POOL 리스트' },
+    { id: 'customers', label: '고객 정보 확인', icon: Users, desc: '내 고객 및 가망고객 POOL 리스트' },
     { id: 'schedules', label: '일정 관리', icon: Calendar, desc: '상담 및 미팅 캘린더' },
-    { id: 'tools', label: '설계사도구 (연금계산기)', icon: Calculator, badge: 'HOT', desc: '4대 보험사 대조 연금설계 및 시뮬레이션' },
     { id: 'market', label: '오늘의 증시/시황', icon: TrendingUp, desc: '국내/해외 증시 및 속보' },
+    { id: 'tools', label: '설계사 도구', icon: Calculator, badge: 'HOT', desc: '4대 보험사 대조 연금설계 및 시뮬레이션' },
     { id: 'board', label: '상품전략자료실', icon: BookOpen, desc: '보험사별 전략 및 약관 자료실' },
-    { id: 'org', label: '조직 관리', icon: Building2, desc: '사업단/지점/팀 조직원 현황' },
-    { id: 'reports', label: '보장분석', icon: FileCheck, desc: '고객 증권 보장분석 리포트' },
-    { id: 'claims', label: '보험사 정보', icon: FileText, desc: '30대 보험사 콜센터 & 약관 정보' },
-    { id: 'system', label: '클라우드 동기화', icon: Database, desc: '실시간 DB 동기화 및 계정 정보' }
+    { id: 'claims', label: '보험사 정보', icon: FileText, desc: '30대 보험사 콜센터 & 약관 정보' }
   ];
 
   const handleSelectTab = (tabId) => {
