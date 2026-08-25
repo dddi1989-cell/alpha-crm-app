@@ -31,6 +31,7 @@ import {
 import { useCrmStore } from '../store/useCrmStore';
 import { getDescendantOrgAndUserIds, matchesOrgFilter } from '../utils/orgHierarchy';
 import { isCustomerBirthdayOnDate, getSolarBirthdayInYear } from '../utils/lunarSolar';
+import MobileScheduleView from './mobile/MobileScheduleView';
 
 const columnHelper = createColumnHelper();
 
@@ -384,24 +385,54 @@ export default function ScheduleView() {
   const todayStr = formatDateKey(new Date());
 
   return (
-    <div className="p-8 space-y-6 max-w-7xl mx-auto">
-      {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="font-['Outfit',sans-serif] text-2xl font-bold tracking-tight text-white flex items-center space-x-2.5">
-            <Calendar className="w-7 h-7 text-indigo-400" />
-            <span>일정 관리</span>
-          </h2>
-          <p className="text-sm text-slate-400 mt-1">
-            월간 캘린더를 통해 상담 및 미팅 일정을 확인하고 체계적으로 관리하세요.
-          </p>
-        </div>
+    <div className="p-4 sm:p-6 md:p-8 space-y-6 max-w-7xl mx-auto">
+      {/* ==================================================== */}
+      {/* 📱 MOBILE VIEW: Google Calendar Style (md:hidden)    */}
+      {/* ==================================================== */}
+      <div className="block md:hidden">
+        <MobileScheduleView
+          schedules={schedules}
+          customers={customers}
+          visibleSchedules={visibleSchedules}
+          visibleCustomers={visibleCustomers}
+          currentDate={currentDate}
+          setCurrentDate={setCurrentDate}
+          selectedDateStr={selectedDateStr}
+          setSelectedDateStr={setSelectedDateStr}
+          openScheduleModal={openScheduleModal}
+          toggleScheduleStatus={toggleScheduleStatus}
+          deleteSchedule={deleteSchedule}
+          currentUser={currentUser}
+          scheduleViewScope={scheduleViewScope}
+          setScheduleViewScope={setScheduleViewScope}
+          selectedOrgFilter={selectedOrgFilter}
+          setSelectedOrgFilter={setSelectedOrgFilter}
+          organizations={organizations}
+          accessibleUsers={accessibleUsers}
+        />
+      </div>
 
-        {/* Right Controls: View Switcher & New Button */}
-        <div className="flex flex-wrap items-center gap-3">
-          {/* View Mode Toggle: Calendar vs List */}
-          <div className="bg-slate-900 p-1 rounded-xl border border-slate-800 flex items-center text-xs font-semibold">
-            <button
+      {/* ==================================================== */}
+      {/* 💻 DESKTOP VIEW: Standard Table & Grid (hidden md:block) */}
+      {/* ==================================================== */}
+      <div className="hidden md:block space-y-6">
+        {/* Top Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 className="font-['Outfit',sans-serif] text-2xl font-bold tracking-tight text-white flex items-center space-x-2.5">
+              <Calendar className="w-7 h-7 text-indigo-400" />
+              <span>일정 관리</span>
+            </h2>
+            <p className="text-sm text-slate-400 mt-1">
+              월간 캘린더를 통해 상담 및 미팅 일정을 확인하고 체계적으로 관리하세요.
+            </p>
+          </div>
+
+          {/* Right Controls: View Switcher & New Button */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* View Mode Toggle: Calendar vs List */}
+            <div className="bg-slate-900 p-1 rounded-xl border border-slate-800 flex items-center text-xs font-semibold">
+              <button
               onClick={() => setViewMode('calendar')}
               className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all ${
                 viewMode === 'calendar'
@@ -1021,6 +1052,7 @@ export default function ScheduleView() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
