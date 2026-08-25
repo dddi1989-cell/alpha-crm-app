@@ -32,7 +32,7 @@ export default function Sidebar() {
     { id: 'board', label: '상품전략자료실', icon: BookOpen },
     { id: 'org', label: '조직 관리', icon: Building2 },
     { id: 'reports', label: '보장분석', icon: FileCheck },
-    { id: 'claims', label: '보험금 청구', icon: FileText },
+    { id: 'claims', label: '보험사 정보', icon: FileText },
     { id: 'system', label: '백업 & 복원', icon: Database }
   ];
 

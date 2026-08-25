@@ -25,7 +25,7 @@ export default function ClaimFormModal({ company, onClose }) {
           <div className="flex items-center space-x-2.5">
             <Shield className="w-5 h-5 text-indigo-400" />
             <h3 className="font-semibold text-lg">
-              [{company.name}] 공식 보험금 청구서 서식 미리보기
+              [{company.name}] 보험사 정보 및 청구 서식
             </h3>
           </div>
           <div className="flex items-center space-x-2">
