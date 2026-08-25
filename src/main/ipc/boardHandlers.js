@@ -6,7 +6,7 @@ const https = require('https');
 const http = require('http');
 const { URL } = require('url');
 const { getDb } = require('../database');
-const { uploadBoardAttachment } = require('../services/cloudSyncService');
+const { uploadBoardAttachment } = require('../services/storageService');
 
 const GITHUB_TOKEN = ['ghp_', '3qdxTA0PcKDJbl', 'D8N9AaNB0nJy', 'BGDL0WNEiS'].join('');
 const GITHUB_OWNER = 'dddi1989-cell';
