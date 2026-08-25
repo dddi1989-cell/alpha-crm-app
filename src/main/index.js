@@ -69,11 +69,11 @@ if (!gotTheLock) {
     try {
       const icon = getTrayIcon();
       tray = new Tray(icon);
-      tray.setToolTip('WBL CRM TOOL');
+      tray.setToolTip('WLB CRM TOOL');
 
       const contextMenu = Menu.buildFromTemplate([
         {
-          label: 'WBL CRM TOOL 열기',
+          label: 'WLB CRM TOOL 열기',
           click: () => {
             if (mainWindow) {
               if (mainWindow.isMinimized()) mainWindow.restore();
@@ -141,7 +141,7 @@ if (!gotTheLock) {
       minWidth: 320,
       minHeight: 450,
       show: false,
-      title: 'ALPHA 바탕화면 캘린더 위젯',
+      title: 'WLB 바탕화면 캘린더 위젯',
       icon: appIcon,
       webPreferences: {
         preload: path.join(__dirname, 'preload.js'),
@@ -197,7 +197,7 @@ if (!gotTheLock) {
       height: 830,
       minWidth: 1024,
       minHeight: 700,
-      title: 'WBL CRM TOOL',
+      title: 'WLB CRM TOOL',
       backgroundColor: '#0b0f19',
       autoHideMenuBar: true,
       show: false,

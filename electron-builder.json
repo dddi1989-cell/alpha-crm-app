@@ -4,7 +4,7 @@
     "smartUnpack": true
   },
   "afterPack": "./scripts/disable-asar-integrity.js",
-  "productName": "WBL CRM TOOL",
+  "productName": "WLB CRM TOOL",
   "directories": {
     "output": "dist-electron",
     "buildResources": "build"
@@ -44,7 +44,7 @@
     "unicode": true,
     "createDesktopShortcut": "always",
     "createStartMenuShortcut": true,
-    "shortcutName": "WBL CRM TOOL",
-    "artifactName": "WBL_CRM_Setup_${version}.${ext}"
+    "shortcutName": "WLB CRM TOOL",
+    "artifactName": "WLB_CRM_Setup_${version}.${ext}"
   }
 }

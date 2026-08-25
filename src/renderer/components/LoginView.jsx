@@ -200,7 +200,7 @@ export default function LoginView() {
           <div className="w-28 h-20 bg-black rounded-2xl p-1.5 mx-auto shadow-2xl shadow-black/90 flex items-center justify-center border border-slate-700/80">
             <img 
               src={logoIcon} 
-              alt="WBL Logo" 
+              alt="WLB Logo" 
               className="w-full h-full object-contain"
               onError={(e) => {
                 e.target.onerror = null;
@@ -212,7 +212,7 @@ export default function LoginView() {
           </div>
           <div>
             <h1 className="font-['Outfit',sans-serif] text-2xl font-extrabold tracking-tight text-white">
-              WBL CRM TOOL
+              WLB CRM TOOL
             </h1>
             <p className="text-slate-400 text-xs mt-1">
               안전한 로그인 후 CRM 시스템에 접속하세요

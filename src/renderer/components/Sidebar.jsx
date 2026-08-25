@@ -109,7 +109,7 @@ export default function Sidebar() {
           <div className="w-12 h-10 rounded-xl bg-black p-0.5 border border-slate-700/80 flex items-center justify-center shadow-lg shadow-black/70 overflow-hidden shrink-0">
             <img 
               src={logoIcon} 
-              alt="WBL Logo" 
+              alt="WLB Logo" 
               className="w-full h-full object-contain"
               onError={(e) => {
                 e.target.onerror = null;
@@ -121,7 +121,7 @@ export default function Sidebar() {
           </div>
           <div className="overflow-hidden">
             <h1 className="font-['Outfit',sans-serif] text-base font-extrabold tracking-tight text-white truncate">
-              WBL CRM TOOL
+              WLB CRM TOOL
             </h1>
             <span className="inline-flex items-center text-[10px] uppercase font-semibold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/50 mt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span>
