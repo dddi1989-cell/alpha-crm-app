@@ -54,6 +54,9 @@ export const api = {
     getHistoryDates: () => window.electronAPI.market.getHistoryDates(),
     refresh: () => window.electronAPI.market.refresh()
   },
+  tools: {
+    exportPensionPdf: (data) => window.electronAPI.tools.exportPensionPdf(data)
+  },
   system: {
     getInfo: () => window.electronAPI.system.getInfo(),
     getAppVersion: () => window.electronAPI.system.getAppVersion(),

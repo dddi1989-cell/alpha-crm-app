@@ -161,11 +161,13 @@ export function simulatePensionComparison({
       {
         id: 'guaranteed',
         rankTag: '🏆 안정수익 1위 (강력추천)',
-        name: '평생 최저보증 연금 (단리 5.5% 보증)',
+        name: '평생 최저보증 연금 (단리 5.5% 평생보증)',
+        productName: '(무)HighFive그랑에이지변액연금보험',
         category: '최저보증형 종신연금',
-        companies: 'D생명, I생명, K생명 등',
+        companyName: 'iM라이프 (구 DGB생명)',
+        otherCompanies: 'KDB생명 ((무)버팀목평생보증연금), IBK연금보험 ((무)평생보증연금)',
         badgeColor: 'amber',
-        rateText: '연 5.5% 단리 평생보증',
+        rateText: '연 5.5% 단리 평생보증 (연금지급률 확정)',
         accumulatedFund: p1AccumulatedFund,
         accumulatedFundStr: `${Math.round(p1AccumulatedFund / 10000).toLocaleString()}만원`,
         refundRate: p1RefundRate,
@@ -178,17 +180,19 @@ export function simulatePensionComparison({
         totalReceivedRatio: ((p1TotalReceived / totalPrincipal) * 100).toFixed(1),
         taxBenefit: '10년 유지 시 비과세 (이자소득세 0원)',
         keyFeatures: [
-          '투자 수익률과 상관없이 계약 시점의 최저보증 연금액 100% 보증',
-          '살아있는 동안 평생 매월 동일한 확정 연금 지급',
-          '금리 하락기에도 원금 손실 없는 가장 안전한 노후 준비'
+          '투자 수익률 하락과 무관하게 계약 시점의 최저보증 연금액 100% 확정 보증',
+          '살아있는 동안 평생 매월 동일한 확정 연금 지급 (사망 시까지 지속)',
+          '금리 하락기에도 원금 손실 없는 가장 안전한 노후 준비 1순위'
         ]
       },
       {
         id: 'declared_rate',
         rankTag: '⭐ 안정 복리형',
         name: '공시이율형 비과세 연금보험',
+        productName: '(무)삼성생명 인터넷NEW연금보험',
         category: '공시이율 복리 연금',
-        companies: 'S생명, H생명, K손보 등',
+        companyName: '삼성생명',
+        otherCompanies: '한화생명 ((무)라이프플러스 연금보험), 교보생명 ((무)미리보는내연금보험)',
         badgeColor: 'emerald',
         rateText: '공시이율 3.1% (최저보증 1.0%)',
         accumulatedFund: p2AccumulatedFund,
@@ -212,8 +216,10 @@ export function simulatePensionComparison({
         id: 'tax_deduct',
         rankTag: '💰 세금환급 1위',
         name: '세액공제 연금저축 (연말정산 특화)',
+        productName: '미래에셋증권 연금저축계좌 (글로벌 ETF)',
         category: '세제적격 연금저축',
-        companies: '은행, 증권사, 생손보사',
+        companyName: '미래에셋증권',
+        otherCompanies: '삼성화재 ((무)아름다운생활 연금저축), 삼성생명 ((무)골든연금 연금저축보험)',
         badgeColor: 'blue',
         rateText: '연 3.5% + 연말정산 최대 16.5% 환급',
         accumulatedFund: p3AccumulatedFund,
@@ -228,7 +234,7 @@ export function simulatePensionComparison({
         totalReceivedRatio: ((p3TotalReceived / totalPrincipal) * 100).toFixed(1),
         taxBenefit: `매년 최대 ${Math.round(annualTaxRefund/10000)}만원 세액공제 (총 ${Math.round(totalTaxRefund/10000)}만원 환급)`,
         keyFeatures: [
-          '근로소득자/자영업자 매년 연말정산 시 막강한 세금 환급',
+          '근로소득자/자영업자 매년 연말정산 시 막강한 세금 환급 (최대 16.5%)',
           '연금 수령 시 3.3%~5.5%의 저율 연금소득세만 부과',
           '직장인 절세 재테크 1순위 필수 상품'
         ]
@@ -237,8 +243,10 @@ export function simulatePensionComparison({
         id: 'variable',
         rankTag: '📈 고수익 추구형',
         name: '변액/투자형 연금보험 (펀드운용형)',
+        productName: '(무)동행 변액연금보험 (스텝업 원금보장)',
         category: '변액투자 연금',
-        companies: 'M생명, P생명, F생명 등',
+        companyName: '메트라이프생명',
+        otherCompanies: '푸본현대생명 ((무)MAX 변액연금보험), BNP파리바카디프생명 ((무)i-선택변액)',
         badgeColor: 'purple',
         rateText: '가정수익률 연 5.0% (원금보장형)',
         accumulatedFund: p4AccumulatedFund,

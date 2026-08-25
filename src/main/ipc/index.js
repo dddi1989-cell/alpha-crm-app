@@ -12,6 +12,7 @@ const { registerUpdaterHandlers } = require('./updaterHandlers');
 const { registerSystemHandlers } = require('./systemHandlers');
 const { registerBoardHandlers } = require('./boardHandlers');
 const { registerMarketHandlers } = require('./marketHandlers');
+const { registerToolsHandlers } = require('./toolsHandlers');
 
 function setupIpcHandlers(mainWindow) {
   const triggerDualBackup = () => {
@@ -59,6 +60,7 @@ function setupIpcHandlers(mainWindow) {
   try { registerSystemHandlers(mainWindow, triggerDualBackup); } catch (e) { console.error('registerSystemHandlers error:', e); }
   try { registerBoardHandlers(mainWindow, triggerDualBackup); } catch (e) { console.error('registerBoardHandlers error:', e); }
   try { registerMarketHandlers(mainWindow); } catch (e) { console.error('registerMarketHandlers error:', e); }
+  try { registerToolsHandlers(mainWindow); } catch (e) { console.error('registerToolsHandlers error:', e); }
 
   console.log('✅ All modular IPC handlers registered successfully.');
 }

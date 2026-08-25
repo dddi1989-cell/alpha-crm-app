@@ -57,6 +57,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getHistoryDates: () => ipcRenderer.invoke('market:get-history-dates'),
     refresh: () => ipcRenderer.invoke('market:refresh')
   },
+  tools: {
+    exportPensionPdf: (data) => ipcRenderer.invoke('tools:export-pension-pdf', data)
+  },
   system: {
     getInfo: () => ipcRenderer.invoke('system:get-info'),
     getAppVersion: () => ipcRenderer.invoke('system:get-app-version'),

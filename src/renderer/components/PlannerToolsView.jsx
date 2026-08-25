@@ -19,19 +19,26 @@ import {
   FileText,
   Percent,
   CheckCircle2,
-  PieChart
+  PieChart,
+  Download,
+  FileDown,
+  Building,
+  CheckCheck
 } from 'lucide-react';
 import { useCrmStore } from '../store/useCrmStore';
+import { api } from '../utils/api';
 import { simulatePensionComparison, calculateAge } from '../utils/pensionEngine';
 
 export default function PlannerToolsView() {
-  const [activeSubTab, setActiveSubTab] = useState('pension'); // 'pension' (추후 'tax', 'needs' 등 확장 가능)
+  const [activeSubTab, setActiveSubTab] = useState('pension'); // 'pension'
   const customers = useCrmStore((state) => state.customers);
+  const currentUser = useCrmStore((state) => state.currentUser);
 
   // ----------------------------------------------------
   // Pension Calculator Input States
   // ----------------------------------------------------
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [clientName, setClientName] = useState('고객');
   const [birthDate, setBirthDate] = useState('1985-05-15');
   const [gender, setGender] = useState('male');
   const [monthlyPayManwon, setMonthlyPayManwon] = useState(50); // 50만원
@@ -39,15 +46,21 @@ export default function PlannerToolsView() {
   const [startAge, setStartAge] = useState(65); // 65세 개시
   const [pensionType, setPensionType] = useState('life100'); // 'life100' | 'fixed20' | 'fixed10'
 
-  // Copy state
-  const [copied, setCopied] = useState(false);
+  // PDF Export state
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [exportSuccessMsg, setExportSuccessMsg] = useState('');
+  const [exportErrorMsg, setExportErrorMsg] = useState('');
 
   // Auto-fill when customer is selected
   const handleSelectCustomer = (custId) => {
     setSelectedCustomerId(custId);
-    if (!custId) return;
+    if (!custId) {
+      setClientName('고객');
+      return;
+    }
     const cust = customers.find((c) => String(c.id) === String(custId));
     if (cust) {
+      setClientName(cust.name || '고객');
       if (cust.birth_date) setBirthDate(cust.birth_date);
       if (cust.gender) setGender(cust.gender === '여성' || cust.gender === 'female' ? 'female' : 'male');
     }
@@ -74,46 +87,35 @@ export default function PlannerToolsView() {
     });
   }, [currentAge, gender, monthlyPayManwon, payYears, effectiveStartAge, pensionType]);
 
-  // Copy Proposal Summary
-  const handleCopyProposal = () => {
-    const s = simulationResult.inputSummary;
-    const topProd = simulationResult.products[0];
+  // Export Presentation PDF Handler
+  const handleExportPdf = async () => {
+    setIsExportingPdf(true);
+    setExportSuccessMsg('');
+    setExportErrorMsg('');
 
-    const text = `[📋 맞춤 노후 연금 플랜 비교 제안서]
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-■ 기본 설계 조건
-- 가입연령: 현재 만 ${s.currentAge}세 (${s.genderLabel})
-- 월 납입액: ${s.monthlyPayStr} (${s.payYearsStr})
-- 총 납입원금: ${s.totalPrincipalStr}
-- 연금 개시: 만 ${s.startAge}세 (${s.deferYears > 0 ? `거치기간 ${s.deferYears}년` : '즉시연계'})
-- 수령 형태: ${s.pensionTypeLabel}
+    try {
+      const res = await api.tools.exportPensionPdf({
+        summary: simulationResult.inputSummary,
+        products: simulationResult.products,
+        plannerInfo: {
+          name: currentUser?.name || 'WLB 재무설계사',
+          org_name: currentUser?.org_name || 'WLB 본부',
+          phone: currentUser?.phone || ''
+        },
+        clientName: clientName.trim() || '고객'
+      });
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-■ 주요 금융사 연금 상품별 비교 결과
-1. [강력추천] ${topProd.name}
-   - 개시시점 적립금: ${topProd.accumulatedFundStr} (환급률 ${topProd.refundRate}%)
-   - 매월 예상 수령액: ${topProd.monthlyPensionStr} (연 ${topProd.annualPensionStr})
-   - 100세까지 총수령액: ${topProd.totalReceivedStr} (원금대비 ${topProd.totalReceivedRatio}%)
-   - 혜택: ${topProd.taxBenefit}
-
-2. ${simulationResult.products[1].name}
-   - 매월 예상 수령액: ${simulationResult.products[1].monthlyPensionStr}
-   - 100세까지 총수령액: ${simulationResult.products[1].totalReceivedStr}
-
-3. ${simulationResult.products[2].name}
-   - 매년 세액공제: ${simulationResult.products[2].taxBenefit}
-   - 매월 예상 수령액: ${simulationResult.products[2].monthlyPensionStr}
-
-4. ${simulationResult.products[3].name}
-   - 매월 예상 수령액: ${simulationResult.products[3].monthlyPensionStr} (투자수익형)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-※ 고객님의 재정 상황과 목적(평생 확정보장 vs 연말정산 절세)에 가장 적합한 상품을 상담해 드립니다.
-- WLB CRM 연금 솔루션 -`;
-
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+      if (res?.success) {
+        setExportSuccessMsg(res.message || '프레젠테이션 PDF 제안서 저장이 완료되었습니다!');
+        setTimeout(() => setExportSuccessMsg(''), 4000);
+      } else if (res?.error && res.error !== '저장이 취소되었습니다.') {
+        setExportErrorMsg(res.error);
+      }
+    } catch (err) {
+      setExportErrorMsg('PDF 생성 실패: ' + err.message);
+    } finally {
+      setIsExportingPdf(false);
+    }
   };
 
   return (
@@ -133,26 +135,64 @@ export default function PlannerToolsView() {
                 </span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                고객 맞춤형 연금 시뮬레이션 및 국내 주요 금융사·보험사 상품별 수령액/이율 실시간 비교
+                국내 주요 금융사·생손보사 연금 상품 실시간 비교 & 고객 프레젠테이션 제안서 PDF 자동 생성
               </p>
             </div>
           </div>
         </div>
 
-        {/* Top Sub Tabs */}
-        <div className="flex items-center space-x-2 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800">
+        {/* Top Sub Tabs & PDF Export Button */}
+        <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800">
+            <button
+              onClick={() => setActiveSubTab('pension')}
+              className={'flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ' + 
+                (activeSubTab === 'pension' 
+                  ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-md shadow-indigo-600/30' 
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800')}
+            >
+              <TrendingUp className="w-4 h-4 text-amber-400" />
+              <span>💰 연금계산기 (금융사비교)</span>
+            </button>
+          </div>
+
           <button
-            onClick={() => setActiveSubTab('pension')}
-            className={'flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ' + 
-              (activeSubTab === 'pension' 
-                ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-md shadow-indigo-600/30' 
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800')}
+            onClick={handleExportPdf}
+            disabled={isExportingPdf}
+            className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-extrabold text-xs rounded-2xl shadow-lg shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none"
           >
-            <TrendingUp className="w-4 h-4 text-amber-400" />
-            <span>💰 연금계산기 (금융사비교)</span>
+            {isExportingPdf ? (
+              <>
+                <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                <span>PDF 생성 중...</span>
+              </>
+            ) : (
+              <>
+                <FileDown className="w-4 h-4" />
+                <span>📊 프레젠테이션 PDF 제안서 다운로드</span>
+              </>
+            )}
           </button>
         </div>
       </div>
+
+      {/* Success/Error Alerts */}
+      {exportSuccessMsg && (
+        <div className="p-3.5 bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 rounded-2xl text-xs font-bold flex items-center justify-between animate-fadeIn shadow-lg">
+          <span className="flex items-center space-x-2">
+            <CheckCheck className="w-4 h-4 text-emerald-400" />
+            <span>{exportSuccessMsg} (저장된 폴더가 자동으로 열렸습니다)</span>
+          </span>
+          <button onClick={() => setExportSuccessMsg('')} className="text-emerald-400 hover:text-white">✕</button>
+        </div>
+      )}
+
+      {exportErrorMsg && (
+        <div className="p-3.5 bg-red-950/80 border border-red-500/50 text-red-300 rounded-2xl text-xs font-bold flex items-center justify-between animate-fadeIn shadow-lg">
+          <span>⚠️ {exportErrorMsg}</span>
+          <button onClick={() => setExportErrorMsg('')} className="text-red-400 hover:text-white">✕</button>
+        </div>
+      )}
 
       {/* 2. Main 2-Column Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -175,7 +215,7 @@ export default function PlannerToolsView() {
               <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
                 <span className="flex items-center space-x-1">
                   <User className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>등록 고객 불러오기 (선택)</span>
+                  <span>고객 선택 (자동 채움)</span>
                 </span>
               </label>
               <select
@@ -183,13 +223,25 @@ export default function PlannerToolsView() {
                 onChange={(e) => handleSelectCustomer(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500 transition-colors"
               >
-                <option value="">직접 정보 입력</option>
+                <option value="">직접 정보 입력 (기본 고객)</option>
                 {customers.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name} ({c.birth_date || '생일미등록'} / {c.gender || '성별미지정'})
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* Client Name Direct Input */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300">고객 성명 (제안서 표기용)</label>
+              <input
+                type="text"
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                placeholder="예: 홍길동"
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500 font-bold"
+              />
             </div>
 
             {/* 2. Birth Date & Gender */}
@@ -384,16 +436,12 @@ export default function PlannerToolsView() {
               <div className="flex items-center space-x-2">
                 <Award className="w-5 h-5 text-amber-400" />
                 <h3 className="font-bold text-sm text-white">
-                  설계 요약: 만 {simulationResult.inputSummary.currentAge}세 / {simulationResult.inputSummary.monthlyPayStr}씩 {simulationResult.inputSummary.payYearsStr}
+                  [{clientName} 고객님 플랜] 만 {simulationResult.inputSummary.currentAge}세 / {simulationResult.inputSummary.monthlyPayStr}씩 {simulationResult.inputSummary.payYearsStr}
                 </h3>
               </div>
-              <button
-                onClick={handleCopyProposal}
-                className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/30 active:scale-95 shrink-0"
-              >
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copied ? '제안서 복사완료!' : '고객 상담용 제안서 복사'}</span>
-              </button>
+              <span className="text-xs font-mono text-sky-400 bg-sky-950/60 px-3 py-1 rounded-full border border-sky-800/50">
+                담당 설계사: {currentUser?.name || 'WLB 재무설계사'}
+              </span>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -435,7 +483,7 @@ export default function PlannerToolsView() {
           <div className="space-y-3">
             <h3 className="font-bold text-sm text-white flex items-center space-x-2">
               <Layers className="w-4 h-4 text-indigo-400" />
-              <span>국내 주요 금융사·보험사 연금 상품군 비교 (4개 선택지)</span>
+              <span>국내 주요 금융사·보험사 연금 상품군 실시간 대조 (4개 선택지)</span>
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -452,7 +500,7 @@ export default function PlannerToolsView() {
                         : 'bg-slate-900/80 border-slate-800 hover:border-slate-700')}
                   >
                     <div className="space-y-3">
-                      {/* Top Rank Badge */}
+                      {/* Top Rank Badge & Exact Company Name */}
                       <div className="flex items-center justify-between">
                         <span className={'text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ' + 
                           (isGuaranteed 
@@ -462,15 +510,21 @@ export default function PlannerToolsView() {
                               : 'bg-slate-950 text-slate-300 border-slate-800'))}>
                           {prod.rankTag}
                         </span>
-                        <span className="text-[11px] font-mono text-slate-400">{prod.companies}</span>
+                        <span className="text-xs font-extrabold text-sky-400 font-sans flex items-center space-x-1">
+                          <Building className="w-3.5 h-3.5" />
+                          <span>{prod.companyName}</span>
+                        </span>
                       </div>
 
-                      {/* Name & Category */}
+                      {/* Name & Product Full Name */}
                       <div>
                         <h4 className="text-base font-extrabold text-white">
                           {prod.name}
                         </h4>
-                        <p className="text-xs text-indigo-400 font-medium mt-0.5">
+                        <p className="text-xs text-slate-300 font-medium mt-0.5">
+                          대표상품: <span className="text-amber-300 font-bold">{prod.productName}</span>
+                        </p>
+                        <p className="text-[11px] text-indigo-400 font-medium mt-0.5">
                           {prod.rateText}
                         </p>
                       </div>
@@ -527,15 +581,16 @@ export default function PlannerToolsView() {
           <div className="glass-panel p-5 rounded-3xl border border-slate-800 space-y-3 bg-slate-900/80 shadow-xl overflow-x-auto custom-scrollbar">
             <h4 className="text-xs font-bold text-white flex items-center space-x-2">
               <FileText className="w-4 h-4 text-indigo-400" />
-              <span>연금 상품별 핵심 비교표 (요약)</span>
+              <span>금융사별 대표 연금 상품 정밀 대조표</span>
             </h4>
 
-            <table className="w-full text-left text-xs border-collapse min-w-[500px]">
+            <table className="w-full text-left text-xs border-collapse min-w-[600px]">
               <thead>
                 <tr className="border-b border-slate-800 text-[11px] text-slate-400 bg-slate-950/60">
-                  <th className="p-2.5 font-bold">상품 구분</th>
+                  <th className="p-2.5 font-bold">대표 금융사 & 상품명</th>
                   <th className="p-2.5 font-bold">적용 이율</th>
                   <th className="p-2.5 font-bold">월 예상 수령액</th>
+                  <th className="p-2.5 font-bold">개시시점 환급률</th>
                   <th className="p-2.5 font-bold">100세 총 수령액</th>
                   <th className="p-2.5 font-bold">세제 혜택</th>
                 </tr>
@@ -543,11 +598,15 @@ export default function PlannerToolsView() {
               <tbody className="divide-y divide-slate-800/60 font-mono">
                 {simulationResult.products.map((p) => (
                   <tr key={p.id} className="hover:bg-slate-850/40 transition-colors">
-                    <td className="p-2.5 font-bold text-white font-sans">{p.category}</td>
+                    <td className="p-2.5 font-bold text-white font-sans">
+                      <div className="text-sky-400 font-bold">{p.companyName}</div>
+                      <div className="text-[11px] text-slate-300 font-normal">{p.productName}</div>
+                    </td>
                     <td className="p-2.5 text-indigo-300">{p.rateText.split(' ')[0]} {p.rateText.split(' ')[1]}</td>
                     <td className="p-2.5 font-extrabold text-amber-400">{p.monthlyPensionStr}</td>
+                    <td className="p-2.5 font-bold text-emerald-400">{p.refundRate}%</td>
                     <td className="p-2.5 font-bold text-emerald-400">{p.totalReceivedStr}</td>
-                    <td className="p-2.5 text-slate-300 font-sans text-[11px]">{p.taxBenefit.slice(0, 15)}...</td>
+                    <td className="p-2.5 text-slate-300 font-sans text-[11px]">{p.taxBenefit.slice(0, 18)}...</td>
                   </tr>
                 ))}
               </tbody>
