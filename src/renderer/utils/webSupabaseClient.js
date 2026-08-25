@@ -418,7 +418,7 @@ export const webApi = {
 
   system: {
     getInfo: async () => ({ platform: 'web', version: '1.6.6 (Web/PWA)', isWeb: true }),
-    getAppVersion: async () => ({ version: '1.6.6' }),
+    getAppVersion: async () => '1.6.6',
     triggerBackup: async () => ({ success: true }),
     exportBackup: async () => ({ success: true }),
     restoreDb: async () => ({ success: false, error: '웹에서는 로컬 복원을 지원하지 않습니다.' }),

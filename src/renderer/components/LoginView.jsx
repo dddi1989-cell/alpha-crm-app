@@ -16,7 +16,10 @@ export default function LoginView() {
   // Load app version on mount
   const [appVersion, setAppVersion] = useState('');
   useEffect(() => {
-    api.system.getAppVersion().then(v => setAppVersion(v || '')).catch(() => {});
+    api.system.getAppVersion().then(v => {
+      const ver = typeof v === 'object' ? (v?.version || '') : (v || '');
+      setAppVersion(ver);
+    }).catch(() => {});
   }, []);
 
   const handleLogin = async (e) => {

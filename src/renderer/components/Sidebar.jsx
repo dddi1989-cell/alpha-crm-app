@@ -240,7 +240,9 @@ export default function Sidebar() {
             <Wifi className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
             <span className="text-[11px] font-medium">{checkingUpdate ? '패치 확인중...' : '온라인 자동 패치 연동'}</span>
           </button>
-          <span className="text-[10px] text-slate-500 font-mono">v{systemInfo?.version || '1.2.0'}</span>
+          <span className="text-[10px] text-slate-500 font-mono">
+            v{typeof systemInfo?.version === 'object' ? systemInfo?.version?.version : (systemInfo?.version || '1.6.6')}
+          </span>
         </div>
       </div>
     </aside>
