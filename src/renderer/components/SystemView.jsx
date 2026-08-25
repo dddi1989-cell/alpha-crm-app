@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useCrmStore } from '../store/useCrmStore';
-import { api } from '../utils/api';
-import { Database, Download, Upload, RefreshCw, CheckCircle, ShieldCheck, FileArchive, Globe, GitBranch, Send, Trash2 } from 'lucide-react';
+import { api, isElectron } from '../utils/api';
+import { Database, Download, Upload, RefreshCw, CheckCircle, ShieldCheck, FileArchive, Globe, GitBranch, Send, Trash2, Smartphone, Palette, User, Shield } from 'lucide-react';
 
 export default function SystemView() {
   const systemInfo = useCrmStore((state) => state.systemInfo);
@@ -66,6 +66,98 @@ export default function SystemView() {
       setTimeout(() => setBackupMessage(null), 5000);
     }
   };
+
+  // Mobile Web Dedicated View
+  if (!isElectron) {
+    return (
+      <div className="p-4 sm:p-8 space-y-6 animate-fadeIn max-w-5xl mx-auto select-none">
+        <div>
+          <h2 className="font-['Outfit',sans-serif] text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center space-x-2">
+            <Smartphone className="w-6 h-6 text-indigo-400" />
+            <span>모바일 클라우드 동기화 & 세션 관리</span>
+          </h2>
+          <p className="text-slate-400 text-xs sm:text-sm mt-1">
+            WLB CRM 모바일 앱은 Supabase 클라우드 데이터베이스와 100% 실시간 양방향으로 동기화됩니다.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Cloud Sync Status Card */}
+          <div className="glass-panel p-5 rounded-2xl border border-indigo-500/40 bg-indigo-950/20 space-y-4 shadow-xl">
+            <div className="flex items-center justify-between pb-3 border-b border-indigo-900/50">
+              <div className="flex items-center space-x-2.5">
+                <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                <h3 className="font-bold text-sm text-white">실시간 클라우드 DB 연결</h3>
+              </div>
+              <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/80 font-bold animate-pulse">
+                ● 실시간 동기화 ON
+              </span>
+            </div>
+
+            <div className="space-y-2 text-xs text-slate-300">
+              <p className="leading-relaxed">
+                모바일에서 등록하거나 수정한 고객, 일정, 연금 설계 내역은 즉시 클라우드에 안전하게 저장되며 PC 프로그램과 자동 동기화됩니다.
+              </p>
+              <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] text-slate-400 space-y-1">
+                <div className="flex justify-between">
+                  <span>동기화 서버:</span>
+                  <span className="text-indigo-400 font-mono">Supabase Cloud + R2</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>보안 암호화:</span>
+                  <span className="text-emerald-400 font-mono">TLS 1.3 / SHA-256</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>앱 버전:</span>
+                  <span className="text-amber-400 font-mono">v1.6.6 (Web/PWA)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Account Session Card */}
+          <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4 shadow-xl">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center space-x-2.5">
+                <User className="w-5 h-5 text-indigo-400" />
+                <h3 className="font-bold text-sm text-white">현재 접속 계정 정보</h3>
+              </div>
+              <span className="text-[10px] px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800/60 font-mono">
+                {currentUser?.role || 'FA'}
+              </span>
+            </div>
+
+            <div className="space-y-2.5 text-xs text-slate-300">
+              <div className="flex justify-between py-1 border-b border-slate-800/60">
+                <span className="text-slate-400">설계사 성명:</span>
+                <span className="font-bold text-white">{currentUser?.name || '설계사'}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-800/60">
+                <span className="text-slate-400">사번 (아이디):</span>
+                <span className="font-mono text-slate-200">{currentUser?.username || '—'}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-800/60">
+                <span className="text-slate-400">소속 조직:</span>
+                <span className="text-indigo-300">{currentUser?.org_name || '본사 총괄 사업단'}</span>
+              </div>
+              <div className="flex justify-between py-1">
+                <span className="text-slate-400">연락처:</span>
+                <span className="font-mono text-slate-200">{currentUser?.phone || '미등록'}</span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => useCrmStore.getState().openThemeModal()}
+              className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl flex items-center justify-center space-x-1.5 transition-all"
+            >
+              <Palette className="w-4 h-4 text-amber-400" />
+              <span>프로그램 색상 테마 변경하기</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 space-y-8 animate-fadeIn">

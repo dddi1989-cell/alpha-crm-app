@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FileText, Search, Copy, Check, Download, Phone, Printer, Filter, Shield, Eye, ExternalLink, Globe, BookOpen, HelpCircle } from 'lucide-react';
-import { api } from '../utils/api';
+import { api, isElectron } from '../utils/api';
 import ClaimFormModal from './ClaimFormModal';
 
 const INSURANCE_COMPANIES = [
@@ -485,7 +485,17 @@ export default function ClaimsView() {
                       <Phone className="w-3.5 h-3.5 text-slate-500" />
                       <span>고객센터:</span>
                     </div>
-                    <span className="font-semibold text-slate-200 font-mono">{company.tel}</span>
+                    <div className="flex items-center space-x-2">
+                      <span className="font-semibold text-slate-200 font-mono">{company.tel}</span>
+                      <a
+                        href={`tel:${company.tel.replace(/[^0-9]/g, '')}`}
+                        className="px-2 py-0.5 bg-emerald-950 text-emerald-300 border border-emerald-800/60 rounded-md font-bold text-[10px] hover:bg-emerald-900 transition-all flex items-center space-x-1"
+                        title="전화 연결"
+                      >
+                        <Phone className="w-2.5 h-2.5" />
+                        <span>통화</span>
+                      </a>
+                    </div>
                   </div>
 
                   {/* Official Website & Terms (약관보러가기) Action Buttons */}
@@ -534,25 +544,27 @@ export default function ClaimsView() {
                 </div>
               </div>
 
-              {/* PDF Action Buttons */}
-              <div className="pt-3 border-t border-slate-800 grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => handleOpenDirectPdf(company)}
-                  className="py-2 px-3 bg-slate-800/90 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition-all flex items-center justify-center space-x-1.5 border border-slate-700"
-                  title="공식 PDF 서식 즉시 열기"
-                >
-                  <ExternalLink className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>PDF 즉시 열기</span>
-                </button>
-                <button
-                  onClick={() => handleDownloadForm(company)}
-                  className="py-2 px-3 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 text-xs font-semibold rounded-xl transition-all flex items-center justify-center space-x-1.5 group-hover:bg-indigo-600 group-hover:text-white"
-                  title="공식 PDF 청구서 다운로드"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>PDF 다운로드</span>
-                </button>
-              </div>
+              {/* PDF Action Buttons (Desktop Electron Only) */}
+              {isElectron && (
+                <div className="pt-3 border-t border-slate-800 grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => handleOpenDirectPdf(company)}
+                    className="py-2 px-3 bg-slate-800/90 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition-all flex items-center justify-center space-x-1.5 border border-slate-700"
+                    title="공식 PDF 서식 즉시 열기"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>PDF 즉시 열기</span>
+                  </button>
+                  <button
+                    onClick={() => handleDownloadForm(company)}
+                    className="py-2 px-3 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 text-xs font-semibold rounded-xl transition-all flex items-center justify-center space-x-1.5 group-hover:bg-indigo-600 group-hover:text-white"
+                    title="공식 PDF 청구서 다운로드"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>PDF 다운로드</span>
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}
