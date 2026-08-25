@@ -12,7 +12,7 @@ export default function MobileHeader({ onOpenDrawer }) {
   const openThemeModal = useCrmStore((state) => state.openThemeModal);
 
   return (
-    <header className="md:hidden sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/80 px-4 py-3.5 flex items-center justify-between shadow-lg">
+    <header className="md:hidden sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/80 px-4 pt-[calc(env(safe-area-inset-top,0px)+14px)] pb-3.5 flex items-center justify-between shadow-lg">
       <div className="flex items-center space-x-3">
         <button
           onClick={onOpenDrawer}

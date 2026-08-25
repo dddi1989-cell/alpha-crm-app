@@ -20,7 +20,7 @@ export default function MobileBottomNav({ onOpenDrawer }) {
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur-lg border-t border-slate-800/90 px-3 py-2 flex items-center justify-around shadow-2xl safe-bottom">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur-lg border-t border-slate-800/90 px-3 pt-2 pb-[calc(env(safe-area-inset-bottom,0px)+10px)] flex items-center justify-around shadow-2xl">
       {mainTabs.map((t) => {
         const Icon = t.icon;
         const isActive = activeTab === t.id;

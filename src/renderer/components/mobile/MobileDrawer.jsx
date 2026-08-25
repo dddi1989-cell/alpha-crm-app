@@ -43,7 +43,7 @@ export default function MobileDrawer({ isOpen, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex justify-end animate-fadeIn">
-      <div className="w-4/5 max-w-sm h-full bg-[#0d1322] border-l border-slate-800 flex flex-col justify-between p-5 shadow-2xl overflow-y-auto custom-scrollbar animate-slideLeft">
+      <div className="w-4/5 max-w-sm h-full bg-[#0d1322] border-l border-slate-800 flex flex-col justify-between p-5 pt-[calc(env(safe-area-inset-top,0px)+20px)] pb-[calc(env(safe-area-inset-bottom,0px)+20px)] shadow-2xl overflow-y-auto custom-scrollbar animate-slideLeft">
         
         {/* Top Header */}
         <div>

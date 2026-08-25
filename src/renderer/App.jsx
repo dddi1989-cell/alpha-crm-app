@@ -167,7 +167,7 @@ export default function App() {
   if (!currentUser) {
     return (
       <ErrorBoundary>
-        <div data-theme={theme} className="app-main-bg w-full h-full min-h-screen">
+        <div data-theme={theme} className="app-main-bg w-full h-full min-h-screen pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]">
           <PwaInstallPrompt />
           <LoginView />
           <UpdateModal />
