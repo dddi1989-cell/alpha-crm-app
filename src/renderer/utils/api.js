@@ -1,4 +1,8 @@
-export const api = {
+import { webApi } from './webSupabaseClient';
+
+const isElectron = typeof window !== 'undefined' && window.electronAPI !== undefined;
+
+export const api = isElectron ? {
   customers: {
     getAll: (params) => window.electronAPI.customers.getAll(params),
     create: (data) => window.electronAPI.customers.create(data),
@@ -80,8 +84,10 @@ export const api = {
     setGitHubConfig: (config) => window.electronAPI.system.setGitHubConfig(config),
     testGitHubConnection: (config) => window.electronAPI.system.testGitHubConnection(config)
   },
-  onScheduleDue: (callback) => window.electronAPI.onScheduleDue(callback),
-  onSchedulesChanged: (callback) => window.electronAPI.onSchedulesChanged(callback),
-  onUpdateAvailable: (callback) => window.electronAPI.onUpdateAvailable(callback),
-  onUpdateProgress: (callback) => window.electronAPI.onUpdateProgress(callback)
-};
+  onScheduleDue: (callback) => window.electronAPI.onScheduleDue ? window.electronAPI.onScheduleDue(callback) : () => {},
+  onSchedulesChanged: (callback) => window.electronAPI.onSchedulesChanged ? window.electronAPI.onSchedulesChanged(callback) : () => {},
+  onUpdateAvailable: (callback) => window.electronAPI.onUpdateAvailable ? window.electronAPI.onUpdateAvailable(callback) : () => {},
+  onUpdateProgress: (callback) => window.electronAPI.onUpdateProgress ? window.electronAPI.onUpdateProgress(callback) : () => {}
+} : webApi;
+
+export { isElectron };

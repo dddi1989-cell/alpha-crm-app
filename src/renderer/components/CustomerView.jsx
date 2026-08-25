@@ -331,56 +331,58 @@ export default function CustomerView() {
   });
 
   return (
-    <div className="p-8 space-y-6 animate-fadeIn">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="p-3 md:p-8 space-y-4 md:space-y-6 animate-fadeIn select-none max-w-[1600px] mx-auto">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800 pb-3">
         <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-2xl font-bold text-white tracking-tight">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight">
               {activeSubTab === 'my-customers' && '👤 내 고객 목록'}
               {activeSubTab === 'my-pool' && '📋 내 POOL LIST'}
               {activeSubTab === 'all-customers' && '🏢 전체고객 조회'}
             </h2>
             
             {/* Sub-tab 3-level Buttons */}
-            <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs font-semibold">
-              <button
-                onClick={() => {
-                  setActiveSubTab('my-customers');
-                  setPoolGroupFilter('');
-                }}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
-                  activeSubTab === 'my-customers'
-                    ? 'bg-blue-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                👤 내 고객 목록 ({myCustomers.length})
-              </button>
+            <div className="overflow-x-auto no-scrollbar py-0.5">
+              <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs font-semibold shrink-0 space-x-1">
+                <button
+                  onClick={() => {
+                    setActiveSubTab('my-customers');
+                    setPoolGroupFilter('');
+                  }}
+                  className={`px-3 py-1.5 rounded-lg transition-all whitespace-nowrap ${
+                    activeSubTab === 'my-customers'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  👤 내 고객 ({myCustomers.length})
+                </button>
 
-              <button
-                onClick={() => setActiveSubTab('my-pool')}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
-                  activeSubTab === 'my-pool'
-                    ? 'bg-amber-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                📋 내 POOL LIST ({myPoolCustomers.length})
-              </button>
+                <button
+                  onClick={() => setActiveSubTab('my-pool')}
+                  className={`px-3 py-1.5 rounded-lg transition-all whitespace-nowrap ${
+                    activeSubTab === 'my-pool'
+                      ? 'bg-amber-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  📋 내 POOL LIST ({myPoolCustomers.length})
+                </button>
 
-              <button
-                onClick={() => {
-                  setActiveSubTab('all-customers');
-                  setPoolGroupFilter('');
-                }}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
-                  activeSubTab === 'all-customers'
-                    ? 'bg-emerald-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                🏢 전체고객 조회하기 ({allCustomers.length})
-              </button>
+                <button
+                  onClick={() => {
+                    setActiveSubTab('all-customers');
+                    setPoolGroupFilter('');
+                  }}
+                  className={`px-3 py-1.5 rounded-lg transition-all whitespace-nowrap ${
+                    activeSubTab === 'all-customers'
+                      ? 'bg-emerald-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  🏢 전체고객 조회 ({allCustomers.length})
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -538,7 +540,8 @@ export default function CustomerView() {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-sm text-slate-300">
                 <thead className="bg-slate-900/80 text-xs uppercase text-slate-400 font-semibold border-b border-slate-800">
                   {table.getHeaderGroups().map((headerGroup) => (
@@ -572,6 +575,82 @@ export default function CustomerView() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Card List View (Visible only on < md) */}
+            <div className="md:hidden divide-y divide-slate-800/60">
+              {table.getRowModel().rows.map((row) => {
+                const cust = row.original;
+                return (
+                  <div key={row.id} className="p-4 space-y-3 bg-slate-900/40 hover:bg-slate-800/30 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-indigo-950 border border-indigo-500/40 flex items-center justify-center text-indigo-300 font-bold text-sm">
+                          {cust.name ? cust.name[0] : '고'}
+                        </div>
+                        <div>
+                          <div className="flex items-center space-x-1.5">
+                            <span className="font-bold text-sm text-white">{cust.name}</span>
+                            {cust.is_pool ? (
+                              <span className="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800/60 text-[9px] font-bold">
+                                POOL {cust.pool_group || 'A'}
+                              </span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800/60 text-[9px] font-bold">
+                                {cust.status || 'Active'}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-400">
+                            {cust.relationship ? `[${cust.relationship}] ` : ''}{cust.birth_date ? `만 ${new Date().getFullYear() - new Date(cust.birth_date).getFullYear()}세` : '생일미입력'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Quick Mobile Call & SMS Buttons */}
+                      <div className="flex items-center space-x-1.5">
+                        {cust.phone && (
+                          <>
+                            <a
+                              href={`tel:${cust.phone}`}
+                              className="p-2 rounded-xl bg-emerald-950 text-emerald-300 border border-emerald-800/60 active:scale-95 transition-all"
+                              title="전화 걸기"
+                            >
+                              <Phone className="w-3.5 h-3.5" />
+                            </a>
+                            <a
+                              href={`sms:${cust.phone}`}
+                              className="p-2 rounded-xl bg-blue-950 text-blue-300 border border-blue-800/60 active:scale-95 transition-all"
+                              title="문자 보내기"
+                            >
+                              <Mail className="w-3.5 h-3.5" />
+                            </a>
+                          </>
+                        )}
+                        <button
+                          onClick={() => openDetailModal(cust)}
+                          className="p-2 rounded-xl bg-slate-800 text-slate-300 border border-slate-700 active:scale-95 transition-all text-xs font-bold"
+                        >
+                          상세
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Insurance details or note summary */}
+                    {cust.insurance_provider && (
+                      <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-xs space-y-1">
+                        <div className="flex items-center space-x-1 font-bold text-indigo-400">
+                          <Shield className="w-3 h-3" />
+                          <span>{cust.insurance_provider}</span>
+                        </div>
+                        {cust.insurance_details && (
+                          <p className="text-[11px] text-slate-300 line-clamp-1">{cust.insurance_details}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             {/* Pagination Controls */}

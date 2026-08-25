@@ -1,5 +1,9 @@
 import React, { useEffect } from 'react';
 import Sidebar from './components/Sidebar';
+import MobileHeader from './components/MobileHeader';
+import MobileBottomNav from './components/MobileBottomNav';
+import PwaInstallPrompt from './components/PwaInstallPrompt';
+
 import DashboardView from './components/DashboardView';
 import CustomerView from './components/CustomerView';
 import ScheduleView from './components/ScheduleView';
@@ -22,7 +26,7 @@ import UpdateModal from './components/UpdateModal';
 import ThemeModal from './components/ThemeModal';
 
 import { useCrmStore } from './store/useCrmStore';
-import { api } from './utils/api';
+import { api, isElectron } from './utils/api';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -62,6 +66,7 @@ class ErrorBoundary extends React.Component {
             <button
               onClick={() => {
                 localStorage.removeItem('alpha_crm_active_user');
+                localStorage.removeItem('wlb_active_user');
                 this.setState({ hasError: false, error: null });
                 window.location.reload();
               }}
@@ -94,7 +99,7 @@ export default function App() {
     loadAllData();
     checkRollbackStatus();
 
-    // Listen for data updates across windows (does not open popup)
+    // Listen for data updates across windows (Electron only)
     const unsubData = api.onSchedulesChanged(() => {
       loadAllData();
     });
@@ -103,7 +108,6 @@ export default function App() {
     const unsubDue = api.onScheduleDue((schedule) => {
       loadAllData();
       if (!isWidgetMode && schedule && currentUser) {
-        // Only trigger popup alert if this schedule belongs directly to the currently logged in user!
         const isDirectOwner = Number(schedule.user_id) === Number(currentUser.id);
         if (isDirectOwner) {
           addDueScheduleAlert(schedule);
@@ -111,24 +115,26 @@ export default function App() {
       }
     });
 
-    // Listen for online updates (opens update confirmation modal)
+    // Listen for online updates (Electron only)
     const unsubUpdate = api.onUpdateAvailable((info) => {
       if (!isWidgetMode && info) {
         setUpdateAvailableInfo(info);
       }
     });
 
-    // Active Check for Updates on launch
-    setTimeout(async () => {
-      try {
-        const info = await api.system.checkForUpdates();
-        if (!isWidgetMode && info && info.updateAvailable) {
-          setUpdateAvailableInfo(info);
+    // Active Check for Updates on launch (Electron only)
+    if (isElectron) {
+      setTimeout(async () => {
+        try {
+          const info = await api.system.checkForUpdates();
+          if (!isWidgetMode && info && info.updateAvailable) {
+            setUpdateAvailableInfo(info);
+          }
+        } catch (err) {
+          console.log('Startup update check error:', err);
         }
-      } catch (err) {
-        console.log('Startup update check error:', err);
-      }
-    }, 1500);
+      }, 1500);
+    }
 
     return () => {
       if (unsubData) unsubData();
@@ -149,7 +155,8 @@ export default function App() {
   if (!currentUser) {
     return (
       <ErrorBoundary>
-        <div data-theme={theme} className="app-main-bg w-full h-full">
+        <div data-theme={theme} className="app-main-bg w-full h-full min-h-screen">
+          <PwaInstallPrompt />
           <LoginView />
           <UpdateModal />
           <ThemeModal />
@@ -162,13 +169,19 @@ export default function App() {
     <ErrorBoundary>
       <div
         data-theme={theme}
-        className="flex h-screen w-screen overflow-hidden app-main-bg bg-[#090d16] text-slate-100 font-['Inter',sans-serif] select-none transition-colors duration-300"
+        className="flex flex-col md:flex-row h-screen w-screen overflow-hidden app-main-bg bg-[#090d16] text-slate-100 font-['Inter',sans-serif] select-none transition-colors duration-300"
       >
-        {/* Sidebar Navigation */}
+        {/* Mobile Header (Hidden on md/desktop) */}
+        <MobileHeader />
+
+        {/* Mobile PWA Install Prompt Banner */}
+        <PwaInstallPrompt />
+
+        {/* Desktop/Tablet Sidebar Navigation (Hidden on mobile) */}
         <Sidebar />
 
         {/* Main Workspace */}
-        <main className="flex-1 flex flex-col h-screen overflow-y-auto custom-scrollbar relative app-workspace-bg">
+        <main className="flex-1 flex flex-col h-full overflow-y-auto custom-scrollbar relative app-workspace-bg pb-20 md:pb-0">
           {/* Startup Rollback Alert Banner */}
           {showRollbackAlert && <RollbackBanner />}
 
@@ -184,6 +197,9 @@ export default function App() {
           {activeTab === 'claims' && <ClaimsView />}
           {activeTab === 'system' && <SystemView />}
         </main>
+
+        {/* Mobile Bottom Navigation Bar (Fixed on mobile) */}
+        <MobileBottomNav />
 
         {/* Global Modals */}
         <CustomerModal />

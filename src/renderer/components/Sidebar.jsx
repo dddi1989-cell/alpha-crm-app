@@ -103,7 +103,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 bg-[#0e1422] border-r border-slate-800/80 flex flex-col justify-between h-screen select-none shrink-0 transition-colors duration-300">
+    <aside className="hidden md:flex w-64 bg-[#0e1422] border-r border-slate-800/80 flex-col justify-between h-screen select-none shrink-0 transition-colors duration-300">
       <div>
         {/* App Logo & Header */}
         <div className="p-4 border-b border-slate-800/60 flex items-center space-x-3">
