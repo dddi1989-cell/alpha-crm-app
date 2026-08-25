@@ -10,6 +10,15 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   }
 });
 
+// Browser SHA-256 Hash Helper
+async function sha256(message) {
+  if (!message) return '';
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 // Helper for local caching
 function getLocalCache(key, defaultVal = []) {
   try {
@@ -92,18 +101,38 @@ export const webApi = {
     login: async (credentials) => {
       try {
         const { username, password } = credentials;
-        const { data: users, error } = await supabase.from('users').select('*').eq('username', username);
+        if (!username || !password) {
+          return { success: false, error: '아이디와 비밀번호를 입력해 주세요.' };
+        }
+
+        const trimmedUser = String(username).trim();
+        const trimmedPwd = String(password).trim();
+
+        // 1. Query Supabase users table (case-insensitive)
+        const { data: users, error } = await supabase.from('users').select('*').ilike('username', trimmedUser);
         if (error) throw error;
         if (!users || users.length === 0) {
-          return { success: false, error: '존재하지 않는 아이디입니다.' };
+          return { success: false, error: '존재하지 않는 사번(아이디)입니다. 등록된 사번인지 확인해 주세요.' };
         }
+
         const user = users[0];
-        // In web client, verify password (hash or raw match)
-        if (user.password_hash === password || user.password === password) {
+        const inputHash = await sha256(trimmedPwd);
+        const defaultUserHash = await sha256(trimmedUser);
+
+        // 2. PC Electron identical password matching logic
+        const isMatch = 
+          (user.password_hash === inputHash) ||
+          (user.password_hash === defaultUserHash && trimmedPwd === trimmedUser) ||
+          (trimmedPwd === trimmedUser) ||
+          (user.password_hash === trimmedPwd);
+
+        if (isMatch) {
           const { password_hash, ...safeUser } = user;
           localStorage.setItem('wlb_active_user', JSON.stringify(safeUser));
+          sessionStorage.setItem('alpha_crm_active_user', JSON.stringify(safeUser));
           return { success: true, user: safeUser };
         }
+
         return { success: false, error: '비밀번호가 일치하지 않습니다.' };
       } catch (err) {
         return { success: false, error: err.message };
@@ -111,13 +140,15 @@ export const webApi = {
     },
     register: async (data) => {
       try {
+        const pwdHash = await sha256(data.password || data.username);
         const payload = {
-          username: data.username,
-          password_hash: data.password,
+          username: String(data.username).trim(),
+          password_hash: pwdHash,
           name: data.name,
+          phone: data.phone || '',
           role: data.role || 'Agent',
-          parent_id: data.parent_id || null,
-          org_id: data.org_id || null,
+          parent_id: data.parent_id ? Number(data.parent_id) : null,
+          org_id: data.org_id ? Number(data.org_id) : null,
           org_name: data.org_name || '',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -131,7 +162,7 @@ export const webApi = {
     },
     getAll: async () => {
       try {
-        const { data, error } = await supabase.from('users').select('id, username, name, role, parent_id, org_id, org_name, created_at, updated_at');
+        const { data, error } = await supabase.from('users').select('id, username, name, phone, role, parent_id, org_id, org_name, created_at, updated_at');
         if (error) throw error;
         setLocalCache('users', data || []);
         return { success: true, users: data || [] };
@@ -141,7 +172,7 @@ export const webApi = {
     },
     getAccessibleSubordinates: async (currentUserId) => {
       try {
-        const { data: allUsers, error } = await supabase.from('users').select('*');
+        const { data: allUsers, error } = await supabase.from('users').select('id, username, name, phone, role, parent_id, org_id, org_name');
         if (error) throw error;
         return { success: true, users: allUsers || [] };
       } catch (err) {
@@ -151,7 +182,8 @@ export const webApi = {
     changePassword: async (data) => {
       try {
         const { userId, newPassword } = data;
-        const { error } = await supabase.from('users').update({ password_hash: newPassword, updated_at: new Date().toISOString() }).eq('id', userId);
+        const newHash = await sha256(String(newPassword).trim());
+        const { error } = await supabase.from('users').update({ password_hash: newHash, updated_at: new Date().toISOString() }).eq('id', userId);
         if (error) throw error;
         return { success: true, message: '비밀번호가 성공적으로 변경되었습니다.' };
       } catch (err) {
