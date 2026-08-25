@@ -1,7 +1,7 @@
 import React from 'react';
 import { LayoutDashboard, Users, Calendar, Database, Wifi, FileText, Monitor, FileCheck, Building2, LogOut, Palette, BookOpen, TrendingUp, Calculator } from 'lucide-react';
 import { useCrmStore } from '../store/useCrmStore';
-import { api } from '../utils/api';
+import { api, isElectron } from '../utils/api';
 import logoIcon from '../assets/icon.png';
 
 export default function Sidebar() {
@@ -161,33 +161,35 @@ export default function Sidebar() {
             );
           })}
 
-          <div className="pt-3 space-y-2">
-            <button
-              onClick={handleToggleWidget}
-              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-semibold text-xs bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/60 transition-all shadow-md active:scale-95"
-              title="바탕화면에 미니 캘린더 위젯 띄우기"
-            >
-              <div className="flex items-center space-x-2.5">
-                <Monitor className="w-4 h-4 text-indigo-400" />
-                <span>바탕화면 위젯 토글</span>
-              </div>
-              <span className="text-[10px] bg-indigo-500/30 text-indigo-200 px-1.5 py-0.5 rounded font-bold">ON/OFF</span>
-            </button>
+          {isElectron && (
+            <div className="pt-3 space-y-2">
+              <button
+                onClick={handleToggleWidget}
+                className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-semibold text-xs bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/60 transition-all shadow-md active:scale-95"
+                title="바탕화면에 미니 캘린더 위젯 띄우기"
+              >
+                <div className="flex items-center space-x-2.5">
+                  <Monitor className="w-4 h-4 text-indigo-400" />
+                  <span>바탕화면 위젯 토글</span>
+                </div>
+                <span className="text-[10px] bg-indigo-500/30 text-indigo-200 px-1.5 py-0.5 rounded font-bold">ON/OFF</span>
+              </button>
 
-            <button
-              onClick={openThemeModal}
-              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-semibold text-xs bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 hover:border-purple-500/50 transition-all shadow-md active:scale-95 group"
-              title="프로그램 색상 테마 변경"
-            >
-              <div className="flex items-center space-x-2.5">
-                <Palette className="w-4 h-4 text-purple-400 group-hover:rotate-12 transition-transform" />
-                <span>색상 테마 설정</span>
-              </div>
-              <span className="text-[10px] bg-purple-950/80 text-purple-300 border border-purple-800/60 px-2 py-0.5 rounded-md font-bold">
-                {themeLabels[theme] || '테마'}
-              </span>
-            </button>
-          </div>
+              <button
+                onClick={openThemeModal}
+                className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-semibold text-xs bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 hover:border-purple-500/50 transition-all shadow-md active:scale-95 group"
+                title="프로그램 색상 테마 변경"
+              >
+                <div className="flex items-center space-x-2.5">
+                  <Palette className="w-4 h-4 text-purple-400 group-hover:rotate-12 transition-transform" />
+                  <span>색상 테마 설정</span>
+                </div>
+                <span className="text-[10px] bg-purple-950/80 text-purple-300 border border-purple-800/60 px-2 py-0.5 rounded-md font-bold">
+                  {themeLabels[theme] || '테마'}
+                </span>
+              </button>
+            </div>
+          )}
         </nav>
       </div>
 
@@ -231,15 +233,22 @@ export default function Sidebar() {
         )}
 
         <div className="bg-slate-900/60 rounded-xl p-3 border border-slate-800/50 flex items-center justify-between text-xs text-slate-400">
-          <button
-            onClick={() => handleCheckUpdate(true)}
-            disabled={checkingUpdate}
-            className="flex items-center space-x-1.5 text-slate-400 hover:text-indigo-300 transition-colors"
-            title="온라인 GitHub 패치 서버 확인"
-          >
-            <Wifi className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-            <span className="text-[11px] font-medium">{checkingUpdate ? '패치 확인중...' : '온라인 자동 패치 연동'}</span>
-          </button>
+          {isElectron ? (
+            <button
+              onClick={() => handleCheckUpdate(true)}
+              disabled={checkingUpdate}
+              className="flex items-center space-x-1.5 text-slate-400 hover:text-indigo-300 transition-colors"
+              title="온라인 GitHub 패치 서버 확인"
+            >
+              <Wifi className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+              <span className="text-[11px] font-medium">{checkingUpdate ? '패치 확인중...' : '온라인 자동 패치 연동'}</span>
+            </button>
+          ) : (
+            <div className="flex items-center space-x-1.5 text-slate-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span className="text-[11px] font-medium text-emerald-400">클라우드 실시간 동기화</span>
+            </div>
+          )}
           <span className="text-[10px] text-slate-500 font-mono">
             v{typeof systemInfo?.version === 'object' ? systemInfo?.version?.version : (systemInfo?.version || '1.6.6')}
           </span>
