@@ -37,7 +37,7 @@ export default function DesktopWidgetView() {
   const loadWidgetData = async () => {
     await loadAllData();
     try {
-      const stored = typeof window !== 'undefined' ? (sessionStorage.getItem('alpha_crm_active_user') || localStorage.getItem('alpha_crm_active_user')) : null;
+      const stored = typeof window !== 'undefined' ? (sessionStorage.getItem('alpha_crm_active_user') || localStorage.getItem('alpha_crm_active_user') || localStorage.getItem('wlb_active_user')) : null;
       const u = stored ? JSON.parse(stored) : null;
       const uid = u?.id || null;
 
@@ -46,8 +46,11 @@ export default function DesktopWidgetView() {
         api.users?.getAccessibleSubordinates ? api.users.getAccessibleSubordinates(uid) : Promise.resolve({ users: [] })
       ]);
 
-      if (orgsRes?.organizations) setLocalOrgs(orgsRes.organizations);
-      if (usersRes?.users) setLocalUsers(usersRes.users);
+      const orgsList = Array.isArray(orgsRes) ? orgsRes : (orgsRes?.organizations || []);
+      const usersList = Array.isArray(usersRes) ? usersRes : (usersRes?.users || []);
+
+      if (orgsList.length > 0) setLocalOrgs(orgsList);
+      if (usersList.length > 0) setLocalUsers(usersList);
     } catch (e) {
       console.error('Widget org loading error:', e);
     }
@@ -90,8 +93,8 @@ export default function DesktopWidgetView() {
   const storeOrganizations = useCrmStore((state) => state.organizations);
   const storeAccessibleUsers = useCrmStore((state) => state.accessibleUsers);
 
-  const effectiveOrgs = localOrgs.length > 0 ? localOrgs : storeOrganizations;
-  const effectiveUsers = localUsers.length > 0 ? localUsers : storeAccessibleUsers;
+  const effectiveOrgs = localOrgs.length > 0 ? localOrgs : (storeOrganizations || []);
+  const effectiveUsers = localUsers.length > 0 ? localUsers : (storeAccessibleUsers || []);
 
   // Resolved hierarchy for selected organization filter
   const hierarchyInfo = useMemo(() => {
@@ -118,8 +121,10 @@ export default function DesktopWidgetView() {
   }, [schedules, scheduleViewScope, hierarchyInfo, currentUser]);
 
   const getSchedulesForDay = (day) => visibleSchedules.filter((s) => {
-    const d = new Date(s.scheduled_at);
-    return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
+    const dateStr = s.date || (s.scheduled_at ? s.scheduled_at.slice(0, 10) : '');
+    if (!dateStr) return false;
+    const parts = dateStr.split('-').map(Number);
+    return parts[0] === year && parts[1] === (month + 1) && parts[2] === day;
   });
 
   const getBirthdaysForDay = (day) => {
@@ -127,16 +132,30 @@ export default function DesktopWidgetView() {
     return customers.filter(c => isCustomerBirthdayOnDate(c, year, month, day));
   };
 
-  const getSchedulesForDate = (date) => visibleSchedules.filter((s) => {
-    const d = new Date(s.scheduled_at);
-    return d.getFullYear() === date.getFullYear() && d.getMonth() === date.getMonth() && d.getDate() === date.getDate();
-  });
+  const getSchedulesForDate = (date) => {
+    const targetY = date.getFullYear();
+    const targetM = date.getMonth() + 1;
+    const targetD = date.getDate();
+    return visibleSchedules.filter((s) => {
+      const dateStr = s.date || (s.scheduled_at ? s.scheduled_at.slice(0, 10) : '');
+      if (!dateStr) return false;
+      const parts = dateStr.split('-').map(Number);
+      return parts[0] === targetY && parts[1] === targetM && parts[2] === targetD;
+    });
+  };
 
-  const todaySchedules = visibleSchedules.filter((s) => {
-    const d = new Date(s.scheduled_at);
+  const todaySchedules = useMemo(() => {
     const today = new Date();
-    return d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
-  });
+    const targetY = today.getFullYear();
+    const targetM = today.getMonth() + 1;
+    const targetD = today.getDate();
+    return visibleSchedules.filter((s) => {
+      const dateStr = s.date || (s.scheduled_at ? s.scheduled_at.slice(0, 10) : '');
+      if (!dateStr) return false;
+      const parts = dateStr.split('-').map(Number);
+      return parts[0] === targetY && parts[1] === targetM && parts[2] === targetD;
+    });
+  }, [visibleSchedules]);
 
   const handleCloseWidget = () => api.system.toggleWidget();
 
@@ -197,6 +216,9 @@ export default function DesktopWidgetView() {
 
   const ScheduleRow = ({ s }) => {
     const isOwner = !currentUser || !s.user_id || Number(s.user_id) === Number(currentUser.id) || Number(currentUser.id) === 1;
+    const u = s.user_id ? effectiveUsers.find(user => Number(user.id) === Number(s.user_id)) : null;
+    const userName = s.user_name || u?.name || '설계사';
+    const userRole = s.user_role || u?.role || 'FA';
 
     return (
       <div className="p-2 bg-slate-900 border border-slate-800 rounded-xl text-xs flex items-center justify-between group">
@@ -215,11 +237,9 @@ export default function DesktopWidgetView() {
           </button>
           <div className="min-w-0">
             <div className="flex items-center space-x-1.5 truncate">
-              {s.user_name && (
-                <span className="text-[9px] px-1 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold shrink-0">
-                  {s.user_name}
-                </span>
-              )}
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-purple-950 text-purple-200 border border-purple-800 font-extrabold shrink-0">
+                {userName} ({userRole})
+              </span>
               <span className={`font-semibold truncate ${s.status === 'Completed' ? 'line-through text-slate-500' : 'text-white'}`}>
                 {s.title}
               </span>
@@ -315,9 +335,9 @@ export default function DesktopWidgetView() {
               👤 내 일정
             </button>
             <button
-              onClick={() => setScheduleViewScope('organization')}
+              onClick={() => setScheduleViewScope('org')}
               className={`px-2 py-1 rounded-md font-bold transition-all ${
-                scheduleViewScope === 'organization'
+                scheduleViewScope === 'org' || scheduleViewScope === 'organization'
                   ? 'bg-emerald-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-white'
               }`}
@@ -340,7 +360,7 @@ export default function DesktopWidgetView() {
         </div>
 
         {/* Sub-Organization Selector (Only shown in organization scope) */}
-        {scheduleViewScope === 'organization' && (
+        {(scheduleViewScope === 'org' || scheduleViewScope === 'organization') && (
           <div className="flex items-center space-x-1.5 pt-0.5 px-0.5">
             <span className="text-[10px] font-bold text-slate-400 shrink-0">조직 선택:</span>
             <select
@@ -352,8 +372,8 @@ export default function DesktopWidgetView() {
               {effectiveOrgs.length > 0 && (
                 <optgroup label="── 하부 조직별 ──">
                   {effectiveOrgs.map((org) => (
-                    <option key={org.id} value={org.name}>
-                      [{org.type || '팀'}] {org.name}
+                    <option key={org.id} value={org.id}>
+                      🏢 {org.name}
                     </option>
                   ))}
                 </optgroup>
@@ -362,7 +382,7 @@ export default function DesktopWidgetView() {
                 <optgroup label="── 특정 조직원별 ──">
                   {effectiveUsers.map((u) => (
                     <option key={u.id} value={`user:${u.id}`}>
-                      👤 {u.name} ({u.role})
+                      👤 {u.name} ({u.role || 'FA'}) {u.org_name ? `· ${u.org_name}` : ''}
                     </option>
                   ))}
                 </optgroup>
