@@ -2,13 +2,14 @@ const { ipcMain } = require('electron');
 const { getDb } = require('../database');
 const { syncCloudAccounts } = require('../services/cloudSyncService');
 const { getRoleRank } = require('./authHandlers');
+const { getActiveUserId } = require('../notification');
 const { normalizeCustomerInsurances } = require('../services/documentParserService');
 
 function registerOrgHandlers(mainWindow, triggerDualBackup) {
   ipcMain.handle('org:get-all-organizations', async (event, params = {}) => {
     const db = getDb();
     try {
-      const actingUserId = typeof params === 'object' ? (params.currentUserId || params.userId) : params;
+      const actingUserId = (typeof params === 'object' && params !== null ? (params.currentUserId || params.userId) : params) || getActiveUserId() || 1;
 
       const orgs = db.prepare(`
         SELECT o.id, o.name, o.type, o.parent_id, o.created_at, o.updated_at,

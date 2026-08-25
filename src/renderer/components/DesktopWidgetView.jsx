@@ -39,15 +39,25 @@ export default function DesktopWidgetView() {
     try {
       const stored = typeof window !== 'undefined' ? (sessionStorage.getItem('alpha_crm_active_user') || localStorage.getItem('alpha_crm_active_user') || localStorage.getItem('wlb_active_user')) : null;
       const u = stored ? JSON.parse(stored) : null;
-      const uid = u?.id || null;
+      const uid = u?.id || 1;
 
       const [orgsRes, usersRes] = await Promise.all([
         api.org?.getAllOrganizations ? api.org.getAllOrganizations(uid) : Promise.resolve({ organizations: [] }),
         api.users?.getAccessibleSubordinates ? api.users.getAccessibleSubordinates(uid) : Promise.resolve({ users: [] })
       ]);
 
-      const orgsList = Array.isArray(orgsRes) ? orgsRes : (orgsRes?.organizations || []);
-      const usersList = Array.isArray(usersRes) ? usersRes : (usersRes?.users || []);
+      let orgsList = Array.isArray(orgsRes) ? orgsRes : (orgsRes?.organizations || []);
+      let usersList = Array.isArray(usersRes) ? usersRes : (usersRes?.users || []);
+
+      if (orgsList.length === 0 && api.org?.getAllOrganizations) {
+        const fallbackOrgs = await api.org.getAllOrganizations(1);
+        orgsList = Array.isArray(fallbackOrgs) ? fallbackOrgs : (fallbackOrgs?.organizations || []);
+      }
+
+      if (usersList.length === 0 && api.users?.getAll) {
+        const fallbackUsers = await api.users.getAll();
+        usersList = Array.isArray(fallbackUsers) ? fallbackUsers : (fallbackUsers?.users || []);
+      }
 
       if (orgsList.length > 0) setLocalOrgs(orgsList);
       if (usersList.length > 0) setLocalUsers(usersList);

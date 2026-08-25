@@ -141,9 +141,14 @@ function stopNotificationEngine() {
   }
 }
 
+function getActiveUserId() {
+  return currentActiveUserId;
+}
+
 module.exports = {
   startNotificationEngine,
   stopNotificationEngine,
   checkUpcomingSchedules,
-  setActiveUserId
+  setActiveUserId,
+  getActiveUserId
 };

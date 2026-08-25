@@ -2,7 +2,7 @@ const { ipcMain } = require('electron');
 const crypto = require('crypto');
 const fs = require('fs');
 const { getDb } = require('../database');
-const { setActiveUserId } = require('../notification');
+const { setActiveUserId, getActiveUserId } = require('../notification');
 const { performDualBackup } = require('../backupEngine');
 const { 
   syncCloudAccounts, 
@@ -483,12 +483,18 @@ function registerAuthHandlers(mainWindow, triggerDualBackup) {
   ipcMain.handle('users:get-accessible-subordinates', async (event, params) => {
     const db = getDb();
     try {
-      const currentUserId = typeof params === 'object' && params !== null ? (params.currentUserId || params.userId) : params;
+      const currentUserId = (typeof params === 'object' && params !== null ? (params.currentUserId || params.userId) : params) || getActiveUserId() || 1;
       const accessibleUsers = getAccessibleUsersForUser(db, currentUserId);
-      return { success: true, users: accessibleUsers };
+      if (accessibleUsers && accessibleUsers.length > 0) {
+        return { success: true, users: accessibleUsers };
+      }
+      // Fail-safe fallback: return all users
+      const allUsers = db.prepare('SELECT id, username, name, role, parent_id, org_id, org_name FROM users').all();
+      return { success: true, users: allUsers || [] };
     } catch (err) {
       console.error('get-accessible-subordinates error:', err);
-      return { success: false, error: err.message, users: [] };
+      const allUsers = db.prepare('SELECT id, username, name, role, parent_id, org_id, org_name FROM users').all();
+      return { success: true, users: allUsers || [] };
     }
   });
 

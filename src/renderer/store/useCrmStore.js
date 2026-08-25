@@ -67,8 +67,10 @@ export const useCrmStore = create((set, get) => ({
   setCurrentUser: (user) => {
     if (user) {
       if (typeof window !== 'undefined') {
-        sessionStorage.setItem('alpha_crm_active_user', JSON.stringify(user));
-        localStorage.removeItem('alpha_crm_active_user');
+        const userJson = JSON.stringify(user);
+        sessionStorage.setItem('alpha_crm_active_user', userJson);
+        localStorage.setItem('alpha_crm_active_user', userJson);
+        localStorage.setItem('wlb_active_user', userJson);
       }
       set({ currentUser: user });
       if (api.users?.setActiveUser) api.users.setActiveUser(user.id);
@@ -77,6 +79,7 @@ export const useCrmStore = create((set, get) => ({
       if (typeof window !== 'undefined') {
         sessionStorage.removeItem('alpha_crm_active_user');
         localStorage.removeItem('alpha_crm_active_user');
+        localStorage.removeItem('wlb_active_user');
       }
       if (api.users?.setActiveUser) api.users.setActiveUser(null);
       set({ currentUser: null, customers: [], schedules: [], dueScheduleAlerts: [] });
