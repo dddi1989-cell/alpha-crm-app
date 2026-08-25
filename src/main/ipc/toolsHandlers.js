@@ -515,7 +515,7 @@ function generatePresentationHtml({ summary, products, plannerInfo, clientName, 
         </div>
         <div style="font-size: 11px; color: #e2e8f0; line-height: 1.5;">
           • <strong>평생 확정 수령을 원하시는 경우:</strong> <strong>iM라이프 (구 DGB생명) 평생보증연금</strong>을 가장 추천합니다. 시장 금리가 하락하더라도 단리 5.5% 최저보증 및 평생 고정 연금지급률이 100% 보장되어 가장 안정적입니다.<br>
-          • <strong>매년 연말정산 환급을 원하시는 경우:</strong> <strong>미래에셋증권 연금저축</strong>을 통해 매년 최대 16.5% 세액공제를 받으신 후 은퇴 시점에 수령하시는 복합 포트폴리오를 권장합니다.
+          • <strong>매년 연말정산 환급을 원하시는 경우:</strong> <strong>삼성화재 아름다운생활 연금저축보험</strong>을 통해 매년 최대 16.5% 세액공제를 받으신 후 은퇴 시점에 수령하시는 복합 포트폴리오를 권장합니다.
         </div>
       </div>
     </div>

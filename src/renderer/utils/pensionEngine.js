@@ -189,7 +189,7 @@ export function simulatePensionComparison({
         id: 'declared_rate',
         rankTag: '⭐ 안정 복리형',
         name: '공시이율형 비과세 연금보험',
-        productName: '(무)삼성생명 인터넷NEW연금보험',
+        productName: '(무)삼성생명 플러스연금보험 (대면정규)',
         category: '공시이율 복리 연금',
         companyName: '삼성생명',
         otherCompanies: '한화생명 ((무)라이프플러스 연금보험), 교보생명 ((무)미리보는내연금보험)',
@@ -205,9 +205,9 @@ export function simulatePensionComparison({
         totalReceived: p2TotalReceived,
         totalReceivedStr: `${Math.round(p2TotalReceived / 10000).toLocaleString()}만원`,
         totalReceivedRatio: ((p2TotalReceived / totalPrincipal) * 100).toFixed(1),
-        taxBenefit: '10년 이상 유지 시 전액 비과세',
+        taxBenefit: '10년 이상 유지 시 전액 비과세 (금융소득종합과세 제외)',
         keyFeatures: [
-          '안정적인 복리 이자 증식 및 최저보증이율 안전망',
+          '안정적인 복리 이자 증식 및 최저보증이율 안전망 (대면 정규 판매 상품)',
           '목돈 필요 시 중도인출 및 추가납입 기능 활용 가능',
           '금융소득종합과세 제외되는 완벽한 비과세 혜택'
         ]
@@ -215,13 +215,13 @@ export function simulatePensionComparison({
       {
         id: 'tax_deduct',
         rankTag: '💰 세금환급 1위',
-        name: '세액공제 연금저축 (연말정산 특화)',
-        productName: '미래에셋증권 연금저축계좌 (글로벌 ETF)',
-        category: '세제적격 연금저축',
-        companyName: '미래에셋증권',
-        otherCompanies: '삼성화재 ((무)아름다운생활 연금저축), 삼성생명 ((무)골든연금 연금저축보험)',
+        name: '세액공제 연금저축보험 (세제적격)',
+        productName: '(무)삼성화재 아름다운생활 연금저축보험',
+        category: '세제적격 연금저축보험',
+        companyName: '삼성화재',
+        otherCompanies: '삼성생명 ((무)골든연금 연금저축보험), 한화손해보험 ((무)연금저축보험)',
         badgeColor: 'blue',
-        rateText: '연 3.5% + 연말정산 최대 16.5% 환급',
+        rateText: '공시이율 3.2% + 연말정산 최대 16.5% 환급',
         accumulatedFund: p3AccumulatedFund,
         accumulatedFundStr: `${Math.round(p3AccumulatedFund / 10000).toLocaleString()}만원`,
         refundRate: p3RefundRate,
@@ -234,9 +234,9 @@ export function simulatePensionComparison({
         totalReceivedRatio: ((p3TotalReceived / totalPrincipal) * 100).toFixed(1),
         taxBenefit: `매년 최대 ${Math.round(annualTaxRefund/10000)}만원 세액공제 (총 ${Math.round(totalTaxRefund/10000)}만원 환급)`,
         keyFeatures: [
-          '근로소득자/자영업자 매년 연말정산 시 막강한 세금 환급 (최대 16.5%)',
-          '연금 수령 시 3.3%~5.5%의 저율 연금소득세만 부과',
-          '직장인 절세 재테크 1순위 필수 상품'
+          '보험사 세제적격 상품으로 매년 연말정산 시 막강한 세금 환급 (최대 16.5%)',
+          '원금 보장 및 복리 부리 + 유당 배당금 및 연금 수령 시 저율과세(3.3~5.5%)',
+          '직장인 및 자영업자 절세 재테크 1순위 필수 보험 상품'
         ]
       },
       {
