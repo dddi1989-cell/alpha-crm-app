@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import logoIcon from '../assets/icon.png';
-import { ShieldCheck, Lock, User, KeyRound, AlertCircle, ArrowRight, UserPlus, Phone, CheckCircle2, Info, Building2 } from 'lucide-react';
+import { ShieldCheck, Lock, User, KeyRound, AlertCircle, ArrowRight, UserPlus, Phone, CheckCircle2, Info, Building2, Eye, EyeOff } from 'lucide-react';
 import { api } from '../utils/api';
 import { useCrmStore } from '../store/useCrmStore';
 
 export default function LoginView() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [successInfo, setSuccessInfo] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -250,7 +251,11 @@ export default function LoginView() {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="사번 또는 아이디 입력"
+              placeholder="사번 또는 ID (예: admin)"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck="false"
+              autoComplete="username"
               className="w-full bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors font-medium"
               autoFocus
             />
@@ -271,13 +276,27 @@ export default function LoginView() {
                 <span>비밀번호 변경</span>
               </button>
             </div>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="비밀번호 입력 (최초: 사번과 동일)"
-              className="w-full bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="비밀번호 (최초: admin 또는 본인 사번)"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck="false"
+                autoComplete="current-password"
+                className="w-full bg-slate-900/90 border border-slate-800 rounded-xl pl-4 pr-11 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-white transition-colors"
+                title={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
 
           <div className="space-y-2.5 pt-1">

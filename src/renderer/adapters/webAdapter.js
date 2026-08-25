@@ -150,13 +150,18 @@ export const webAdapter = {
 
         const user = users[0];
         const inputHash = await sha256(trimmedPwd);
+        const inputHashLower = await sha256(trimmedPwd.toLowerCase());
         const defaultUserHash = await sha256(trimmedUser);
+        const defaultUserHashLower = await sha256(trimmedUser.toLowerCase());
 
-        // 2. PC identical matching logic
+        // 2. PC identical matching logic with robust mobile fallback
         const isMatch = 
           (user.password_hash === inputHash) ||
+          (user.password_hash === inputHashLower) ||
           (user.password_hash === defaultUserHash && trimmedPwd === trimmedUser) ||
+          (user.password_hash === defaultUserHashLower && trimmedPwd.toLowerCase() === trimmedUser.toLowerCase()) ||
           (trimmedPwd === trimmedUser) ||
+          (trimmedPwd.toLowerCase() === trimmedUser.toLowerCase()) ||
           (user.password_hash === trimmedPwd);
 
         if (isMatch) {
