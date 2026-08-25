@@ -326,14 +326,14 @@ export const webAdapter = {
           usersData.forEach(u => userMap.set(Number(u.id), u));
         }
 
-        const { data, error } = await supabase.from('schedules').select('*').order('start_time', { ascending: false });
+        const { data, error } = await supabase.from('schedules').select('*').order('date', { ascending: false });
         if (error) throw error;
 
         const normalized = (data || []).map(s => {
           const u = s.user_id ? userMap.get(Number(s.user_id)) : null;
           return {
             ...s,
-            user_name: u ? u.name : (s.user_name || ''),
+            user_name: u ? u.name : (s.user_name || '설계사'),
             user_role: u ? u.role : (s.user_role || 'FA'),
             user_org_name: u ? u.org_name : (s.user_org_name || ''),
             org_id: u ? u.org_id : (s.org_id || null)

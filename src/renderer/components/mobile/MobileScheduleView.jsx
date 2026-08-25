@@ -131,6 +131,23 @@ export default function MobileScheduleView({
     setSelectedDateStr(todayStr);
   };
 
+  // Map accessible users for reliable fallback lookup
+  const userMap = useMemo(() => {
+    const map = new Map();
+    if (Array.isArray(accessibleUsers)) {
+      accessibleUsers.forEach((u) => map.set(Number(u.id), u));
+    }
+    return map;
+  }, [accessibleUsers]);
+
+  const getPlannerInfo = (schedule) => {
+    const u = schedule.user_id ? userMap.get(Number(schedule.user_id)) : null;
+    const name = schedule.user_name || u?.name || '담당 설계사';
+    const role = schedule.user_role || u?.role || 'FA';
+    const org = schedule.user_org_name || u?.org_name || '';
+    return { name, role, org };
+  };
+
   return (
     <div className="flex flex-col h-full space-y-4 pb-24 select-none">
       
@@ -413,12 +430,13 @@ export default function MobileScheduleView({
               const isCompleted = s.status === 'Completed';
               const isBroadcast = s.is_broadcast === 1;
               const timeStr = s.time || (s.scheduled_at ? s.scheduled_at.slice(11, 16) : '');
+              const planner = getPlannerInfo(s);
 
               return (
                 <div
                   key={s.id}
                   onClick={() => openScheduleModal(s)}
-                  className={`p-3.5 rounded-2xl border transition-all active:scale-[0.99] flex flex-col justify-between space-y-2.5 cursor-pointer shadow-md ${
+                  className={`p-4 rounded-2xl border transition-all active:scale-[0.99] flex flex-col justify-between space-y-3 cursor-pointer shadow-md ${
                     isCompleted
                       ? 'bg-slate-900/60 border-slate-800/80 opacity-75'
                       : isBroadcast
@@ -426,9 +444,9 @@ export default function MobileScheduleView({
                       : 'bg-slate-900/90 border-slate-700/80 hover:border-indigo-500/60'
                   }`}
                 >
-                  {/* Top: Time & Status Badges */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
+                  {/* Top: Time, Planner Badge & Status */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <div
                         className={`px-2.5 py-1 rounded-xl text-xs font-mono font-black flex items-center space-x-1 ${
                           timeStr
@@ -438,6 +456,13 @@ export default function MobileScheduleView({
                       >
                         <Clock className="w-3.5 h-3.5" />
                         <span>{timeStr || '시간 미지정'}</span>
+                      </div>
+
+                      {/* 👤 담당자 선명 배지 */}
+                      <div className="flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-purple-950/80 text-purple-200 border border-purple-800/80 text-xs font-black shadow-sm">
+                        <User className="w-3.5 h-3.5 text-purple-400" />
+                        <span>{planner.name}</span>
+                        <span className="text-[10px] text-purple-300/80 font-bold">({planner.role})</span>
                       </div>
 
                       {isBroadcast && (
@@ -459,7 +484,7 @@ export default function MobileScheduleView({
                         e.stopPropagation();
                         toggleScheduleStatus(s.id);
                       }}
-                      className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center space-x-1 border transition-all ${
+                      className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center space-x-1 border transition-all shrink-0 ${
                         isCompleted
                           ? 'bg-emerald-950 text-emerald-300 border-emerald-700/80'
                           : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'
@@ -498,17 +523,18 @@ export default function MobileScheduleView({
                     )}
 
                     {s.description && (
-                      <p className="text-xs text-slate-300/90 mt-1.5 line-clamp-2 bg-slate-950/60 p-2 rounded-xl border border-slate-800/60">
+                      <p className="text-xs text-slate-300/90 mt-1.5 line-clamp-2 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/60">
                         {s.description}
                       </p>
                     )}
                   </div>
 
                   {/* Bottom Action Footer */}
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 text-xs">
-                    <span className="text-[11px] text-slate-500 font-medium">
-                      담당: {s.user_name || '설계사'}
-                    </span>
+                  <div className="flex items-center justify-between pt-2.5 border-t border-slate-800/60 text-xs">
+                    <div className="flex items-center space-x-1 text-slate-400 text-xs font-semibold">
+                      <span className="text-slate-500">소속:</span>
+                      <span className="text-slate-300 font-bold">{planner.org || 'WLB 본부'}</span>
+                    </div>
 
                     <div className="flex items-center space-x-2">
                       <button
