@@ -55,7 +55,10 @@ export const api = {
     refresh: () => window.electronAPI.market.refresh()
   },
   tools: {
-    exportPensionPdf: (data) => window.electronAPI.tools.exportPensionPdf(data)
+    exportPensionPdf: (data) => window.electronAPI.tools.exportPensionPdf(data),
+    getPensionCatalog: () => window.electronAPI.tools.getPensionCatalog(),
+    syncPensionCatalog: () => window.electronAPI.tools.syncPensionCatalog(),
+    updatePensionProduct: (data) => window.electronAPI.tools.updatePensionProduct(data)
   },
   system: {
     getInfo: () => window.electronAPI.system.getInfo(),

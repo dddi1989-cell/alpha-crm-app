@@ -1,6 +1,7 @@
 /**
  * Pension Calculation & Comparison Engine
  * Simulates domestic life insurance, non-life insurance, and financial pension products
+ * Dynamically adapts to monthly updated rates and product lines from cloud catalog.
  */
 
 // Approximate Life Expectancy table based on 10th Korean Empirical Life Table
@@ -37,6 +38,7 @@ export function calculateAge(birthDateStr, targetDate = new Date()) {
  * @param {number} params.payYears - Payment period in years (e.g. 10)
  * @param {number} params.startAge - Pension start age (e.g. 65)
  * @param {string} params.pensionType - 'life100' (종신100세보증) | 'fixed20' (확정20년) | 'fixed10' (확정10년) | 'inherited' (상속형)
+ * @param {Array} [params.catalogProducts] - Optional dynamic catalog array loaded from cloud/local DB
  */
 export function simulatePensionComparison({
   currentAge = 40,
@@ -44,7 +46,8 @@ export function simulatePensionComparison({
   monthlyPay = 500000,
   payYears = 10,
   startAge = 65,
-  pensionType = 'life100'
+  pensionType = 'life100',
+  catalogProducts = null
 }) {
   const totalPayMonths = payYears * 12;
   const totalPrincipal = monthlyPay * totalPayMonths; // 총 납입 원금
@@ -53,11 +56,21 @@ export function simulatePensionComparison({
   const lifeSpan = 100; // 100세 기준
   const receivingYears = Math.max(1, lifeSpan - startAge + 1); // 100세까지 수령 기간
 
+  // Dynamic catalog map or fallback
+  const cMap = new Map();
+  if (Array.isArray(catalogProducts)) {
+    catalogProducts.forEach(p => cMap.set(p.id, p));
+  }
+
+  const c1 = cMap.get('guaranteed') || {};
+  const c2 = cMap.get('declared_rate') || {};
+  const c3 = cMap.get('tax_deduct') || {};
+  const c4 = cMap.get('variable') || {};
+
   // ----------------------------------------------------
-  // Product 1: 평생 최저보증 연금 (단리 5~7% 보증형) - 예: D사/I사/K사 평생보증연금
-  // 납입기간 및 거치기간 동안 단리 5.0%~7.0% 최저보증 후 연금전환 시 고정 연금지급률 적용
+  // Product 1: 평생 최저보증 연금 (단리 5~7% 보증형) - 예: iM라이프/KDB/IBK
   // ----------------------------------------------------
-  const p1GuaranteedRate = 0.055; // 연 5.5% 단리 최저보증 가정
+  const p1GuaranteedRate = c1.guaranteed_rate !== undefined ? Number(c1.guaranteed_rate) : 0.055;
   const p1InterestFactor = (payYears / 2 + deferYears) * p1GuaranteedRate;
   const p1AccumulatedFund = Math.round(totalPrincipal * (1 + p1InterestFactor));
   const p1RefundRate = ((p1AccumulatedFund / totalPrincipal) * 100).toFixed(1);
@@ -69,9 +82,9 @@ export function simulatePensionComparison({
   const p1TotalReceived = Math.round(p1AnnualPension * receivingYears);
 
   // ----------------------------------------------------
-  // Product 2: 공시이율형 비과세 연금보험 (안정적 복리 이율형) - 예: S생명/H생명 비과세 연금
+  // Product 2: 공시이율형 비과세 연금보험 (대면 정규) - 예: 삼성/한화/교보
   // ----------------------------------------------------
-  const p2AnnualRate = 0.031; // 연 3.1% 공시이율
+  const p2AnnualRate = c2.annual_rate !== undefined ? Number(c2.annual_rate) : 0.031;
   const p2MonthlyRate = p2AnnualRate / 12;
   let p2Fund = 0;
   for (let m = 0; m < totalPayMonths; m++) {
@@ -96,9 +109,9 @@ export function simulatePensionComparison({
   const p2TotalReceived = Math.round(p2AnnualPension * receivingYears);
 
   // ----------------------------------------------------
-  // Product 3: 세액공제 연금저축 (연말정산 특화) - 예: 금융사 연금저축
+  // Product 3: 세액공제 연금저축보험 (세제적격) - 예: 삼성화재/삼성생명/한화손보
   // ----------------------------------------------------
-  const p3AnnualRate = 0.035; // 연 3.5%
+  const p3AnnualRate = c3.annual_rate !== undefined ? Number(c3.annual_rate) : 0.032;
   const p3MonthlyRate = p3AnnualRate / 12;
   let p3Fund = 0;
   for (let m = 0; m < totalPayMonths; m++) {
@@ -111,7 +124,7 @@ export function simulatePensionComparison({
   const p3RefundRate = ((p3AccumulatedFund / totalPrincipal) * 100).toFixed(1);
 
   const annualPay = Math.min(6000000, monthlyPay * 12);
-  const annualTaxRefund = Math.round(annualPay * 0.132);
+  const annualTaxRefund = Math.round(annualPay * 0.165); // 최대 16.5%
   const totalTaxRefund = annualTaxRefund * payYears;
 
   const p3Months = (pensionType === 'fixed10' ? 120 : (pensionType === 'fixed20' ? 240 : receivingYears * 12));
@@ -121,9 +134,9 @@ export function simulatePensionComparison({
   const p3TotalReceived = Math.round(p3AnnualPension * receivingYears) + totalTaxRefund;
 
   // ----------------------------------------------------
-  // Product 4: 변액/투자형 연금보험 (원금보장형) - 예: M사/P사 변액연금
+  // Product 4: 변액/투자형 연금보험 (원금보장형) - 예: 메트라이프/푸본현대
   // ----------------------------------------------------
-  const p4AssumedRate = 0.050; // 연 5.0% 가정수익률
+  const p4AssumedRate = c4.assumed_rate !== undefined ? Number(c4.assumed_rate) : 0.050;
   const p4MonthlyRate = p4AssumedRate / 12;
   let p4Fund = 0;
   for (let m = 0; m < totalPayMonths; m++) {
@@ -138,6 +151,8 @@ export function simulatePensionComparison({
   const p4MonthlyPension = Math.round((p4AccumulatedFund / (receivingYears * 12)) * 1.3);
   const p4AnnualPension = p4MonthlyPension * 12;
   const p4TotalReceived = Math.round(p4AnnualPension * receivingYears);
+
+  const currentMonthStr = `${new Date().getFullYear()}년 ${new Date().getMonth() + 1}월`;
 
   return {
     inputSummary: {
@@ -155,19 +170,20 @@ export function simulatePensionComparison({
       totalPrincipalStr: `${Math.round(totalPrincipal / 10000).toLocaleString()}만원`,
       receivingYears,
       pensionType,
-      pensionTypeLabel: pensionType === 'fixed10' ? '10년 확정지급형' : (pensionType === 'fixed20' ? '20년 확정지급형' : '100세 보증 종신연금형')
+      pensionTypeLabel: pensionType === 'fixed10' ? '10년 확정지급형' : (pensionType === 'fixed20' ? '20년 확정지급형' : '100세 보증 종신연금형'),
+      effectiveMonth: c1.effective_month || currentMonthStr
     },
     products: [
       {
         id: 'guaranteed',
-        rankTag: '🏆 안정수익 1위 (강력추천)',
-        name: '평생 최저보증 연금 (단리 5.5% 평생보증)',
-        productName: '(무)HighFive그랑에이지변액연금보험',
-        category: '최저보증형 종신연금',
-        companyName: 'iM라이프 (구 DGB생명)',
-        otherCompanies: 'KDB생명 ((무)버팀목평생보증연금), IBK연금보험 ((무)평생보증연금)',
-        badgeColor: 'amber',
-        rateText: '연 5.5% 단리 평생보증 (연금지급률 확정)',
+        rankTag: c1.rank_tag || '🏆 안정수익 1위 (강력추천)',
+        name: c1.name || '평생 최저보증 연금 (단리 5.5% 평생보증)',
+        productName: c1.product_name || '(무)HighFive그랑에이지변액연금보험',
+        category: c1.category || '최저보증형 종신연금',
+        companyName: c1.company_name || 'iM라이프 (구 DGB생명)',
+        otherCompanies: c1.other_companies || 'KDB생명 ((무)버팀목평생보증연금), IBK연금보험 ((무)평생보증연금)',
+        badgeColor: c1.badge_color || 'amber',
+        rateText: c1.rate_text || `연 ${(p1GuaranteedRate * 100).toFixed(1)}% 단리 평생보증 (연금지급률 확정)`,
         accumulatedFund: p1AccumulatedFund,
         accumulatedFundStr: `${Math.round(p1AccumulatedFund / 10000).toLocaleString()}만원`,
         refundRate: p1RefundRate,
@@ -178,8 +194,8 @@ export function simulatePensionComparison({
         totalReceived: p1TotalReceived,
         totalReceivedStr: `${Math.round(p1TotalReceived / 10000).toLocaleString()}만원`,
         totalReceivedRatio: ((p1TotalReceived / totalPrincipal) * 100).toFixed(1),
-        taxBenefit: '10년 유지 시 비과세 (이자소득세 0원)',
-        keyFeatures: [
+        taxBenefit: c1.tax_benefit || '10년 유지 시 비과세 (이자소득세 0원)',
+        keyFeatures: Array.isArray(c1.key_features) ? c1.key_features : [
           '투자 수익률 하락과 무관하게 계약 시점의 최저보증 연금액 100% 확정 보증',
           '살아있는 동안 평생 매월 동일한 확정 연금 지급 (사망 시까지 지속)',
           '금리 하락기에도 원금 손실 없는 가장 안전한 노후 준비 1순위'
@@ -187,14 +203,14 @@ export function simulatePensionComparison({
       },
       {
         id: 'declared_rate',
-        rankTag: '⭐ 안정 복리형',
-        name: '공시이율형 비과세 연금보험',
-        productName: '(무)삼성생명 플러스연금보험 (대면정규)',
-        category: '공시이율 복리 연금',
-        companyName: '삼성생명',
-        otherCompanies: '한화생명 ((무)라이프플러스 연금보험), 교보생명 ((무)미리보는내연금보험)',
-        badgeColor: 'emerald',
-        rateText: '공시이율 3.1% (최저보증 1.0%)',
+        rankTag: c2.rank_tag || '⭐ 안정 복리형',
+        name: c2.name || '공시이율형 비과세 연금보험',
+        productName: c2.product_name || '(무)삼성생명 플러스연금보험 (대면정규)',
+        category: c2.category || '공시이율 복리 연금',
+        companyName: c2.company_name || '삼성생명',
+        otherCompanies: c2.other_companies || '한화생명 ((무)라이프플러스 연금보험), 교보생명 ((무)미리보는내연금보험)',
+        badgeColor: c2.badge_color || 'emerald',
+        rateText: c2.rate_text || `공시이율 ${(p2AnnualRate * 100).toFixed(1)}% (최저보증 1.0%)`,
         accumulatedFund: p2AccumulatedFund,
         accumulatedFundStr: `${Math.round(p2AccumulatedFund / 10000).toLocaleString()}만원`,
         refundRate: p2RefundRate,
@@ -205,8 +221,8 @@ export function simulatePensionComparison({
         totalReceived: p2TotalReceived,
         totalReceivedStr: `${Math.round(p2TotalReceived / 10000).toLocaleString()}만원`,
         totalReceivedRatio: ((p2TotalReceived / totalPrincipal) * 100).toFixed(1),
-        taxBenefit: '10년 이상 유지 시 전액 비과세 (금융소득종합과세 제외)',
-        keyFeatures: [
+        taxBenefit: c2.tax_benefit || '10년 이상 유지 시 전액 비과세 (금융소득종합과세 제외)',
+        keyFeatures: Array.isArray(c2.key_features) ? c2.key_features : [
           '안정적인 복리 이자 증식 및 최저보증이율 안전망 (대면 정규 판매 상품)',
           '목돈 필요 시 중도인출 및 추가납입 기능 활용 가능',
           '금융소득종합과세 제외되는 완벽한 비과세 혜택'
@@ -214,14 +230,14 @@ export function simulatePensionComparison({
       },
       {
         id: 'tax_deduct',
-        rankTag: '💰 세금환급 1위',
-        name: '세액공제 연금저축보험 (세제적격)',
-        productName: '(무)삼성화재 아름다운생활 연금저축보험',
-        category: '세제적격 연금저축보험',
-        companyName: '삼성화재',
-        otherCompanies: '삼성생명 ((무)골든연금 연금저축보험), 한화손해보험 ((무)연금저축보험)',
-        badgeColor: 'blue',
-        rateText: '공시이율 3.2% + 연말정산 최대 16.5% 환급',
+        rankTag: c3.rank_tag || '💰 세금환급 1위',
+        name: c3.name || '세액공제 연금저축보험 (세제적격)',
+        productName: c3.product_name || '(무)삼성화재 아름다운생활 연금저축보험',
+        category: c3.category || '세제적격 연금저축보험',
+        companyName: c3.company_name || '삼성화재',
+        otherCompanies: c3.other_companies || '삼성생명 ((무)골든연금 연금저축보험), 한화손해보험 ((무)연금저축보험)',
+        badgeColor: c3.badge_color || 'blue',
+        rateText: c3.rate_text || `공시이율 ${(p3AnnualRate * 100).toFixed(1)}% + 연말정산 최대 16.5% 환급`,
         accumulatedFund: p3AccumulatedFund,
         accumulatedFundStr: `${Math.round(p3AccumulatedFund / 10000).toLocaleString()}만원`,
         refundRate: p3RefundRate,
@@ -232,8 +248,8 @@ export function simulatePensionComparison({
         totalReceived: p3TotalReceived,
         totalReceivedStr: `${Math.round(p3TotalReceived / 10000).toLocaleString()}만원 (환급세금 포함)`,
         totalReceivedRatio: ((p3TotalReceived / totalPrincipal) * 100).toFixed(1),
-        taxBenefit: `매년 최대 ${Math.round(annualTaxRefund/10000)}만원 세액공제 (총 ${Math.round(totalTaxRefund/10000)}만원 환급)`,
-        keyFeatures: [
+        taxBenefit: c3.tax_benefit || `매년 최대 ${Math.round(annualTaxRefund/10000)}만원 세액공제 (총 ${Math.round(totalTaxRefund/10000)}만원 환급)`,
+        keyFeatures: Array.isArray(c3.key_features) ? c3.key_features : [
           '보험사 세제적격 상품으로 매년 연말정산 시 막강한 세금 환급 (최대 16.5%)',
           '원금 보장 및 복리 부리 + 유당 배당금 및 연금 수령 시 저율과세(3.3~5.5%)',
           '직장인 및 자영업자 절세 재테크 1순위 필수 보험 상품'
@@ -241,14 +257,14 @@ export function simulatePensionComparison({
       },
       {
         id: 'variable',
-        rankTag: '📈 고수익 추구형',
-        name: '변액/투자형 연금보험 (펀드운용형)',
-        productName: '(무)동행 변액연금보험 (스텝업 원금보장)',
-        category: '변액투자 연금',
-        companyName: '메트라이프생명',
-        otherCompanies: '푸본현대생명 ((무)MAX 변액연금보험), BNP파리바카디프생명 ((무)i-선택변액)',
-        badgeColor: 'purple',
-        rateText: '가정수익률 연 5.0% (원금보장형)',
+        rankTag: c4.rank_tag || '📈 고수익 추구형',
+        name: c4.name || '변액/투자형 연금보험 (펀드운용형)',
+        productName: c4.product_name || '(무)동행 변액연금보험 (스텝업 원금보장)',
+        category: c4.category || '변액투자 연금',
+        companyName: c4.company_name || '메트라이프생명',
+        otherCompanies: c4.other_companies || '푸본현대생명 ((무)MAX 변액연금보험), BNP파리바카디프생명 ((무)i-선택변액)',
+        badgeColor: c4.badge_color || 'purple',
+        rateText: c4.rate_text || `가정수익률 연 ${(p4AssumedRate * 100).toFixed(1)}% (원금보장형)`,
         accumulatedFund: p4AccumulatedFund,
         accumulatedFundStr: `${Math.round(p4AccumulatedFund / 10000).toLocaleString()}만원`,
         refundRate: p4RefundRate,
@@ -259,8 +275,8 @@ export function simulatePensionComparison({
         totalReceived: p4TotalReceived,
         totalReceivedStr: `${Math.round(p4TotalReceived / 10000).toLocaleString()}만원`,
         totalReceivedRatio: ((p4TotalReceived / totalPrincipal) * 100).toFixed(1),
-        taxBenefit: '10년 이상 유지 시 비과세',
-        keyFeatures: [
+        taxBenefit: c4.tax_benefit || '10년 이상 유지 시 비과세',
+        keyFeatures: Array.isArray(c4.key_features) ? c4.key_features : [
           '글로벌 주식/채권 분산투자로 인플레이션 헷지 및 초과수익 추구',
           '연금개시 시점 납입원금 100%~130% 최저보증 기능 탑재',
           '시장 상승기 높은 연금 수령액 기대 가능'

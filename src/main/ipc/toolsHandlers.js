@@ -602,6 +602,105 @@ function registerToolsHandlers(mainWindow) {
       };
     }
   });
+
+  // Get current pension products catalog from local DB
+  ipcMain.handle('tools:get-pension-catalog', async () => {
+    try {
+      const { getDb } = require('../database');
+      const db = getDb();
+      const rows = db.prepare('SELECT * FROM pension_products ORDER BY id ASC').all();
+      const currentMonthStr = `${new Date().getFullYear()}년 ${new Date().getMonth() + 1}월`;
+      return {
+        success: true,
+        monthLabel: currentMonthStr,
+        products: rows.map(r => ({
+          ...r,
+          key_features: typeof r.key_features === 'string' ? JSON.parse(r.key_features || '[]') : r.key_features
+        }))
+      };
+    } catch (err) {
+      console.error('get-pension-catalog error:', err);
+      return { success: false, error: err.message };
+    }
+  });
+
+  // Trigger manual cloud sync of pension catalog
+  ipcMain.handle('tools:sync-pension-catalog', async () => {
+    try {
+      const { getDb } = require('../database');
+      const { loadPensionCatalog, syncPensionCatalog } = require('../services/cloudSyncService');
+      const db = getDb();
+      await loadPensionCatalog(db);
+      await syncPensionCatalog(db);
+      const rows = db.prepare('SELECT * FROM pension_products ORDER BY id ASC').all();
+      const currentMonthStr = `${new Date().getFullYear()}년 ${new Date().getMonth() + 1}월`;
+      return {
+        success: true,
+        monthLabel: currentMonthStr,
+        products: rows.map(r => ({
+          ...r,
+          key_features: typeof r.key_features === 'string' ? JSON.parse(r.key_features || '[]') : r.key_features
+        }))
+      };
+    } catch (err) {
+      console.error('sync-pension-catalog error:', err);
+      return { success: false, error: err.message };
+    }
+  });
+
+  // Admin update of pension product (rates / company / product name)
+  ipcMain.handle('tools:update-pension-product', async (event, productData) => {
+    try {
+      const { getDb } = require('../database');
+      const { syncPensionCatalog } = require('../services/cloudSyncService');
+      const db = getDb();
+      const now = new Date().toISOString();
+      const currentMonthStr = `${new Date().getFullYear()}년 ${new Date().getMonth() + 1}월`;
+
+      const stmt = db.prepare(`
+        UPDATE pension_products SET
+          name = ?,
+          product_name = ?,
+          company_name = ?,
+          other_companies = ?,
+          rate_text = ?,
+          guaranteed_rate = ?,
+          payout_rate = ?,
+          annual_rate = ?,
+          assumed_rate = ?,
+          tax_benefit = ?,
+          key_features = ?,
+          effective_month = ?,
+          updated_at = ?
+        WHERE id = ?
+      `);
+
+      stmt.run(
+        productData.name,
+        productData.product_name,
+        productData.company_name,
+        productData.other_companies || '',
+        productData.rate_text,
+        Number(productData.guaranteed_rate) || 0.055,
+        Number(productData.payout_rate) || 0.052,
+        Number(productData.annual_rate) || 0.031,
+        Number(productData.assumed_rate) || 0.050,
+        productData.tax_benefit || '',
+        typeof productData.key_features === 'string' ? productData.key_features : JSON.stringify(productData.key_features || []),
+        productData.effective_month || currentMonthStr,
+        now,
+        productData.id
+      );
+
+      // Sync to cloud in background
+      syncPensionCatalog(db);
+
+      return { success: true, message: '연금 상품 및 이율 정보가 성공적으로 갱신되었습니다.' };
+    } catch (err) {
+      console.error('update-pension-product error:', err);
+      return { success: false, error: err.message };
+    }
+  });
 }
 
 module.exports = {

@@ -142,7 +142,129 @@ function initDatabase(dbPath = null) {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS pension_products (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      product_name TEXT NOT NULL,
+      category TEXT NOT NULL,
+      company_name TEXT NOT NULL,
+      other_companies TEXT,
+      badge_color TEXT DEFAULT 'amber',
+      rank_tag TEXT,
+      rate_text TEXT,
+      guaranteed_rate REAL DEFAULT 0.055,
+      payout_rate REAL DEFAULT 0.052,
+      annual_rate REAL DEFAULT 0.031,
+      assumed_rate REAL DEFAULT 0.050,
+      tax_benefit TEXT,
+      key_features TEXT,
+      effective_month TEXT,
+      updated_at TEXT NOT NULL
+    );
   `);
+
+  // Seed default pension products if empty
+  try {
+    const count = dbInstance.prepare("SELECT COUNT(*) as count FROM pension_products").get().count;
+    if (count === 0) {
+      const now = new Date().toISOString();
+      const currentMonthStr = `${new Date().getFullYear()}년 ${new Date().getMonth() + 1}월`;
+      const insertStmt = dbInstance.prepare(`
+        INSERT INTO pension_products (id, name, product_name, category, company_name, other_companies, badge_color, rank_tag, rate_text, guaranteed_rate, payout_rate, annual_rate, assumed_rate, tax_benefit, key_features, effective_month, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      const defaultProducts = [
+        [
+          'guaranteed',
+          '평생 최저보증 연금 (단리 5.5% 평생보증)',
+          '(무)HighFive그랑에이지변액연금보험',
+          '최저보증형 종신연금',
+          'iM라이프 (구 DGB생명)',
+          'KDB생명 ((무)버팀목평생보증연금), IBK연금보험 ((무)평생보증연금)',
+          'amber',
+          '🏆 안정수익 1위 (강력추천)',
+          '연 5.5% 단리 평생보증 (연금지급률 확정)',
+          0.055, 0.052, 0.031, 0.050,
+          '10년 유지 시 비과세 (이자소득세 0원)',
+          JSON.stringify([
+            '투자 수익률 하락과 무관하게 계약 시점의 최저보증 연금액 100% 확정 보증',
+            '살아있는 동안 평생 매월 동일한 확정 연금 지급 (사망 시까지 지속)',
+            '금리 하락기에도 원금 손실 없는 가장 안전한 노후 준비 1순위'
+          ]),
+          currentMonthStr,
+          now
+        ],
+        [
+          'declared_rate',
+          '공시이율형 비과세 연금보험',
+          '(무)삼성생명 플러스연금보험 (대면정규)',
+          '공시이율 복리 연금',
+          '삼성생명',
+          '한화생명 ((무)라이프플러스 연금보험), 교보생명 ((무)미리보는내연금보험)',
+          'emerald',
+          '⭐ 안정 복리형',
+          '공시이율 3.1% (최저보증 1.0%)',
+          0.055, 0.052, 0.031, 0.050,
+          '10년 이상 유지 시 전액 비과세 (금융소득종합과세 제외)',
+          JSON.stringify([
+            '안정적인 복리 이자 증식 및 최저보증이율 안전망 (대면 정규 판매 상품)',
+            '목돈 필요 시 중도인출 및 추가납입 기능 활용 가능',
+            '금융소득종합과세 제외되는 완벽한 비과세 혜택'
+          ]),
+          currentMonthStr,
+          now
+        ],
+        [
+          'tax_deduct',
+          '세액공제 연금저축보험 (세제적격)',
+          '(무)삼성화재 아름다운생활 연금저축보험',
+          '세제적격 연금저축보험',
+          '삼성화재',
+          '삼성생명 ((무)골든연금 연금저축보험), 한화손해보험 ((무)연금저축보험)',
+          'blue',
+          '💰 세금환급 1위',
+          '공시이율 3.2% + 연말정산 최대 16.5% 환급',
+          0.055, 0.052, 0.032, 0.050,
+          '매년 최대 99만원 세액공제 (총 세금 환급)',
+          JSON.stringify([
+            '보험사 세제적격 상품으로 매년 연말정산 시 막강한 세금 환급 (최대 16.5%)',
+            '원금 보장 및 복리 부리 + 유당 배당금 및 연금 수령 시 저율과세(3.3~5.5%)',
+            '직장인 및 자영업자 절세 재테크 1순위 필수 보험 상품'
+          ]),
+          currentMonthStr,
+          now
+        ],
+        [
+          'variable',
+          '변액/투자형 연금보험 (펀드운용형)',
+          '(무)동행 변액연금보험 (스텝업 원금보장)',
+          '변액투자 연금',
+          '메트라이프생명',
+          '푸본현대생명 ((무)MAX 변액연금보험), BNP파리바카디프생명 ((무)i-선택변액)',
+          'purple',
+          '📈 고수익 추구형',
+          '가정수익률 연 5.0% (원금보장형)',
+          0.055, 0.052, 0.031, 0.050,
+          '10년 이상 유지 시 비과세',
+          JSON.stringify([
+            '글로벌 주식/채권 분산투자로 인플레이션 헷지 및 초과수익 추구',
+            '연금개시 시점 납입원금 100%~130% 최저보증 기능 탑재',
+            '시장 상승기 높은 연금 수령액 기대 가능'
+          ]),
+          currentMonthStr,
+          now
+        ]
+      ];
+
+      for (const p of defaultProducts) {
+        insertStmt.run(...p);
+      }
+    }
+  } catch (e) {
+    console.error('Seed pension_products error:', e);
+  }
 
   // Robust column migration for post_attachments table
   const postAttachmentColumns = ['file_path', 'download_url', 'file_data'];

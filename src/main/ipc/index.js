@@ -1,6 +1,6 @@
 const { getDb } = require('../database');
 const { performDualBackup } = require('../backupEngine');
-const { loadCloudAccounts, loadCloudData, syncCloudAccounts, syncCloudData, syncCloudUpdateManifest, importLegacyLocalDatabases, startPeriodicCloudSync } = require('../services/cloudSyncService');
+const { loadCloudAccounts, loadCloudData, syncCloudAccounts, syncCloudData, loadPensionCatalog, syncPensionCatalog, syncCloudUpdateManifest, importLegacyLocalDatabases, startPeriodicCloudSync } = require('../services/cloudSyncService');
 const { autoCheckAndApplyMicroPatch } = require('../services/updaterService');
 
 const { registerAuthHandlers } = require('./authHandlers');
@@ -28,14 +28,17 @@ function setupIpcHandlers(mainWindow) {
     // 1. Recover legacy offline local databases if existing on this machine
     importLegacyLocalDatabases(db);
 
-    // 2. Load latest cloud accounts and CRM data first
+    // 2. Load latest cloud accounts, CRM data, and pension catalog
     loadCloudAccounts(db).then(() => {
       syncCustomerInsuranceExpirySchedules(db);
       return loadCloudData(db);
     }).then(() => {
+      return loadPensionCatalog(db);
+    }).then(() => {
       // 3. Only sync outwards after loading
       syncCloudAccounts(db);
       syncCloudData(db);
+      syncPensionCatalog(db);
       // 4. Start periodic background sync (every 60s)
       startPeriodicCloudSync(db, mainWindow);
     }).catch(err => {

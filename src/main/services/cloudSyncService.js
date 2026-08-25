@@ -918,6 +918,98 @@ async function syncCloudUpdateManifest(version, downloadUrl, title, releaseNotes
   }
 }
 
+function _mergePensionCatalogIntoDB(db, catalogRows) {
+  if (!Array.isArray(catalogRows) || catalogRows.length === 0) return;
+  try {
+    const insertStmt = db.prepare(`
+      INSERT INTO pension_products (id, name, product_name, category, company_name, other_companies, badge_color, rank_tag, rate_text, guaranteed_rate, payout_rate, annual_rate, assumed_rate, tax_benefit, key_features, effective_month, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        name = excluded.name,
+        product_name = excluded.product_name,
+        category = excluded.category,
+        company_name = excluded.company_name,
+        other_companies = excluded.other_companies,
+        badge_color = excluded.badge_color,
+        rank_tag = excluded.rank_tag,
+        rate_text = excluded.rate_text,
+        guaranteed_rate = excluded.guaranteed_rate,
+        payout_rate = excluded.payout_rate,
+        annual_rate = excluded.annual_rate,
+        assumed_rate = excluded.assumed_rate,
+        tax_benefit = excluded.tax_benefit,
+        key_features = excluded.key_features,
+        effective_month = excluded.effective_month,
+        updated_at = excluded.updated_at
+    `);
+
+    db.transaction((rows) => {
+      for (const r of rows) {
+        insertStmt.run(
+          r.id,
+          r.name,
+          r.product_name,
+          r.category,
+          r.company_name,
+          r.other_companies || '',
+          r.badge_color || 'amber',
+          r.rank_tag || '',
+          r.rate_text || '',
+          r.guaranteed_rate !== undefined ? Number(r.guaranteed_rate) : 0.055,
+          r.payout_rate !== undefined ? Number(r.payout_rate) : 0.052,
+          r.annual_rate !== undefined ? Number(r.annual_rate) : 0.031,
+          r.assumed_rate !== undefined ? Number(r.assumed_rate) : 0.050,
+          r.tax_benefit || '',
+          typeof r.key_features === 'string' ? r.key_features : JSON.stringify(r.key_features || []),
+          r.effective_month || '',
+          r.updated_at || new Date().toISOString()
+        );
+      }
+    })(catalogRows);
+    console.log(`[Pension-Sync] Successfully merged ${catalogRows.length} pension products into local DB`);
+  } catch (err) {
+    console.error('_mergePensionCatalogIntoDB error:', err);
+  }
+}
+
+async function loadPensionCatalog(db) {
+  try {
+    const supabase = getSupabase();
+    if (!supabase) return;
+
+    const { data: cloudProducts, error } = await supabase.from('pension_products').select('*');
+    if (error) {
+      console.log('[Pension-CloudSync] Supabase load note:', error.message);
+      return;
+    }
+
+    if (Array.isArray(cloudProducts) && cloudProducts.length > 0) {
+      _mergePensionCatalogIntoDB(db, cloudProducts);
+    }
+  } catch (err) {
+    console.error('loadPensionCatalog error:', err);
+  }
+}
+
+async function syncPensionCatalog(db) {
+  try {
+    const supabase = getSupabase();
+    if (!supabase) return;
+
+    const localProducts = db.prepare('SELECT * FROM pension_products').all();
+    if (localProducts && localProducts.length > 0) {
+      const { error } = await supabase.from('pension_products').upsert(localProducts, { onConflict: 'id' });
+      if (error) {
+        console.log('[Pension-CloudSync] Supabase upsert note:', error.message);
+      } else {
+        console.log(`[Pension-CloudSync] Successfully synced ${localProducts.length} pension products to Supabase`);
+      }
+    }
+  } catch (err) {
+    console.error('syncPensionCatalog error:', err);
+  }
+}
+
 let syncIntervalId = null;
 
 function startPeriodicCloudSync(db, mainWindow) {
@@ -928,6 +1020,7 @@ function startPeriodicCloudSync(db, mainWindow) {
     try {
       await loadCloudAccounts(db);
       await loadCloudData(db);
+      await loadPensionCatalog(db);
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('cloud:synced', { timestamp: new Date().toISOString() });
       }
@@ -954,6 +1047,8 @@ module.exports = {
   loadCloudAccounts,
   syncCloudData,
   loadCloudData,
+  loadPensionCatalog,
+  syncPensionCatalog,
   syncCloudUpdateManifest,
   importLegacyLocalDatabases,
   startPeriodicCloudSync,

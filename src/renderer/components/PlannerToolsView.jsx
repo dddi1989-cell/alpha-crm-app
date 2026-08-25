@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Calculator, 
   Sparkles, 
@@ -23,7 +23,12 @@ import {
   Download,
   FileDown,
   Building,
-  CheckCheck
+  CheckCheck,
+  RefreshCw,
+  Edit3,
+  Save,
+  X,
+  ShieldAlert
 } from 'lucide-react';
 import { useCrmStore } from '../store/useCrmStore';
 import { api } from '../utils/api';
@@ -33,6 +38,52 @@ export default function PlannerToolsView() {
   const [activeSubTab, setActiveSubTab] = useState('pension'); // 'pension'
   const customers = useCrmStore((state) => state.customers);
   const currentUser = useCrmStore((state) => state.currentUser);
+
+  // Is Top Admin
+  const isAdmin = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'admin' || currentUser.username === 'admin');
+
+  // Dynamic Catalog State
+  const [catalogProducts, setCatalogProducts] = useState([]);
+  const [effectiveMonthLabel, setEffectiveMonthLabel] = useState(`${new Date().getFullYear()}년 ${new Date().getMonth() + 1}월`);
+  const [isSyncingCatalog, setIsSyncingCatalog] = useState(false);
+
+  // Load Pension Catalog
+  const loadCatalog = async () => {
+    try {
+      if (api.tools?.getPensionCatalog) {
+        const res = await api.tools.getPensionCatalog();
+        if (res?.success && Array.isArray(res.products)) {
+          setCatalogProducts(res.products);
+          if (res.monthLabel) setEffectiveMonthLabel(res.monthLabel);
+        }
+      }
+    } catch (e) {
+      console.log('Catalog load error:', e);
+    }
+  };
+
+  const handleManualSyncCatalog = async () => {
+    setIsSyncingCatalog(true);
+    try {
+      if (api.tools?.syncPensionCatalog) {
+        const res = await api.tools.syncPensionCatalog();
+        if (res?.success && Array.isArray(res.products)) {
+          setCatalogProducts(res.products);
+          if (res.monthLabel) setEffectiveMonthLabel(res.monthLabel);
+          setExportSuccessMsg('클라우드로부터 최신 연금 상품 및 공시이율 정보가 동기화되었습니다!');
+          setTimeout(() => setExportSuccessMsg(''), 3000);
+        }
+      }
+    } catch (e) {
+      setExportErrorMsg('동기화 실패: ' + e.message);
+    } finally {
+      setIsSyncingCatalog(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCatalog();
+  }, []);
 
   // ----------------------------------------------------
   // Pension Calculator Input States
@@ -50,6 +101,52 @@ export default function PlannerToolsView() {
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [exportSuccessMsg, setExportSuccessMsg] = useState('');
   const [exportErrorMsg, setExportErrorMsg] = useState('');
+
+  // Admin Product Edit Modal
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    id: '',
+    name: '',
+    product_name: '',
+    company_name: '',
+    rate_text: '',
+    guaranteed_rate: 0.055,
+    annual_rate: 0.031,
+    tax_benefit: ''
+  });
+
+  const handleOpenEditProduct = (prod) => {
+    setEditingProduct(prod);
+    setEditFormData({
+      id: prod.id,
+      name: prod.name,
+      product_name: prod.productName || prod.product_name,
+      company_name: prod.companyName || prod.company_name,
+      rate_text: prod.rateText || prod.rate_text,
+      guaranteed_rate: prod.guaranteed_rate !== undefined ? prod.guaranteed_rate : 0.055,
+      annual_rate: prod.annual_rate !== undefined ? prod.annual_rate : 0.031,
+      tax_benefit: prod.taxBenefit || prod.tax_benefit || ''
+    });
+  };
+
+  const handleSaveProductEdit = async (e) => {
+    e.preventDefault();
+    try {
+      if (api.tools?.updatePensionProduct) {
+        const res = await api.tools.updatePensionProduct(editFormData);
+        if (res?.success) {
+          setExportSuccessMsg('연금 상품 정보가 클라우드에 성공적으로 갱신되었습니다!');
+          setTimeout(() => setExportSuccessMsg(''), 3000);
+          setEditingProduct(null);
+          loadCatalog();
+        } else {
+          alert('수정 실패: ' + (res?.error || '알 수 없는 오류'));
+        }
+      }
+    } catch (err) {
+      alert('오류 발생: ' + err.message);
+    }
+  };
 
   // Auto-fill when customer is selected
   const handleSelectCustomer = (custId) => {
@@ -75,7 +172,7 @@ export default function PlannerToolsView() {
   const minStartAge = Math.max(55, currentAge + payYears);
   const effectiveStartAge = Math.max(startAge, minStartAge);
 
-  // Run Simulation
+  // Run Simulation with Dynamic Catalog
   const simulationResult = useMemo(() => {
     return simulatePensionComparison({
       currentAge,
@@ -83,9 +180,10 @@ export default function PlannerToolsView() {
       monthlyPay: monthlyPayManwon * 10000,
       payYears,
       startAge: effectiveStartAge,
-      pensionType
+      pensionType,
+      catalogProducts
     });
-  }, [currentAge, gender, monthlyPayManwon, payYears, effectiveStartAge, pensionType]);
+  }, [currentAge, gender, monthlyPayManwon, payYears, effectiveStartAge, pensionType, catalogProducts]);
 
   // Export Presentation PDF Handler
   const handleExportPdf = async () => {
@@ -128,33 +226,33 @@ export default function PlannerToolsView() {
               <Calculator className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl font-extrabold text-white flex items-center space-x-2">
-                <span>설계사 도구</span>
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-800/60 font-mono">
-                  FA Pro Suite
+              <div className="flex items-center space-x-2.5">
+                <h2 className="text-xl font-extrabold text-white">
+                  설계사 도구
+                </h2>
+                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/80 font-bold flex items-center space-x-1 shadow-sm">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span>{effectiveMonthLabel} 최신 이율 자동 적용</span>
                 </span>
-              </h2>
+              </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                국내 주요 금융사·생손보사 연금 상품 실시간 비교 & 고객 프레젠테이션 제안서 PDF 자동 생성
+                국내 주요 금융사·보험사 연금 상품 매월 최신 공시이율 자동 반영 & 고객 프레젠테이션 제안서 PDF 생성
               </p>
             </div>
           </div>
         </div>
 
         {/* Top Sub Tabs & PDF Export Button */}
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-2 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800">
-            <button
-              onClick={() => setActiveSubTab('pension')}
-              className={'flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ' + 
-                (activeSubTab === 'pension' 
-                  ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-md shadow-indigo-600/30' 
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800')}
-            >
-              <TrendingUp className="w-4 h-4 text-amber-400" />
-              <span>💰 연금계산기 (금융사비교)</span>
-            </button>
-          </div>
+        <div className="flex items-center space-x-2.5">
+          <button
+            onClick={handleManualSyncCatalog}
+            disabled={isSyncingCatalog}
+            title="클라우드에서 최신 이율 및 상품 정보를 즉시 갱신합니다."
+            className="flex items-center space-x-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-bold border border-slate-800 transition-all shadow-sm active:scale-95 disabled:opacity-50"
+          >
+            <RefreshCw className={'w-3.5 h-3.5 text-sky-400 ' + (isSyncingCatalog ? 'animate-spin' : '')} />
+            <span>{isSyncingCatalog ? '동기화 중...' : '최신 이율 갱신'}</span>
+          </button>
 
           <button
             onClick={handleExportPdf}
@@ -181,7 +279,7 @@ export default function PlannerToolsView() {
         <div className="p-3.5 bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 rounded-2xl text-xs font-bold flex items-center justify-between animate-fadeIn shadow-lg">
           <span className="flex items-center space-x-2">
             <CheckCheck className="w-4 h-4 text-emerald-400" />
-            <span>{exportSuccessMsg} (저장된 폴더가 자동으로 열렸습니다)</span>
+            <span>{exportSuccessMsg}</span>
           </span>
           <button onClick={() => setExportSuccessMsg('')} className="text-emerald-400 hover:text-white">✕</button>
         </div>
@@ -481,10 +579,15 @@ export default function PlannerToolsView() {
 
           {/* 4 Product Comparison Cards */}
           <div className="space-y-3">
-            <h3 className="font-bold text-sm text-white flex items-center space-x-2">
-              <Layers className="w-4 h-4 text-indigo-400" />
-              <span>국내 주요 금융사·보험사 연금 상품군 실시간 대조 (4개 선택지)</span>
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-sm text-white flex items-center space-x-2">
+                <Layers className="w-4 h-4 text-indigo-400" />
+                <span>국내 주요 보험사 대면 정규 연금 라인업 실시간 대조 (4개 선택지)</span>
+              </h3>
+              <span className="text-[10px] font-mono text-slate-500">
+                {effectiveMonthLabel} 기준
+              </span>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {simulationResult.products.map((prod) => {
@@ -494,7 +597,7 @@ export default function PlannerToolsView() {
                 return (
                   <div
                     key={prod.id}
-                    className={'p-5 rounded-3xl border transition-all flex flex-col justify-between space-y-4 shadow-xl ' + 
+                    className={'p-5 rounded-3xl border transition-all flex flex-col justify-between space-y-4 shadow-xl relative ' + 
                       (isGuaranteed 
                         ? 'bg-slate-900/90 border-amber-500/50 shadow-amber-950/20' 
                         : 'bg-slate-900/80 border-slate-800 hover:border-slate-700')}
@@ -510,10 +613,22 @@ export default function PlannerToolsView() {
                               : 'bg-slate-950 text-slate-300 border-slate-800'))}>
                           {prod.rankTag}
                         </span>
-                        <span className="text-xs font-extrabold text-sky-400 font-sans flex items-center space-x-1">
-                          <Building className="w-3.5 h-3.5" />
-                          <span>{prod.companyName}</span>
-                        </span>
+
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs font-extrabold text-sky-400 font-sans flex items-center space-x-1">
+                            <Building className="w-3.5 h-3.5" />
+                            <span>{prod.companyName}</span>
+                          </span>
+                          {isAdmin && (
+                            <button
+                              onClick={() => handleOpenEditProduct(prod)}
+                              title="관리자: 이율 및 상품 정보 수정"
+                              className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-amber-300 transition-colors"
+                            >
+                              <Edit3 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       {/* Name & Product Full Name */}
@@ -581,7 +696,7 @@ export default function PlannerToolsView() {
           <div className="glass-panel p-5 rounded-3xl border border-slate-800 space-y-3 bg-slate-900/80 shadow-xl overflow-x-auto custom-scrollbar">
             <h4 className="text-xs font-bold text-white flex items-center space-x-2">
               <FileText className="w-4 h-4 text-indigo-400" />
-              <span>금융사별 대표 연금 상품 정밀 대조표</span>
+              <span>보험사별 대표 연금 상품 정밀 대조표</span>
             </h4>
 
             <table className="w-full text-left text-xs border-collapse min-w-[600px]">
@@ -615,6 +730,116 @@ export default function PlannerToolsView() {
 
         </div>
       </div>
+
+      {/* ======================================================== */}
+      {/* ADMIN EDIT PRODUCT MODAL                                 */}
+      {/* ======================================================== */}
+      {editingProduct && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-[#0f172a] border border-amber-500/50 rounded-3xl p-6 w-full max-w-lg space-y-5 shadow-2xl shadow-amber-950/80">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="font-bold text-base text-white flex items-center space-x-2">
+                <ShieldAlert className="w-5 h-5 text-amber-400" />
+                <span>[관리자 전용] 연금 상품 & 이율 수정</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditingProduct(null)}
+                className="text-slate-400 hover:text-white text-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProductEdit} className="space-y-3.5 text-xs">
+              <div>
+                <label className="text-slate-300 font-bold block mb-1">보험사명</label>
+                <input
+                  type="text"
+                  value={editFormData.company_name}
+                  onChange={(e) => setEditFormData({ ...editFormData, company_name: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-bold"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-slate-300 font-bold block mb-1">대표 상품명</label>
+                <input
+                  type="text"
+                  value={editFormData.product_name}
+                  onChange={(e) => setEditFormData({ ...editFormData, product_name: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-bold"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-300 font-bold block mb-1">이율 표기 텍스트</label>
+                  <input
+                    type="text"
+                    value={editFormData.rate_text}
+                    onChange={(e) => setEditFormData({ ...editFormData, rate_text: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="text-slate-300 font-bold block mb-1">연산용 이율 (예: 0.055 = 5.5%)</label>
+                  <input
+                    type="number"
+                    step="0.001"
+                    value={editFormData.id === 'guaranteed' ? editFormData.guaranteed_rate : editFormData.annual_rate}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      if (editFormData.id === 'guaranteed') {
+                        setEditFormData({ ...editFormData, guaranteed_rate: val });
+                      } else {
+                        setEditFormData({ ...editFormData, annual_rate: val });
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-slate-300 font-bold block mb-1">세제 혜택 설명</label>
+                <input
+                  type="text"
+                  value={editFormData.tax_benefit}
+                  onChange={(e) => setEditFormData({ ...editFormData, tax_benefit: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white"
+                />
+              </div>
+
+              <div className="p-3 rounded-2xl bg-amber-950/40 border border-amber-500/30 text-[11px] text-amber-300 space-y-1">
+                <p className="font-bold">⚠️ 클라우드 실시간 전파 안내</p>
+                <p>수정 후 저장 시 Supabase 클라우드에 자동 동기화되어 모든 설계사의 WLB CRM 프로그램에 즉시 반영됩니다.</p>
+              </div>
+
+              <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setEditingProduct(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-slate-950 font-extrabold shadow-lg shadow-amber-600/30"
+                >
+                  클라우드 저장 및 배포
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
