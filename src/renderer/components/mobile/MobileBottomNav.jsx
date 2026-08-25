@@ -20,7 +20,7 @@ export default function MobileBottomNav({ onOpenDrawer }) {
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur-lg border-t border-slate-800/80 px-2 py-1.5 flex items-center justify-around shadow-2xl safe-bottom">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur-lg border-t border-slate-800/90 px-3 py-2 flex items-center justify-around shadow-2xl safe-bottom">
       {mainTabs.map((t) => {
         const Icon = t.icon;
         const isActive = activeTab === t.id;
@@ -29,20 +29,20 @@ export default function MobileBottomNav({ onOpenDrawer }) {
           <button
             key={t.id}
             onClick={() => setActiveTab(t.id)}
-            className={'flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all relative ' + 
+            className={'flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all relative min-w-[58px] ' + 
               (isActive 
-                ? 'text-indigo-400 font-extrabold scale-105' 
-                : 'text-slate-500 hover:text-slate-300 font-medium')}
+                ? 'text-indigo-400 font-black scale-105' 
+                : 'text-slate-400 hover:text-slate-200 font-semibold')}
           >
             {t.badge && !isActive && (
-              <span className="absolute -top-1 right-1 px-1 py-0.2 bg-amber-500 text-[8px] font-black text-slate-950 rounded-full animate-bounce">
+              <span className="absolute -top-0.5 right-2 px-1.5 py-0.2 bg-amber-500 text-[9px] font-black text-slate-950 rounded-full animate-bounce">
                 {t.badge}
               </span>
             )}
-            <div className={'p-1 rounded-xl transition-all ' + (isActive ? 'bg-indigo-950/80 border border-indigo-500/40 text-indigo-300 shadow-md shadow-indigo-600/30' : '')}>
-              <Icon className="w-4 h-4" />
+            <div className={'p-1.5 rounded-xl transition-all ' + (isActive ? 'bg-indigo-950/90 border border-indigo-500/50 text-indigo-300 shadow-md shadow-indigo-600/30' : '')}>
+              <Icon className="w-5 h-5" />
             </div>
-            <span className="text-[10px] mt-0.5 tracking-tight">
+            <span className={`mt-0.5 tracking-tight ${isActive ? 'text-xs text-indigo-300 font-extrabold' : 'text-[11px] text-slate-400'}`}>
               {t.label}
             </span>
           </button>
@@ -52,12 +52,12 @@ export default function MobileBottomNav({ onOpenDrawer }) {
       {/* 5th Tab: Full Menu Drawer Trigger */}
       <button
         onClick={onOpenDrawer}
-        className="flex flex-col items-center justify-center py-1 px-2 rounded-2xl text-slate-400 hover:text-indigo-300 font-medium active:scale-95 transition-all"
+        className="flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl text-slate-400 hover:text-indigo-300 font-semibold active:scale-95 transition-all min-w-[58px]"
       >
-        <div className="p-1 rounded-xl bg-slate-900 border border-slate-800">
-          <Menu className="w-4 h-4 text-indigo-400" />
+        <div className="p-1.5 rounded-xl bg-slate-900 border border-slate-800">
+          <Menu className="w-5 h-5 text-indigo-400" />
         </div>
-        <span className="text-[10px] mt-0.5 tracking-tight text-indigo-300 font-bold">
+        <span className="text-[11px] mt-0.5 tracking-tight text-indigo-300 font-bold">
           전체메뉴
         </span>
       </button>

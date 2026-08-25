@@ -48,46 +48,46 @@ export default function MobileDrawer({ isOpen, onClose }) {
         {/* Top Header */}
         <div>
           <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-            <div className="flex items-center space-x-2.5">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-amber-500 flex items-center justify-center text-white font-black text-sm shadow-md">
+            <div className="flex items-center space-x-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-amber-500 flex items-center justify-center text-white font-black text-base shadow-md">
                 W
               </div>
               <div>
-                <h3 className="font-extrabold text-sm text-white">WLB CRM TOOL</h3>
-                <p className="text-[10px] text-slate-400">모바일 전체 메뉴</p>
+                <h3 className="font-black text-base text-white">WLB CRM TOOL</h3>
+                <p className="text-xs text-slate-400">모바일 전체 메뉴</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
+              className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white flex items-center justify-center min-w-[38px] min-h-[38px]"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
 
           {/* User Profile Card */}
-          <div className="my-4 p-3 bg-slate-900/90 rounded-2xl border border-slate-800 flex items-center justify-between">
-            <div className="flex items-center space-x-2.5">
-              <div className="w-9 h-9 rounded-xl bg-indigo-950 border border-indigo-500/40 flex items-center justify-center text-indigo-300 font-bold text-sm">
+          <div className="my-4 p-3.5 bg-slate-900/90 rounded-2xl border border-slate-800 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-950 border border-indigo-500/40 flex items-center justify-center text-indigo-300 font-bold text-base">
                 {currentUser?.name ? currentUser.name[0] : '설'}
               </div>
               <div>
-                <div className="flex items-center space-x-1.5">
-                  <span className="font-bold text-xs text-white">{currentUser?.name || '설계사'}</span>
-                  <span className="px-1.5 py-0.2 bg-indigo-950 text-indigo-300 border border-indigo-800/60 rounded text-[9px] font-mono">
+                <div className="flex items-center space-x-2">
+                  <span className="font-extrabold text-sm text-white">{currentUser?.name || '설계사'}</span>
+                  <span className="px-2 py-0.5 bg-indigo-950 text-indigo-300 border border-indigo-800/60 rounded-md text-[10px] font-mono font-bold">
                     {currentUser?.role || 'FA'}
                   </span>
                 </div>
-                <p className="text-[10px] text-slate-400 truncate max-w-[170px]">
+                <p className="text-xs text-slate-300 truncate max-w-[180px] font-medium mt-0.5">
                   {currentUser?.org_name || '본사 총괄 사업단'}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* 10 Major Menu Items */}
-          <div className="space-y-1">
-            <p className="text-[10px] font-bold text-slate-500 uppercase px-2 mb-1 tracking-wider">전체 메뉴 목록</p>
+          {/* 6 Major Menu Items */}
+          <div className="space-y-1.5">
+            <p className="text-xs font-bold text-slate-400 uppercase px-2 mb-2 tracking-wider">주요 실무 메뉴 (6종)</p>
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -96,26 +96,26 @@ export default function MobileDrawer({ isOpen, onClose }) {
                 <button
                   key={item.id}
                   onClick={() => handleSelectTab(item.id)}
-                  className={`w-full p-2.5 rounded-xl flex items-center justify-between transition-all text-left ${
+                  className={`w-full p-3 rounded-2xl flex items-center justify-between transition-all text-left ${
                     isActive 
-                      ? 'bg-indigo-950/80 border border-indigo-500/50 text-white font-bold shadow-md shadow-indigo-950' 
-                      : 'hover:bg-slate-900/60 text-slate-300'
+                      ? 'bg-indigo-950/90 border border-indigo-500/60 text-white font-extrabold shadow-lg shadow-indigo-950/60' 
+                      : 'hover:bg-slate-900/80 text-slate-200 bg-slate-900/30 border border-slate-800/40'
                   }`}
                 >
-                  <div className="flex items-center space-x-3">
-                    <div className={`p-1.5 rounded-lg ${isActive ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-slate-400'}`}>
-                      <Icon className="w-4 h-4" />
+                  <div className="flex items-center space-x-3.5">
+                    <div className={`p-2 rounded-xl ${isActive ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-900 text-indigo-400 border border-slate-800'}`}>
+                      <Icon className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="flex items-center space-x-1.5">
-                        <span className="text-xs">{item.label}</span>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-bold">{item.label}</span>
                         {item.badge && (
-                          <span className="px-1.5 py-0.2 bg-amber-500 text-[8px] font-black text-slate-950 rounded-full">
+                          <span className="px-1.5 py-0.2 bg-amber-500 text-[9px] font-black text-slate-950 rounded-full">
                             {item.badge}
                           </span>
                         )}
                       </div>
-                      <p className="text-[9px] text-slate-500 line-clamp-1">{item.desc}</p>
+                      <p className="text-xs text-slate-400 line-clamp-1 mt-0.5">{item.desc}</p>
                     </div>
                   </div>
                 </button>
@@ -131,7 +131,7 @@ export default function MobileDrawer({ isOpen, onClose }) {
               onClose();
               logout();
             }}
-            className="w-full py-2.5 bg-rose-950/50 hover:bg-rose-900/60 text-rose-300 border border-rose-800/60 rounded-xl text-xs font-bold flex items-center justify-center space-x-2 transition-all active:scale-95"
+            className="w-full py-3 rounded-2xl bg-red-950/40 hover:bg-red-950/60 border border-red-900/50 text-red-300 font-extrabold text-sm flex items-center justify-center space-x-2 transition-all active:scale-98 shadow-md"
           >
             <LogOut className="w-4 h-4" />
             <span>시스템 로그아웃</span>

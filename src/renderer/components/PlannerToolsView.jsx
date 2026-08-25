@@ -338,7 +338,7 @@ export default function PlannerToolsView() {
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
                 placeholder="예: 홍길동"
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500 font-bold"
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500 font-bold"
               />
             </div>
 
@@ -350,18 +350,18 @@ export default function PlannerToolsView() {
                   type="date"
                   value={birthDate}
                   onChange={(e) => setBirthDate(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500 font-mono"
                 />
-                <p className="text-[11px] text-indigo-400 font-bold">만 {currentAge}세</p>
+                <p className="text-xs text-indigo-400 font-extrabold">만 {currentAge}세</p>
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-300">성별</label>
-                <div className="grid grid-cols-2 gap-1.5">
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setGender('male')}
-                    className={'py-2 rounded-xl text-xs font-bold border transition-all ' + 
+                    className={'py-2.5 rounded-xl text-xs font-extrabold border transition-all ' + 
                       (gender === 'male' 
                         ? 'bg-blue-950 text-blue-300 border-blue-600 shadow-sm' 
                         : 'bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-800')}
@@ -371,7 +371,7 @@ export default function PlannerToolsView() {
                   <button
                     type="button"
                     onClick={() => setGender('female')}
-                    className={'py-2 rounded-xl text-xs font-bold border transition-all ' + 
+                    className={'py-2.5 rounded-xl text-xs font-extrabold border transition-all ' + 
                       (gender === 'female' 
                         ? 'bg-pink-950 text-pink-300 border-pink-600 shadow-sm' 
                         : 'bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-800')}
@@ -386,25 +386,25 @@ export default function PlannerToolsView() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-300 flex items-center space-x-1">
-                  <DollarSign className="w-3.5 h-3.5 text-amber-400" />
+                  <DollarSign className="w-4 h-4 text-amber-400" />
                   <span>월 납입 금액</span>
                 </label>
-                <span className="text-sm font-extrabold text-amber-300 font-mono">
+                <span className="text-base font-black text-amber-300 font-mono">
                   {monthlyPayManwon.toLocaleString()}만원
                 </span>
               </div>
 
               {/* Quick Select Buttons */}
-              <div className="grid grid-cols-4 gap-1.5">
+              <div className="grid grid-cols-4 gap-2">
                 {[20, 30, 50, 70, 100, 150, 200, 300].map((amt) => (
                   <button
                     key={amt}
                     type="button"
                     onClick={() => setMonthlyPayManwon(amt)}
-                    className={'py-1.5 rounded-lg text-xs font-bold border transition-all ' + 
+                    className={'py-2 rounded-xl text-xs font-black border transition-all ' + 
                       (monthlyPayManwon === amt 
                         ? 'bg-amber-600 text-white border-amber-500 shadow-md' 
-                        : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200 hover:bg-slate-800')}
+                        : 'bg-slate-950 text-slate-300 border-slate-800 hover:text-white hover:bg-slate-800')}
                   >
                     {amt}만
                   </button>
@@ -427,24 +427,24 @@ export default function PlannerToolsView() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-300 flex items-center space-x-1">
-                  <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+                  <Calendar className="w-4 h-4 text-indigo-400" />
                   <span>납입 기간</span>
                 </label>
-                <span className="text-xs font-extrabold text-indigo-300 font-mono">
+                <span className="text-sm font-black text-indigo-300 font-mono">
                   {payYears}년납
                 </span>
               </div>
 
-              <div className="grid grid-cols-5 gap-1.5">
+              <div className="grid grid-cols-5 gap-2">
                 {[5, 7, 10, 15, 20].map((yr) => (
                   <button
                     key={yr}
                     type="button"
                     onClick={() => setPayYears(yr)}
-                    className={'py-1.5 rounded-lg text-xs font-bold border transition-all ' + 
+                    className={'py-2 rounded-xl text-xs font-black border transition-all ' + 
                       (payYears === yr 
                         ? 'bg-indigo-600 text-white border-indigo-500 shadow-md' 
-                        : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200 hover:bg-slate-800')}
+                        : 'bg-slate-950 text-slate-300 border-slate-800 hover:text-white hover:bg-slate-800')}
                   >
                     {yr}년
                   </button>

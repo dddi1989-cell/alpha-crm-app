@@ -422,152 +422,131 @@ export default function ClaimsView() {
 
       {/* Insurance Companies Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {filteredCompanies.map((company) => {
-          const isSpecialFax = company.fax.includes('가상번호') || company.fax.includes('콜센터') || company.fax.includes('종료') || company.fax.includes('문의');
-          return (
-            <div
-              key={company.id}
-              className="glass-panel p-5 rounded-2xl border border-slate-800 hover:border-indigo-500/40 transition-all space-y-4 group flex flex-col justify-between"
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-all">
-                      <Shield className="w-5 h-5" />
-                    </div>
-                    <h3 className="font-bold text-base text-white">{company.name}</h3>
+        {filteredCompanies.map((company) => (
+          <div
+            key={company.id}
+            className="glass-panel p-4 sm:p-5 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all space-y-4 flex flex-col justify-between group shadow-lg bg-slate-900/50"
+          >
+            <div>
+              {/* Top Company Badge & Type */}
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-950/80 border border-indigo-500/40 flex items-center justify-center text-indigo-300 font-bold text-sm">
+                    {company.name[0]}
                   </div>
-                  <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full border ${
-                    company.type === '손해보험'
-                      ? 'bg-blue-950/80 text-blue-400 border-blue-800/60'
-                      : 'bg-purple-950/80 text-purple-400 border-purple-800/60'
-                  }`}>
-                    {company.type}
-                  </span>
-                </div>
-
-                {/* FAX Details */}
-                <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800/80 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-1.5 text-xs text-slate-400">
-                      <Printer className="w-3.5 h-3.5 text-amber-400" />
-                      <span>청구 접수 FAX:</span>
-                    </div>
-                    <button
-                      onClick={() => handleCopyFax(company.fax, company.id)}
-                      className="text-xs text-indigo-400 hover:text-indigo-300 font-medium flex items-center space-x-1 px-2 py-0.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 transition-all"
-                      title="FAX 번호 또는 안내 문구 복사"
-                    >
-                      {copiedFax === company.id ? (
-                        <>
-                          <Check className="w-3 h-3 text-emerald-400" />
-                          <span className="text-emerald-400">복사됨!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3 h-3" />
-                          <span>복사</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                  <span className={`text-xs font-bold block tracking-wide ${
-                    isSpecialFax ? 'text-emerald-400 font-sans' : 'text-amber-300 font-mono text-sm'
-                  }`}>
-                    {company.fax}
-                  </span>
-                </div>
-
-                {/* Phone & Website Buttons */}
-                <div className="space-y-2.5 px-1 text-xs text-slate-400">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-1.5">
-                      <Phone className="w-3.5 h-3.5 text-slate-500" />
-                      <span>고객센터:</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="font-semibold text-slate-200 font-mono">{company.tel}</span>
-                      <a
-                        href={`tel:${company.tel.replace(/[^0-9]/g, '')}`}
-                        className="px-2 py-0.5 bg-emerald-950 text-emerald-300 border border-emerald-800/60 rounded-md font-bold text-[10px] hover:bg-emerald-900 transition-all flex items-center space-x-1"
-                        title="전화 연결"
-                      >
-                        <Phone className="w-2.5 h-2.5" />
-                        <span>통화</span>
-                      </a>
-                    </div>
-                  </div>
-
-                  {/* Official Website & Terms (약관보러가기) Action Buttons */}
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/60">
-                    {/* 공식홈페이지 버튼 */}
-                    <button
-                      onClick={() => handleOpenUrl(company.url)}
-                      className="py-2 px-2.5 bg-slate-800/90 hover:bg-slate-700 text-blue-400 hover:text-blue-300 border border-blue-500/30 hover:border-blue-400/60 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all shadow-sm active:scale-95 group/btn"
-                      title={`${company.name} 공식 홈페이지 열기`}
-                    >
-                      <Globe className="w-3.5 h-3.5 text-blue-400 group-hover/btn:rotate-12 transition-transform" />
-                      <span>공식홈페이지</span>
-                    </button>
-
-                    {/* 약관보러가기 버튼 */}
-                    {company.termsUrl ? (
-                      <button
-                        onClick={() => handleOpenUrl(company.termsUrl)}
-                        className="py-2 px-2.5 bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-400 hover:text-emerald-300 border border-emerald-500/30 hover:border-emerald-400/60 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all shadow-sm active:scale-95 group/btn"
-                        title={`${company.name} 상품공시실 및 약관 페이지 열기`}
-                      >
-                        <BookOpen className="w-3.5 h-3.5 text-emerald-400 group-hover/btn:scale-110 transition-transform" />
-                        <span>약관보러가기</span>
-                      </button>
-                    ) : (
-                      <div className="relative group/terms flex">
-                        <button
-                          onClick={() => alert(`[${company.name}] 약관 확인 경로 안내:\n${company.termsGuide || '홈페이지>공시실>상품공시'}`)}
-                          className="w-full py-2 px-2.5 bg-amber-950/30 hover:bg-amber-900/50 text-amber-400 hover:text-amber-300 border border-amber-500/30 hover:border-amber-400/60 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all active:scale-95"
-                          title={company.termsGuide || '홈페이지>공시실>상품공시'}
-                        >
-                          <BookOpen className="w-3.5 h-3.5 text-amber-400" />
-                          <span>약관보러가기</span>
-                        </button>
-                        
-                        {/* Hover Tooltip for Hanwha Life */}
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/terms:flex flex-col items-center z-30 pointer-events-none">
-                          <div className="bg-slate-950 border border-amber-500/60 text-amber-300 text-[11px] font-bold px-3 py-1.5 rounded-lg shadow-xl whitespace-nowrap flex items-center space-x-1">
-                            <span>경로: {company.termsGuide || '홈페이지>공시실>상품공시'}</span>
-                          </div>
-                          <div className="w-2 h-2 bg-slate-950 border-r border-b border-amber-500/60 rotate-45 -mt-1"></div>
-                        </div>
-                      </div>
-                    )}
+                  <div>
+                    <h3 className="font-['Outfit',sans-serif] font-black text-base text-white tracking-tight">
+                      {company.name}
+                    </h3>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-md font-extrabold ${
+                      company.type === '생명보험' 
+                        ? 'bg-blue-950 text-blue-300 border border-blue-800/60' 
+                        : 'bg-emerald-950 text-emerald-300 border border-emerald-800/60'
+                    }`}>
+                      {company.type}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              {/* PDF Action Buttons (Desktop Electron Only) */}
-              {isElectron && (
-                <div className="pt-3 border-t border-slate-800 grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => handleOpenDirectPdf(company)}
-                    className="py-2 px-3 bg-slate-800/90 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition-all flex items-center justify-center space-x-1.5 border border-slate-700"
-                    title="공식 PDF 서식 즉시 열기"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>PDF 즉시 열기</span>
-                  </button>
-                  <button
-                    onClick={() => handleDownloadForm(company)}
-                    className="py-2 px-3 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 text-xs font-semibold rounded-xl transition-all flex items-center justify-center space-x-1.5 group-hover:bg-indigo-600 group-hover:text-white"
-                    title="공식 PDF 청구서 다운로드"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>PDF 다운로드</span>
-                  </button>
+              {/* FAX & Customer Center Info */}
+              <div className="mt-3.5 space-y-2.5 px-1 text-xs text-slate-300">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 font-medium">청구 접수 FAX:</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="font-mono font-bold text-sm text-amber-300">{company.fax}</span>
+                    {company.fax !== '고객센터접수' && (
+                      <button
+                        onClick={() => handleCopyFax(company.fax, company.id)}
+                        className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-all flex items-center space-x-1 text-[11px] font-bold"
+                        title="FAX 번호 복사"
+                      >
+                        {copiedFax === company.id ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                        <span>{copiedFax === company.id ? '복사됨' : '복사'}</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
-              )}
+
+                <div className="flex items-center justify-between pt-1">
+                  <div className="flex items-center space-x-1.5 text-slate-400 font-medium">
+                    <Phone className="w-3.5 h-3.5 text-slate-400" />
+                    <span>고객센터:</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="font-bold text-sm text-white font-mono">{company.tel}</span>
+                    <a
+                      href={`tel:${company.tel.replace(/[^0-9]/g, '')}`}
+                      className="px-2.5 py-1 bg-emerald-950 text-emerald-300 border border-emerald-700/80 rounded-lg font-black text-xs hover:bg-emerald-900 transition-all flex items-center space-x-1 shadow-sm"
+                      title="전화 연결"
+                    >
+                      <Phone className="w-3 h-3 text-emerald-400" />
+                      <span>통화</span>
+                    </a>
+                  </div>
+                </div>
+
+                {/* Official Website & Terms Action Buttons */}
+                <div className="grid grid-cols-2 gap-2 pt-3 border-t border-slate-800/80">
+                  <button
+                    onClick={() => handleOpenUrl(company.url)}
+                    className="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-blue-300 border border-blue-500/40 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all shadow-sm active:scale-95"
+                    title={`${company.name} 공식 홈페이지 열기`}
+                  >
+                    <Globe className="w-3.5 h-3.5 text-blue-400" />
+                    <span>공식홈페이지</span>
+                  </button>
+
+                  {company.termsUrl ? (
+                    <button
+                      onClick={() => handleOpenUrl(company.termsUrl)}
+                      className="py-2.5 px-3 bg-emerald-950/50 hover:bg-emerald-900/70 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all shadow-sm active:scale-95"
+                      title={`${company.name} 상품공시실 및 약관 페이지 열기`}
+                    >
+                      <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>약관보러가기</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => alert(`[${company.name}] 약관 확인 경로 안내:\n${company.termsGuide || '홈페이지>공시실>상품공시'}`)}
+                      className="w-full py-2.5 px-3 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 border border-amber-500/40 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all active:scale-95"
+                      title={company.termsGuide || '홈페이지>공시실>상품공시'}
+                    >
+                      <BookOpen className="w-3.5 h-3.5 text-amber-400" />
+                      <span>약관보러가기</span>
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
-          );
-        })}
+
+            {/* PDF Action Buttons (Desktop Electron Only) */}
+            {isElectron && (
+              <div className="pt-3 border-t border-slate-800 grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => handleOpenDirectPdf(company)}
+                  className="py-2 px-3 bg-slate-800/90 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition-all flex items-center justify-center space-x-1.5 border border-slate-700"
+                  title="공식 PDF 서식 즉시 열기"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>PDF 즉시 열기</span>
+                </button>
+                <button
+                  onClick={() => handleDownloadForm(company)}
+                  className="py-2 px-3 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 text-xs font-semibold rounded-xl transition-all flex items-center justify-center space-x-1.5 group-hover:bg-indigo-600 group-hover:text-white"
+                  title="공식 PDF 청구서 다운로드"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>PDF 다운로드</span>
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
 
       {/* Claim Form Preview & Print Modal */}

@@ -342,16 +342,16 @@ export default function CustomerView() {
             </h2>
             
             {/* Sub-tab 3-level Buttons */}
-            <div className="overflow-x-auto no-scrollbar py-0.5">
-              <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs font-semibold shrink-0 space-x-1">
+            <div className="overflow-x-auto no-scrollbar py-1">
+              <div className="flex bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800 text-xs font-bold shrink-0 space-x-1.5">
                 <button
                   onClick={() => {
                     setActiveSubTab('my-customers');
                     setPoolGroupFilter('');
                   }}
-                  className={`px-3 py-1.5 rounded-lg transition-all whitespace-nowrap ${
+                  className={`px-3.5 py-2 rounded-xl transition-all whitespace-nowrap ${
                     activeSubTab === 'my-customers'
-                      ? 'bg-blue-600 text-white shadow-md'
+                      ? 'bg-blue-600 text-white shadow-md font-extrabold'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
@@ -360,9 +360,9 @@ export default function CustomerView() {
 
                 <button
                   onClick={() => setActiveSubTab('my-pool')}
-                  className={`px-3 py-1.5 rounded-lg transition-all whitespace-nowrap ${
+                  className={`px-3.5 py-2 rounded-xl transition-all whitespace-nowrap ${
                     activeSubTab === 'my-pool'
-                      ? 'bg-amber-600 text-white shadow-md'
+                      ? 'bg-amber-600 text-white shadow-md font-extrabold'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
@@ -374,9 +374,9 @@ export default function CustomerView() {
                     setActiveSubTab('all-customers');
                     setPoolGroupFilter('');
                   }}
-                  className={`px-3 py-1.5 rounded-lg transition-all whitespace-nowrap ${
+                  className={`px-3.5 py-2 rounded-xl transition-all whitespace-nowrap ${
                     activeSubTab === 'all-customers'
-                      ? 'bg-emerald-600 text-white shadow-md'
+                      ? 'bg-emerald-600 text-white shadow-md font-extrabold'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
@@ -578,58 +578,59 @@ export default function CustomerView() {
             </div>
 
             {/* Mobile Card List View (Visible only on < md) */}
-            <div className="md:hidden divide-y divide-slate-800/60">
+            <div className="md:hidden divide-y divide-slate-800/80">
               {table.getRowModel().rows.map((row) => {
                 const cust = row.original;
                 return (
-                  <div key={row.id} className="p-4 space-y-3 bg-slate-900/40 hover:bg-slate-800/30 transition-colors">
+                  <div key={row.id} className="p-4 space-y-3 bg-slate-900/50 hover:bg-slate-800/40 transition-colors">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-indigo-950 border border-indigo-500/40 flex items-center justify-center text-indigo-300 font-bold text-sm">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-11 h-11 rounded-2xl bg-indigo-950/90 border border-indigo-500/50 flex items-center justify-center text-indigo-300 font-black text-base shadow-md shrink-0">
                           {cust.name ? cust.name[0] : '고'}
                         </div>
                         <div>
-                          <div className="flex items-center space-x-1.5">
-                            <span className="font-bold text-sm text-white">{cust.name}</span>
+                          <div className="flex items-center space-x-2">
+                            <span className="font-black text-base text-white">{cust.name}</span>
                             {cust.is_pool ? (
-                              <span className="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800/60 text-[9px] font-bold">
+                              <span className="px-2 py-0.5 rounded-md bg-amber-950 text-amber-300 border border-amber-800/80 text-[10px] font-bold">
                                 POOL {cust.pool_group || 'A'}
                               </span>
                             ) : (
-                              <span className="px-1.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800/60 text-[9px] font-bold">
+                              <span className="px-2 py-0.5 rounded-md bg-blue-950 text-blue-300 border border-blue-800/80 text-[10px] font-bold">
                                 {cust.status || 'Active'}
                               </span>
                             )}
                           </div>
-                          <p className="text-[11px] text-slate-400">
+                          <p className="text-xs text-slate-300 font-medium mt-0.5">
                             {cust.relationship ? `[${cust.relationship}] ` : ''}{cust.birth_date ? `만 ${new Date().getFullYear() - new Date(cust.birth_date).getFullYear()}세` : '생일미입력'}
+                            {cust.phone ? ` · ${cust.phone}` : ''}
                           </p>
                         </div>
                       </div>
 
                       {/* Quick Mobile Call & SMS Buttons */}
-                      <div className="flex items-center space-x-1.5">
+                      <div className="flex items-center space-x-2 shrink-0">
                         {cust.phone && (
                           <>
                             <a
                               href={`tel:${cust.phone}`}
-                              className="p-2 rounded-xl bg-emerald-950 text-emerald-300 border border-emerald-800/60 active:scale-95 transition-all"
+                              className="p-2.5 rounded-xl bg-emerald-950/90 text-emerald-300 border border-emerald-700/80 active:scale-95 transition-all shadow-md flex items-center justify-center min-w-[38px] min-h-[38px]"
                               title="전화 걸기"
                             >
-                              <Phone className="w-3.5 h-3.5" />
+                              <Phone className="w-4 h-4 text-emerald-400" />
                             </a>
                             <a
                               href={`sms:${cust.phone}`}
-                              className="p-2 rounded-xl bg-blue-950 text-blue-300 border border-blue-800/60 active:scale-95 transition-all"
+                              className="p-2.5 rounded-xl bg-blue-950/90 text-blue-300 border border-blue-700/80 active:scale-95 transition-all shadow-md flex items-center justify-center min-w-[38px] min-h-[38px]"
                               title="문자 보내기"
                             >
-                              <Mail className="w-3.5 h-3.5" />
+                              <Mail className="w-4 h-4 text-blue-400" />
                             </a>
                           </>
                         )}
                         <button
                           onClick={() => openDetailModal(cust)}
-                          className="p-2 rounded-xl bg-slate-800 text-slate-300 border border-slate-700 active:scale-95 transition-all text-xs font-bold"
+                          className="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 active:scale-95 transition-all text-xs font-extrabold shadow-sm min-h-[38px]"
                         >
                           상세
                         </button>
@@ -638,13 +639,13 @@ export default function CustomerView() {
 
                     {/* Insurance details or note summary */}
                     {cust.insurance_provider && (
-                      <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-xs space-y-1">
-                        <div className="flex items-center space-x-1 font-bold text-indigo-400">
-                          <Shield className="w-3 h-3" />
+                      <div className="p-3 rounded-xl bg-slate-950/90 border border-slate-800/90 text-xs space-y-1">
+                        <div className="flex items-center space-x-1.5 font-extrabold text-indigo-300">
+                          <Shield className="w-3.5 h-3.5 text-indigo-400" />
                           <span>{cust.insurance_provider}</span>
                         </div>
                         {cust.insurance_details && (
-                          <p className="text-[11px] text-slate-300 line-clamp-1">{cust.insurance_details}</p>
+                          <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">{cust.insurance_details}</p>
                         )}
                       </div>
                     )}

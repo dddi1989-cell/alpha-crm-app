@@ -175,84 +175,65 @@ export default function TodayMarketView() {
   const filteredNews = newsTab === 'domestic' ? domesticNews : (newsTab === 'global' ? globalNews : allNews);
 
   return (
-    <div className="p-8 space-y-7 animate-fadeIn max-w-7xl mx-auto font-['Inter',sans-serif]">
+    <div className="p-4 sm:p-8 space-y-5 sm:space-y-7 animate-fadeIn max-w-7xl mx-auto font-['Inter',sans-serif]">
       {/* 1. Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/30">
-              <TrendingUp className="w-5 h-5" />
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/30 shrink-0">
+              <TrendingUp className="w-6 h-6" />
             </div>
             <div>
-              <div className="flex items-center space-x-2.5">
-                <h2 className="font-['Outfit',sans-serif] text-2xl font-bold text-white tracking-tight">
+              <div className="flex items-center space-x-2">
+                <h2 className="font-['Outfit',sans-serif] text-xl sm:text-2xl font-black text-white tracking-tight">
                   오늘의 증시/시황
                 </h2>
-                <span className="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-gradient-to-r from-indigo-950 to-purple-950 text-indigo-300 border border-indigo-700/60 shadow-sm flex items-center space-x-1">
+                <span className="text-[10px] sm:text-xs font-black px-2 py-0.5 rounded-full bg-gradient-to-r from-indigo-950 to-purple-950 text-indigo-300 border border-indigo-700/60 shadow-sm flex items-center space-x-1">
                   <Sparkles className="w-3 h-3 text-amber-400 animate-pulse" />
-                  <span>실시간 라이브 카드뉴스</span>
+                  <span>실시간 라이브</span>
                 </span>
               </div>
-              <p className="text-slate-400 text-xs mt-0.5">
-                네이버 금융 실시간 시세 및 외신 한국어 번역 리포트가 포함된 스마트 대시보드입니다.
+              <p className="text-slate-300 text-xs mt-0.5 font-medium">
+                국내 및 해외 주요 지수, 미국 빅테크 시세, 글로벌 외신 속보를 제공합니다.
               </p>
             </div>
           </div>
         </div>
 
         {/* Live Status, Date Selector & Refresh Controls */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Live Auto-Refresh Indicator */}
           <div 
             onClick={() => setIsLiveAutoRefresh(!isLiveAutoRefresh)}
-            className={'flex items-center space-x-2 px-3 py-1.5 rounded-xl border transition-all cursor-pointer select-none text-xs font-bold shadow ' + 
+            className={'flex items-center space-x-2 px-3.5 py-2 rounded-xl border transition-all cursor-pointer select-none text-xs font-extrabold shadow ' + 
               (isLiveAutoRefresh 
-                ? 'bg-emerald-950/70 border-emerald-600/50 text-emerald-300 hover:bg-emerald-900/60' 
-                : 'bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-800')}
+                ? 'bg-emerald-950/80 border-emerald-500/60 text-emerald-300' 
+                : 'bg-slate-900 border-slate-700 text-slate-400')}
             title="클릭하여 30초 자동 실시간 갱신 ON/OFF"
           >
-            <span className="relative flex h-2 w-2">
+            <span className="relative flex h-2.5 w-2.5">
               {isLiveAutoRefresh && (
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               )}
-              <span className={'relative inline-flex rounded-full h-2 w-2 ' + (isLiveAutoRefresh ? 'bg-emerald-400' : 'bg-slate-500')}></span>
+              <span className={'relative inline-flex rounded-full h-2.5 w-2.5 ' + (isLiveAutoRefresh ? 'bg-emerald-400' : 'bg-slate-500')}></span>
             </span>
-            <span>{isLiveAutoRefresh ? `실시간 갱신 (${countdown}s)` : '자동 갱신 일시정지'}</span>
+            <span>{isLiveAutoRefresh ? `실시간 (${countdown}s)` : '자동갱신 일시정지'}</span>
           </div>
-
-          {/* History Date Picker */}
-          {historyDates.length > 0 && (
-            <div className="flex items-center space-x-1.5 bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-300">
-              <Calendar className="w-3.5 h-3.5 text-indigo-400" />
-              <select
-                value={selectedDate}
-                onChange={(e) => handleDateChange(e.target.value)}
-                className="bg-transparent text-white font-bold focus:outline-none cursor-pointer"
-              >
-                {historyDates.map((h) => (
-                  <option key={h.date} value={h.date} className="bg-slate-900 text-white">
-                    {h.date} 시황
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
 
           {/* Refresh Button */}
           <button
             onClick={handleManualRefresh}
             disabled={refreshing}
-            className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 text-xs font-bold shadow"
-            title="즉시 새로고침"
+            className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-all active:scale-95 disabled:opacity-50 text-xs font-extrabold shadow"
           >
-            <RefreshCw className={'w-3.5 h-3.5 ' + (refreshing ? 'animate-spin text-indigo-400' : '')} />
-            <span>{refreshing ? '갱신 중...' : '새로고침'}</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+            <span>새로고침</span>
           </button>
         </div>
       </div>
 
       {/* 2. Top Live Market Ticker Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {/* KOSPI */}
         {renderTickerCard(
           'KOSPI (코스피)',
@@ -296,30 +277,26 @@ export default function TodayMarketView() {
       </div>
 
       {/* 3. Highlight 3-Line Summary Card */}
-      <div className="relative overflow-hidden p-6 rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/30 shadow-2xl space-y-4">
-        <div className="flex items-center justify-between border-b border-indigo-500/20 pb-3.5">
+      <div className="relative overflow-hidden p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/40 shadow-2xl space-y-4">
+        <div className="flex items-center justify-between border-b border-indigo-500/20 pb-3">
           <div className="flex items-center space-x-2.5">
             <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300">
               <Zap className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-extrabold text-white flex items-center space-x-2">
-                <span>오늘의 모닝 시황 3줄 핵심 요약</span>
+              <h3 className="text-sm sm:text-base font-black text-white flex items-center space-x-2">
+                <span>오늘의 시황 3줄 핵심 요약</span>
                 <span className="text-[10px] text-slate-400 font-mono">({lastLiveUpdated || briefing?.updated_at || '09:00 KST'})</span>
               </h3>
             </div>
           </div>
-          <span className="text-[11px] font-bold text-indigo-400 bg-indigo-950/80 px-2.5 py-1 rounded-full border border-indigo-800/60 flex items-center space-x-1">
-            <Clock className="w-3 h-3" />
-            <span>실시간 호가 연동</span>
-          </span>
         </div>
 
-        <div className="space-y-2.5 text-xs text-slate-200">
+        <div className="space-y-2.5 text-xs sm:text-sm text-slate-200">
           {summary3.length > 0 ? (
             summary3.map((line, idx) => (
-              <div key={idx} className="flex items-start space-x-3 p-2.5 rounded-2xl bg-slate-950/40 border border-slate-800/60 hover:border-indigo-500/40 transition-colors">
-                <span className="w-5 h-5 rounded-full bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 flex items-center justify-center font-mono font-bold text-[11px] shrink-0 mt-0.5">
+              <div key={idx} className="flex items-start space-x-3 p-3 rounded-2xl bg-slate-950/60 border border-slate-800/80 hover:border-indigo-500/50 transition-colors">
+                <span className="w-6 h-6 rounded-full bg-indigo-600/40 border border-indigo-500/60 text-indigo-300 flex items-center justify-center font-mono font-black text-xs shrink-0 mt-0.5">
                   {idx + 1}
                 </span>
                 <p className="font-semibold leading-relaxed text-slate-100 flex-1">{line}</p>
