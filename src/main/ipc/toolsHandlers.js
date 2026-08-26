@@ -701,6 +701,82 @@ function registerToolsHandlers(mainWindow) {
       return { success: false, error: err.message };
     }
   });
+
+  // ==========================================
+  // Dollar Whole Life Insurance AI Tools
+  // ==========================================
+  const { parseDollarProposalPdf } = require('../services/dollarProposalParser');
+  const { exportDollarProposalPdf } = require('../services/dollarProposalPdfGenerator');
+
+  // 1. Parse Dollar Proposal PDF
+  ipcMain.handle('tools:parse-dollar-proposal', async (event, { filePath, fileBase64, fileName }) => {
+    try {
+      let targetBuffer = null;
+      let targetFileName = fileName || '';
+
+      if (fileBase64) {
+        targetBuffer = Buffer.from(fileBase64, 'base64');
+      } else if (filePath && fs.existsSync(filePath)) {
+        targetBuffer = fs.readFileSync(filePath);
+        targetFileName = targetFileName || path.basename(filePath);
+      } else {
+        // Open file dialog
+        const result = await dialog.showOpenDialog({
+          title: '달러종신보험 가입설계서 / 제안서 PDF 파일 선택',
+          filters: [{ name: 'PDF Documents', extensions: ['pdf'] }],
+          properties: ['openFile']
+        });
+
+        if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+          return { canceled: true };
+        }
+
+        const selectedPath = result.filePaths[0];
+        targetBuffer = fs.readFileSync(selectedPath);
+        targetFileName = path.basename(selectedPath);
+      }
+
+      const parsedData = await parseDollarProposalPdf(targetBuffer, targetFileName);
+      return { success: true, ...parsedData };
+    } catch (err) {
+      console.error('parse-dollar-proposal error:', err);
+      return { success: false, error: '달러 제안서 PDF 파싱 중 오류가 발생했습니다: ' + err.message };
+    }
+  });
+
+  // 2. Generate 16:9 Presentation PDF for Dollar Proposal
+  ipcMain.handle('tools:generate-dollar-proposal-pdf', async (event, { planData, plannerInfo }) => {
+    try {
+      const clientName = planData?.clientName || 'VIP고객';
+      const defaultFileName = `WLB_달러종신_VIP전략제안서_${clientName}.pdf`;
+
+      const result = await dialog.showSaveDialog({
+        title: '달러종신 VIP 프레젠테이션 제안서 PDF 저장',
+        defaultPath: path.join(app.getPath('downloads'), defaultFileName),
+        filters: [{ name: 'PDF Documents', extensions: ['pdf'] }]
+      });
+
+      if (result.canceled || !result.filePath) {
+        return { canceled: true };
+      }
+
+      const exportRes = await exportDollarProposalPdf({
+        planData,
+        plannerInfo,
+        defaultPath: result.filePath
+      });
+
+      if (exportRes.success) {
+        shell.showItemInFolder(exportRes.filePath);
+        return { success: true, filePath: exportRes.filePath, message: 'VIP 제안서 PDF가 성공적으로 생성되었습니다!' };
+      } else {
+        return { success: false, error: exportRes.error };
+      }
+    } catch (err) {
+      console.error('generate-dollar-proposal-pdf error:', err);
+      return { success: false, error: 'PDF 생성 중 오류가 발생했습니다: ' + err.message };
+    }
+  });
 }
 
 module.exports = {

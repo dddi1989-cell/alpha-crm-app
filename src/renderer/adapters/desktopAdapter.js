@@ -63,7 +63,9 @@ export const desktopAdapter = {
     getPensionCatalog: () => window.electronAPI.tools.getPensionCatalog(),
     syncPensionCatalog: () => window.electronAPI.tools.syncPensionCatalog(),
     updatePensionProduct: (product) => window.electronAPI.tools.updatePensionProduct(product),
-    generatePresentationPdf: (planData) => window.electronAPI.tools.generatePresentationPdf(planData)
+    generatePresentationPdf: (planData) => window.electronAPI.tools.generatePresentationPdf(planData),
+    parseDollarProposal: (data) => window.electronAPI.tools.parseDollarProposal(data),
+    generateDollarProposalPdf: (data) => window.electronAPI.tools.generateDollarProposalPdf(data)
   },
   system: {
     getInfo: (params) => window.electronAPI.system.getInfo(params),

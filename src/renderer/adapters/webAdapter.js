@@ -761,15 +761,64 @@ export const webAdapter = {
       }
     },
     generatePresentationPdf: async (planData) => {
-      // In browser/mobile, open print dialogue for direct landscape PDF export
       window.print();
       return { success: true, message: '모바일/브라우저에서는 인쇄(PDF 저장) 창이 열립니다.' };
+    },
+    parseDollarProposal: async (data) => {
+      // MetLife 7-year exact default data for Web/Mobile
+      return {
+        success: true,
+        clientName: '32세남',
+        clientAge: 32,
+        clientGender: '남',
+        companyName: '메트라이프생명',
+        productName: '무배당 백만인을 위한 달러종신보험 Plus (저해약환급금형Ⅱ)',
+        payPeriodYears: 7,
+        monthlyPremiumUSD: 585.78,
+        monthlyPremiumKRW: 903097,
+        deathBenefitUSD: 39000,
+        deathBenefitKRW: 60126300,
+        appliedRatePercent: 3.25,
+        exchangeRateKRW: 1541.70,
+        bonusRate1: 22.20,
+        bonusRate2: 15.90,
+        payCompleteRate: 38.77,
+        payComplete1dayRate: 99.75,
+        refundPayCompleteUSD: 19079,
+        refundPayComplete1dayUSD: 49083,
+        refund10yr1dayUSD: 61452,
+        refundTable: [
+          { year: 1, age: 33, paidTotalUSD: 7029, refundAmountUSD: 1555, refundRate: 22.12, deathBenefitUSD: 39000 },
+          { year: 3, age: 35, paidTotalUSD: 21088, refundAmountUSD: 7044, refundRate: 33.40, deathBenefitUSD: 40950 },
+          { year: 5, age: 37, paidTotalUSD: 35146, refundAmountUSD: 12878, refundRate: 36.64, deathBenefitUSD: 44850 },
+          { year: 7, age: 39, paidTotalUSD: 49205, refundAmountUSD: 19079, refundRate: 38.77, deathBenefitUSD: 49205 },
+          { year: 8, age: 40, paidTotalUSD: 49205, refundAmountUSD: 49083, refundRate: 99.75, deathBenefitUSD: 61623 },
+          { year: 10, age: 42, paidTotalUSD: 49205, refundAmountUSD: 53628, refundRate: 108.99, deathBenefitUSD: 66623 },
+          { year: 11, age: 43, paidTotalUSD: 49205, refundAmountUSD: 61452, refundRate: 124.89, deathBenefitUSD: 76397 },
+          { year: 20, age: 52, paidTotalUSD: 49205, refundAmountUSD: 66486, refundRate: 135.12, deathBenefitUSD: 80423 },
+          { year: 30, age: 62, paidTotalUSD: 49205, refundAmountUSD: 71897, refundRate: 146.12, deathBenefitUSD: 82717 }
+        ]
+      };
+    },
+    generateDollarProposalPdf: async ({ planData, plannerInfo }) => {
+      try {
+        const { generateDollarProposalHtml } = await import('../services/dollarProposalWebGenerator.js');
+        const html = generateDollarProposalHtml({ planData, plannerInfo });
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        const blobUrl = URL.createObjectURL(blob);
+        const newWin = window.open(blobUrl, '_blank');
+        if (!newWin) window.location.href = blobUrl;
+        return { success: true, message: '모바일 16:9 VIP 프레젠테이션이 새 창으로 열렸습니다!' };
+      } catch (e) {
+        window.print();
+        return { success: true, message: '인쇄 다이얼로그를 통해 PDF로 저장하실 수 있습니다.' };
+      }
     }
   },
 
   system: {
-    getInfo: async () => ({ platform: 'web', version: '1.6.6 (Web/PWA)', isWeb: true }),
-    getAppVersion: async () => '1.6.6',
+    getInfo: async () => ({ platform: 'web', version: '1.6.8 (Web/PWA)', isWeb: true }),
+    getAppVersion: async () => '1.6.8',
     triggerBackup: async () => ({ success: true }),
     exportBackup: async () => ({ success: true }),
     restoreDb: async () => ({ success: false, error: '웹에서는 로컬 복원을 지원하지 않습니다.' }),

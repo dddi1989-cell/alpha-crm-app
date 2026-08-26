@@ -33,9 +33,10 @@ import {
 import { useCrmStore } from '../store/useCrmStore';
 import { api } from '../utils/api';
 import { simulatePensionComparison, calculateAge } from '../utils/pensionEngine';
+import DollarUniversalPlannerView from './tools/DollarUniversalPlannerView';
 
 export default function PlannerToolsView() {
-  const [activeSubTab, setActiveSubTab] = useState('pension'); // 'pension'
+  const [activeSubTab, setActiveSubTab] = useState('pension'); // 'pension' | 'dollar'
   const customers = useCrmStore((state) => state.customers);
   const currentUser = useCrmStore((state) => state.currentUser);
 
@@ -274,26 +275,58 @@ export default function PlannerToolsView() {
         </div>
       </div>
 
-      {/* Success/Error Alerts */}
-      {exportSuccessMsg && (
-        <div className="p-3.5 bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 rounded-2xl text-xs font-bold flex items-center justify-between animate-fadeIn shadow-lg">
-          <span className="flex items-center space-x-2">
-            <CheckCheck className="w-4 h-4 text-emerald-400" />
-            <span>{exportSuccessMsg}</span>
-          </span>
-          <button onClick={() => setExportSuccessMsg('')} className="text-emerald-400 hover:text-white">✕</button>
-        </div>
-      )}
+      {/* 2. Sub-Tab Switcher */}
+      <div className="flex items-center space-x-2 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800 w-fit shadow-md">
+        <button
+          onClick={() => setActiveSubTab('pension')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center space-x-2 ${
+            activeSubTab === 'pension'
+              ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-lg shadow-amber-500/20 scale-105'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+          }`}
+        >
+          <Calculator className="w-4 h-4" />
+          <span>💰 노후 연금 계산기</span>
+        </button>
 
-      {exportErrorMsg && (
-        <div className="p-3.5 bg-red-950/80 border border-red-500/50 text-red-300 rounded-2xl text-xs font-bold flex items-center justify-between animate-fadeIn shadow-lg">
-          <span>⚠️ {exportErrorMsg}</span>
-          <button onClick={() => setExportErrorMsg('')} className="text-red-400 hover:text-white">✕</button>
-        </div>
-      )}
+        <button
+          onClick={() => setActiveSubTab('dollar')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center space-x-2 ${
+            activeSubTab === 'dollar'
+              ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white shadow-lg shadow-indigo-500/30 scale-105'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+          }`}
+        >
+          <DollarSign className="w-4 h-4 text-cyan-300" />
+          <span>💵 달러종신 AI 분석 제안서 (5단계)</span>
+        </button>
+      </div>
 
-      {/* 2. Main 2-Column Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* Render Dollar Universal View if active */}
+      {activeSubTab === 'dollar' ? (
+        <DollarUniversalPlannerView />
+      ) : (
+        <>
+          {/* Success/Error Alerts */}
+          {exportSuccessMsg && (
+            <div className="p-3.5 bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 rounded-2xl text-xs font-bold flex items-center justify-between animate-fadeIn shadow-lg">
+              <span className="flex items-center space-x-2">
+                <CheckCheck className="w-4 h-4 text-emerald-400" />
+                <span>{exportSuccessMsg}</span>
+              </span>
+              <button onClick={() => setExportSuccessMsg('')} className="text-emerald-400 hover:text-white">✕</button>
+            </div>
+          )}
+
+          {exportErrorMsg && (
+            <div className="p-3.5 bg-red-950/80 border border-red-500/50 text-red-300 rounded-2xl text-xs font-bold flex items-center justify-between animate-fadeIn shadow-lg">
+              <span>⚠️ {exportErrorMsg}</span>
+              <button onClick={() => setExportErrorMsg('')} className="text-red-400 hover:text-white">✕</button>
+            </div>
+          )}
+
+          {/* 3. Main 2-Column Grid (Pension Calculator) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* ========================================== */}
         {/* LEFT COLUMN: Input Parameters (4 cols) */}
@@ -839,6 +872,8 @@ export default function PlannerToolsView() {
             </form>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

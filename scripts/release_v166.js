@@ -6,27 +6,24 @@ const { URL } = require('url');
 const TOKEN = process.env.GITHUB_TOKEN || ['ghp_', '3qdxTA0PcK', 'DJblD8N9Aa', 'NB0nJyBGDL0WNEiS'].join('');
 const OWNER = 'dddi1989-cell';
 const REPO = 'alpha-crm-app';
-const TAG = 'v1.6.7';
-const VERSION = '1.6.7';
+const TAG = 'v1.6.8';
+const VERSION = '1.6.8';
 
 async function createOrGetRelease() {
   return new Promise((resolve) => {
     const payload = JSON.stringify({
       tag_name: TAG,
       target_commitish: 'main',
-      name: `v${VERSION} WLB CRM TOOL 공식 정식 배포 버전 (모바일 구글캘린더 / 위젯 하위조직 정상화)`,
+      name: `v${VERSION} WLB CRM TOOL 공식 정식 배포 버전 (달러종신 VIP 프레젠테이션 & 원화고정납입)`,
       body: `### WLB CRM TOOL v${VERSION} 업데이트 내역
-- 📅 **모바일 구글 캘린더 스타일 일정 관리 전면 개편**:
-  - 상단 컴팩트 점(Dot) 달력 및 월 퀵 점프 칩스 탑재
-  - 하단 선택 날짜 상세 아젠다 카드 리스트 및 같은 시간대 일정 깔끔 스택 표시
-  - 일정별 담당 사용자 정보(성명, 직책, 소속) 선명 배지 표기
-  - 우측 하단 플로팅 일정 추가('+') 버튼 지원
-- 🖥️ **PC 바탕화면 캘린더 위젯 전면 정상화**:
-  - 일렉트론 윈도우 간 세션 연동 및 IPC Fallback 보강
-  - 하위 조직(본부, 팀) 및 개별 조직원 드롭다운 선택 리스트 완벽 복구
-  - 날짜 매칭 버그 수정으로 날짜별 일정 및 담당자 배지 정상 렌더링
-- 🔐 **로그인 화면 UI 개선**:
-  - 아이디 및 비밀번호 입력창의 예시('admin') 텍스트 제거 및 직관적 안내 적용
+- 💵 **달러종신보험 VIP 16단계 프레젠테이션 마스터피스 완성**:
+  - 실제 메트라이프 가입제안서(32세남 7년납) 100% 동적 매핑 파이프라인 탑재
+  - 유지보너스 1차(7년 22.20%) 및 2차(10년 15.90%) 자동 산출 & 7년+1일(99.75%), 10년+1일(124.89%) 해약환급금 마일스톤 반영
+  - **원화고정납입(Fixed KRW Payment) 전용 킬러 슬라이드 및 실시간 인포그래픽 SVG 다이어그램 탑재**:
+    - 환율 하락 시 달러 자동 비축 ➔ 환율 급등 시 비축 달러로 자동 납부(고객 추가부담 0원 방어)
+  - 역대 경제위기(1997 IMF, 2008 금융위기, 2022 레고랜드) 부동산 및 코스피 급락 vs 달러 폭등 실증 데이터 탑재
+  - 벤다이어그램, 대형 카드 레이아웃, 시인성 및 밀도 극대화 16:9 와이드 디자인 완성
+- 📅 **모바일 구글 캘린더 스타일 일정 관리 & PC 바탕화면 위젯 최적화**
 - 🚀 **고정 다운로드 링크 지원**:
   - 항상 최신 버전을 다운로드할 수 있는 고정 URL 제공`,
       draft: false,

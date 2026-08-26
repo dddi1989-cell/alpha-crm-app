@@ -61,7 +61,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     exportPensionPdf: (data) => ipcRenderer.invoke('tools:export-pension-pdf', data),
     getPensionCatalog: () => ipcRenderer.invoke('tools:get-pension-catalog'),
     syncPensionCatalog: () => ipcRenderer.invoke('tools:sync-pension-catalog'),
-    updatePensionProduct: (data) => ipcRenderer.invoke('tools:update-pension-product', data)
+    updatePensionProduct: (data) => ipcRenderer.invoke('tools:update-pension-product', data),
+    parseDollarProposal: (data) => ipcRenderer.invoke('tools:parse-dollar-proposal', data || {}),
+    generateDollarProposalPdf: (data) => ipcRenderer.invoke('tools:generate-dollar-proposal-pdf', data)
   },
   system: {
     getInfo: () => ipcRenderer.invoke('system:get-info'),
