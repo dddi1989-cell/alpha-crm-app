@@ -1,19 +1,11 @@
 {
-  "version": "1.6.8",
-  "latestVersion": "1.6.8",
-  "productionVersion": "1.6.8",
-  "title": "v1.6.8 WLB CRM TOOL 정식 버전 (달러종신 VIP 프레젠테이션 & 모바일 16:9 뷰어)",
-  "releaseTitle": "v1.6.8 WLB CRM TOOL 정식 버전 (달러종신 VIP 프레젠테이션 & 모바일 16:9 뷰어)",
-  "productionTitle": "v1.6.8 WLB CRM TOOL 정식 버전 (달러종신 VIP 프레젠테이션 & 모바일 16:9 뷰어)",
-  "releaseDate": "2026-08-26T03:14:10.522Z",
-  "releaseNotes": "v1.6.8 정식 버전 (달러종신 VIP 16단계 프레젠테이션 & 모바일 원터치 플래너 탑재)",
-  "productionNotes": "v1.6.8 정식 버전 (달러종신 VIP 16단계 프레젠테이션 & 모바일 원터치 플래너 탑재)",
-  "notes": "v1.6.8 정식 버전 (달러종신 VIP 16단계 프레젠테이션 & 모바일 원터치 플래너 탑재)",
-  "downloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.8/WLB_CRM_Setup_1.6.8.exe",
-  "installerUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.8/WLB_CRM_Setup_1.6.8.exe",
-  "fixedDownloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/latest/download/WLB_CRM_Setup.exe",
-  "productionDownloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.8/ALPHA_CRM_MicroPatch_v1.6.8.asar",
-  "patchUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.8/ALPHA_CRM_MicroPatch_v1.6.8.asar",
-  "microPatchUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.8/ALPHA_CRM_MicroPatch_v1.6.8.asar",
-  "mandatory": false
+  "latestVersion": "1.6.3",
+  "minRequiredVersion": "1.0.0",
+  "title": "v1.6.3 공식 정식 배포 버전",
+  "releaseDate": "2026-08-26",
+  "downloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.3/ALPHA_CRM_MicroPatch_v1.6.3.asar",
+  "installerUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.3/ALPHA_CRM_Setup_1.6.3.exe",
+  "releaseNotes": "상품전략자료실 공유 게시판 및 읽기전용 권한 강화",
+  "forceUpdate": false,
+  "targetFile": "resources/app.asar"
 }
