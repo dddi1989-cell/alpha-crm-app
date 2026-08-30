@@ -31,17 +31,8 @@
 
     <div class="glass-card rounded-3xl p-6 shadow-2xl space-y-4">
 
-      <!-- Loading State -->
-      <div id="step-loading" class="text-center space-y-4 py-6">
-        <div class="w-16 h-16 mx-auto rounded-3xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-2xl text-rose-400 pulse-glow">
-          <i class="fa-solid fa-spinner fa-spin"></i>
-        </div>
-        <h3 class="text-lg font-black text-white">인증 준비 중...</h3>
-        <p class="text-xs text-slate-300">고객님의 정보를 안전하게 불러오고 있습니다.</p>
-      </div>
-
-      <!-- Input Form (Same as original direct design) -->
-      <div id="step-input" class="hidden space-y-4">
+      <!-- Direct Input Form (Opens Immediately on Link Click) -->
+      <div id="step-input" class="space-y-4">
         <div>
           <label class="block text-xs font-bold text-slate-300 mb-1.5">인증 수단 선택</label>
           <div class="grid grid-cols-2 gap-2">
@@ -204,24 +195,12 @@
       }
     }
 
-    // Init: Parse Session ID (supports both #hash and ?session=)
-    async function init() {
+    // Init: Parse Session ID
+    function init() {
       const hash = window.location.hash.replace('#', '');
       const urlParams = new URLSearchParams(window.location.search);
       currentSessionId = hash || urlParams.get('session') || ('MOB_' + Date.now());
-
-      if (currentSessionId) {
-        // Try pre-filling form from Supabase session metadata
-        const session = await sbDownload('session_' + currentSessionId + '.json');
-        if (session) {
-          if (session.clientName) document.getElementById('userName').value = session.clientName;
-          if (session.clientPhone) document.getElementById('phoneNo').value = session.clientPhone;
-          if (session.clientBirth) document.getElementById('identity').value = session.clientBirth;
-        }
-      }
-
-      document.getElementById('step-loading').classList.add('hidden');
-      document.getElementById('step-input').classList.remove('hidden');
+      // Direct form is already visible, no prefill loading needed!
     }
     init();
 
