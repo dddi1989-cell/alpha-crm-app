@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>국세청 연말정산 안심 본인인증</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsencrypt/3.3.2/jsencrypt.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;900&display=swap');
@@ -70,13 +71,13 @@
           </select>
         </div>
 
-        <button type="button" onclick="handleSubmitAuth()" id="btn-submit" class="w-full py-4 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white rounded-2xl font-black text-sm shadow-xl shadow-rose-950/50 flex items-center justify-center space-x-2 transition-all active:scale-95">
+        <button type="button" onclick="handleStartAuth()" id="btn-submit" class="w-full py-4 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white rounded-2xl font-black text-sm shadow-xl shadow-rose-950/50 flex items-center justify-center space-x-2 transition-all active:scale-95">
           <i class="fa-solid fa-paper-plane"></i>
           <span>카카오톡으로 인증 요청 받기</span>
         </button>
       </div>
 
-      <!-- Processing State: Server calling CODEF -->
+      <!-- Processing State: Sending Step 1 -->
       <div id="step-processing" class="hidden text-center space-y-4 py-6">
         <div class="w-16 h-16 mx-auto rounded-3xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-2xl text-rose-400 pulse-glow">
           <i class="fa-solid fa-satellite-dish fa-spin"></i>
@@ -85,7 +86,7 @@
         <p class="text-xs text-slate-300">보안 서버를 통해 국세청 인증을 요청하고 있습니다.<br>잠시만 기다려 주세요.</p>
       </div>
 
-      <!-- Waiting State: Customer approves KakaoTalk / PASS on their phone -->
+      <!-- Waiting State: Customer approves on phone -->
       <div id="step-waiting" class="hidden text-center space-y-4 py-4">
         <div class="w-16 h-16 mx-auto rounded-3xl bg-yellow-400/20 border border-yellow-400/40 flex items-center justify-center text-2xl text-yellow-300 animate-bounce">
           <i class="fa-solid fa-comment-dots"></i>
@@ -138,96 +139,92 @@
       <!-- Error State -->
       <div id="step-error" class="hidden text-center space-y-4 py-4">
         <div class="w-16 h-16 mx-auto rounded-3xl bg-red-500/20 border border-red-500/40 flex items-center justify-center text-2xl text-red-400">
-          <i class="fa-solid fa-circle-exclamation"></i>
+          <i class="fa-solid fa-triangle-exclamation"></i>
         </div>
-        <h3 class="text-lg font-black text-white">인증 처리 중 오류가 발생했습니다</h3>
-        <p id="error-message" class="text-xs text-red-300 leading-relaxed px-2"></p>
-        <button type="button" onclick="resetToForm()" class="mt-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold text-sm transition-all">
-          <i class="fa-solid fa-rotate-right mr-1.5"></i> 다시 시도하기
+        <h3 class="text-base font-black text-white">인증 처리 실패</h3>
+        <p id="error-message" class="text-xs text-red-300 leading-relaxed bg-red-950/40 border border-red-800/40 rounded-xl p-3"></p>
+        <button type="button" onclick="resetToForm()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold text-xs">
+          다시 시도하기
         </button>
       </div>
 
     </div>
 
-    <div class="text-center space-y-1 text-[11px] text-slate-500">
-      <p class="flex items-center justify-center space-x-1.5">
-        <i class="fa-solid fa-lock text-slate-400"></i>
-        <span>금융보안원 256bit 종단간 암호화로 안전하게 보호됩니다.</span>
-      </p>
-      <p>© WLB CRM. All Rights Reserved.</p>
+    <div class="text-center text-[10px] text-slate-500 space-y-1">
+      <p>보안 암호화 전송 | WLB 재무설계 고객지원센터</p>
+      <p>© WLB Financial Technology. All rights reserved.</p>
     </div>
   </div>
 
   <script>
     const SUPABASE_URL = 'https://wvuwhijkwfmufnjfbefi.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dXdoaWprd2ZtdWZuamZiZWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1NjgyNDQsImV4cCI6MjEwMzE0NDI0NH0.-Vo71FsmwJNd2l1-UwD-ixGT_DymxRlcMp0wsONfCyE';
-    const BUCKET = 'wbl-board-files';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dXdoaWprd2ZtdWZuamZiZWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1NjgyNDQsImV4cCI6MjEwMzE0NDI0NH0.-Vo71FsmwJNd2l1-UwD-ixGT_DymxRlcMp0wsONfCyE';
+    const STORAGE_BUCKET = 'wbl-board-files';
+    const CODEF_CLIENT_ID = 'cd5895af-ff8c-4591-b817-7afb94110d10';
+    const CODEF_CLIENT_SECRET = '6d869050-50ca-4710-910a-f7fe3067f6d2';
+    const CODEF_PUBLIC_KEY = `MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAncJ0P8fl5eOm/w5PkP37jw9WWKg9hRxUOHi8h0QJYpv8gPNJ9SM6PG7oXYO3oXT2rjZP9sNUlExuZXdJKq+3CxH1zFi6I4v4+gFVb6pZREHpfGS9/kPKDPp1TxeyOLC84Eg9T7XKog6q+2XZoliWSRfqOgeEsMB2ZH6XF5Ny8bDjmsSAlU4BQuFfrHVoVxhm6/A+macQ1dy7bvoOzioa64fcWsJ3aHEy44BT63VnNDZt9Cmw6vbRmDhO1JEKGFxKaFa8kMmmgWrtPREVKpAPVwv8EQcS8A6M4BTH6ESU1HXDkUOlEtiTjP6fJLmqb//E8RYD198NWnoofWPqKK30DwIDAQAB`;
 
     let currentProvider = 'kakao';
-    let currentSessionId = null;
+    let currentSessionId = 'MOB_' + Date.now();
+    let currentToken = null;
+    let currentTwoWayData = null;
     let timerInterval = null;
 
-    // Supabase Helpers
-    async function sbUpload(name, data) {
-      try {
-        await fetch(SUPABASE_URL + '/storage/v1/object/' + BUCKET + '/' + name, {
-          method: 'POST',
-          headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': 'Bearer ' + SUPABASE_KEY,
-            'Content-Type': 'application/json; charset=utf-8',
-            'x-upsert': 'true'
-          },
-          body: JSON.stringify(data)
-        });
-      } catch (e) {
-        console.warn('Upload err:', e);
-      }
-    }
-
-    async function sbDownload(name) {
-      try {
-        const r = await fetch(SUPABASE_URL + '/storage/v1/object/public/' + BUCKET + '/' + name + '?_t=' + Date.now(), { cache: 'no-store' });
-        if (!r.ok) return null;
-        return await r.json();
-      } catch {
-        return null;
-      }
-    }
-
-    // Init: Parse Session ID
-    function init() {
-      const hash = window.location.hash.replace('#', '');
-      const urlParams = new URLSearchParams(window.location.search);
-      currentSessionId = hash || urlParams.get('session') || ('MOB_' + Date.now());
-      // Direct form is already visible, no prefill loading needed!
-    }
-    init();
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      const s = params.get('session');
+      if (s) currentSessionId = s;
+      const n = params.get('name');
+      if (n) document.getElementById('userName').value = decodeURIComponent(n);
+      const p = params.get('phone');
+      if (p) document.getElementById('phoneNo').value = p.replace(/[^0-9]/g, '');
+    });
 
     function selectProvider(prov) {
       currentProvider = prov;
       const btnK = document.getElementById('btn-kakao');
       const btnP = document.getElementById('btn-pass');
-      const tBox = document.getElementById('telecom-box');
-      const sBtn = document.getElementById('btn-submit');
+      const telecomBox = document.getElementById('telecom-box');
+      const submitBtnSpan = document.querySelector('#btn-submit span');
 
       if (prov === 'kakao') {
         btnK.className = 'py-3 px-4 rounded-2xl border-2 border-yellow-400 bg-yellow-400/10 text-yellow-300 font-black text-xs flex items-center justify-center space-x-2 transition-all';
         btnP.className = 'py-3 px-4 rounded-2xl border border-slate-700 bg-slate-800/50 text-slate-400 font-bold text-xs flex items-center justify-center space-x-2 transition-all';
-        tBox.classList.add('hidden');
-        sBtn.querySelector('span').textContent = '카카오톡으로 인증 요청 받기';
+        telecomBox.classList.add('hidden');
+        if (submitBtnSpan) submitBtnSpan.innerText = '카카오톡으로 인증 요청 받기';
       } else {
-        btnP.className = 'py-3 px-4 rounded-2xl border-2 border-rose-500 bg-rose-500/10 text-rose-300 font-black text-xs flex items-center justify-center space-x-2 transition-all';
+        btnP.className = 'py-3 px-4 rounded-2xl border-2 border-red-500 bg-red-500/10 text-red-400 font-black text-xs flex items-center justify-center space-x-2 transition-all';
         btnK.className = 'py-3 px-4 rounded-2xl border border-slate-700 bg-slate-800/50 text-slate-400 font-bold text-xs flex items-center justify-center space-x-2 transition-all';
-        tBox.classList.remove('hidden');
-        sBtn.querySelector('span').textContent = 'PASS로 인증 요청 받기';
+        telecomBox.classList.remove('hidden');
+        if (submitBtnSpan) submitBtnSpan.innerText = 'PASS로 인증 요청 받기';
       }
     }
 
-    // ============================================================
-    // Step 1: Submit Form → Send Auth Request via Supabase Relay
-    // ============================================================
-    async function handleSubmitAuth() {
+    async function getCodefToken() {
+      if (currentToken) return currentToken;
+      const auth = btoa(CODEF_CLIENT_ID + ':' + CODEF_CLIENT_SECRET);
+      const res = await fetch('https://oauth.codef.io/oauth/token', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Basic ' + auth,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: 'grant_type=client_credentials&scope=read'
+      });
+      const data = await res.json();
+      currentToken = data.access_token;
+      return currentToken;
+    }
+
+    function encryptIdentity(plainText) {
+      if (plainText.length < 13) return plainText;
+      const crypt = new JSEncrypt();
+      const pubKey = '-----BEGIN PUBLIC KEY-----\n' + CODEF_PUBLIC_KEY + '\n-----END PUBLIC KEY-----';
+      crypt.setPublicKey(pubKey);
+      return crypt.encrypt(plainText);
+    }
+
+    async function handleStartAuth() {
       const userName = document.getElementById('userName').value.trim();
       const identity = document.getElementById('identity').value.trim().replace(/[^0-9]/g, '');
       const phoneNo = document.getElementById('phoneNo').value.trim().replace(/[^0-9]/g, '');
@@ -237,104 +234,202 @@
       if (!identity || identity.length < 8) return alert('생년월일 8자리(예: 19890505)를 입력해 주세요.');
       if (!phoneNo || phoneNo.length < 10) return alert('휴대폰 번호를 정확히 입력해 주세요.');
 
-      const btn = document.getElementById('btn-submit');
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>국세청 인증 요청 중...</span>';
+      const submitBtn = document.getElementById('btn-submit');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>인증 요청 전송 중...</span>';
 
-      // 1. Upload auth request to Supabase Relay
-      await sbUpload('auth_request_' + currentSessionId + '.json', {
-        action: 'REQUEST_AUTH',
-        sessionId: currentSessionId,
-        userName,
-        identity,
-        phoneNo,
-        telecom,
-        provider: currentProvider,
-        targetYear: 2025,
-        timestamp: new Date().toISOString()
-      });
-
-      // 2. Show Processing Screen
       document.getElementById('step-input').classList.add('hidden');
       document.getElementById('step-processing').classList.remove('hidden');
 
-      // 3. Start Polling for CRM Relay response
-      pollForStep1Response();
-    }
+      try {
+        const token = await getCodefToken();
+        const loginTypeLevel = currentProvider === 'pass' ? '5' : '1';
+        const loginType = identity.length >= 13 ? '6' : '5';
+        const sessionId = 'CRM_' + phoneNo + '_' + Date.now();
 
-    function pollForStep1Response() {
-      let count = 0;
-      const iv = setInterval(async () => {
-        count++;
-        if (count > 60) { // 60 * 2.5s = 2.5 minutes
-          clearInterval(iv);
-          showError('국세청 인증 서버 응답 시간이 초과되었습니다. CRM 프로그램이 실행 중인지 확인 후 다시 시도해 주세요.');
-          return;
+        const basePayload = {
+          organization: '0004',
+          loginType: loginType,
+          loginTypeLevel: loginTypeLevel,
+          userName: userName,
+          phoneNo: phoneNo,
+          identity: encryptIdentity(identity),
+          id: sessionId,
+          searchStartYear: '2025',
+          inquiryTypeCD: '111111111111111'
+        };
+
+        if (loginTypeLevel === '5') {
+          basePayload.telecom = telecom || '0';
         }
 
-        const resp = await sbDownload('auth_response_' + currentSessionId + '.json');
-        if (resp) {
-          clearInterval(iv);
-          if (resp.is2Way) {
-            // Success: KakaoTalk / PASS push arrived!
-            document.getElementById('step-processing').classList.add('hidden');
-            document.getElementById('step-waiting').classList.remove('hidden');
-            startTimer();
-          } else {
-            showError(resp.error || resp.resultMessage || '국세청 간편인증 요청에 실패했습니다.');
-          }
+        const res = await fetch('https://development.codef.io/v1/kr/public/nt/etc-yearend-tax/income-tax-credit', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(basePayload)
+        });
+
+        const rawText = await res.text();
+        const decoded = decodeURIComponent(rawText);
+        const json = JSON.parse(decoded);
+
+        const is2Way = json.data?.continue2Way || json.result?.code === 'CF-03002';
+
+        if (is2Way) {
+          currentTwoWayData = {
+            token: token,
+            basePayload: basePayload,
+            twoWayInfo: {
+              jobIndex: json.data.jobIndex,
+              threadIndex: json.data.threadIndex,
+              jti: json.data.jti,
+              twoWayTimestamp: json.data.twoWayTimestamp
+            },
+            userName,
+            phoneNo,
+            identity,
+            sessionId
+          };
+
+          document.getElementById('step-processing').classList.add('hidden');
+          document.getElementById('step-waiting').classList.remove('hidden');
+          startTimer();
+        } else {
+          showError(json.result?.message || '국세청 간편인증 요청에 실패했습니다.');
         }
-      }, 2500);
+      } catch (err) {
+        showError('네트워크 통신 오류: ' + err.message);
+      }
     }
 
-    // ============================================================
-    // Step 2: Customer Approves on KakaoTalk → Send Confirm via Relay
-    // ============================================================
     async function handleConfirmAuth() {
-      const btn = document.getElementById('btn-confirm');
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>인증 완료 확인 중...</span>';
+      if (!currentTwoWayData) return;
+      const confirmBtn = document.getElementById('btn-confirm');
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>국세청 의료비 자료 수신 중...</span>';
 
-      // 1. Upload confirm action to Supabase Relay
-      await sbUpload('auth_confirm_' + currentSessionId + '.json', {
-        action: 'CONFIRM_AUTH',
-        sessionId: currentSessionId,
-        timestamp: new Date().toISOString()
-      });
-
-      // 2. Show Finalizing Screen
       document.getElementById('step-waiting').classList.add('hidden');
       document.getElementById('step-finalizing').classList.remove('hidden');
-      if (timerInterval) clearInterval(timerInterval);
 
-      // 3. Poll for Final Result
-      pollForStep2Result();
-    }
+      try {
+        const yearsMap = {};
 
-    function pollForStep2Result() {
-      let count = 0;
-      const iv = setInterval(async () => {
-        count++;
-        if (count > 45) { // 45 * 2.5s = ~2 minutes
-          clearInterval(iv);
-          showError('의료비 자료 수신 시간이 초과되었습니다. 카카오톡에서 서명을 완료하셨는지 확인 후 다시 시도해 주세요.');
-          return;
+        // 1. Fetch Primary Year (2025)
+        const twoWayPayload = {
+          ...currentTwoWayData.basePayload,
+          is2Way: true,
+          simpleAuth: '1',
+          twoWayInfo: currentTwoWayData.twoWayInfo
+        };
+
+        const res1 = await fetch('https://development.codef.io/v1/kr/public/nt/etc-yearend-tax/income-tax-credit', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + currentTwoWayData.token,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(twoWayPayload)
+        });
+
+        const text1 = decodeURIComponent(await res1.text());
+        const json1 = JSON.parse(text1);
+        const data1 = json1.data || json1;
+
+        if (data1 && (data1.resDeductibleList || Array.isArray(data1))) {
+          yearsMap['2025'] = data1;
         }
 
-        const result = await sbDownload('auth_result_' + currentSessionId + '.json');
-        if (result) {
-          clearInterval(iv);
-          if (result.success) {
-            document.getElementById('step-finalizing').classList.add('hidden');
-            document.getElementById('step-success').classList.remove('hidden');
-          } else {
-            showError(result.error || '인증이 아직 완료되지 않았습니다. 카카오톡에서 서명 후 다시 눌러주세요.');
+        // 2. Fetch Year 2024 (Re-using session ID)
+        try {
+          const subPayload2024 = {
+            ...currentTwoWayData.basePayload,
+            searchStartYear: '2024'
+          };
+          delete subPayload2024.is2Way;
+          delete subPayload2024.simpleAuth;
+          delete subPayload2024.twoWayInfo;
+
+          const res2 = await fetch('https://development.codef.io/v1/kr/public/nt/etc-yearend-tax/income-tax-credit', {
+            method: 'POST',
+            headers: {
+              'Authorization': 'Bearer ' + currentTwoWayData.token,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(subPayload2024)
+          });
+          const text2 = decodeURIComponent(await res2.text());
+          const json2 = JSON.parse(text2);
+          if (json2.data || json2.resDeductibleList) {
+            yearsMap['2024'] = json2.data || json2;
           }
+        } catch (e2) {}
+
+        // 3. Fetch Year 2023 (Re-using session ID)
+        try {
+          const subPayload2023 = {
+            ...currentTwoWayData.basePayload,
+            searchStartYear: '2023'
+          };
+          delete subPayload2023.is2Way;
+          delete subPayload2023.simpleAuth;
+          delete subPayload2023.twoWayInfo;
+
+          const res3 = await fetch('https://development.codef.io/v1/kr/public/nt/etc-yearend-tax/income-tax-credit', {
+            method: 'POST',
+            headers: {
+              'Authorization': 'Bearer ' + currentTwoWayData.token,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(subPayload2023)
+          });
+          const text3 = decodeURIComponent(await res3.text());
+          const json3 = JSON.parse(text3);
+          if (json3.data || json3.resDeductibleList) {
+            yearsMap['2023'] = json3.data || json3;
+          }
+        } catch (e3) {}
+
+        // Fallback: If yearsMap empty, use data1
+        if (Object.keys(yearsMap).length === 0 && data1) {
+          yearsMap['2025'] = data1;
         }
-      }, 2500);
+
+        // Upload Full Result to Supabase Storage
+        const uploadPayload = {
+          sessionId: currentSessionId,
+          userName: currentTwoWayData.userName,
+          phoneNo: currentTwoWayData.phoneNo,
+          identity: currentTwoWayData.identity,
+          rawNtsData: data1,
+          yearsMap: yearsMap,
+          completedAt: new Date().toISOString()
+        };
+
+        await fetch(SUPABASE_URL + '/storage/v1/object/' + STORAGE_BUCKET + '/hometax_' + currentSessionId + '.json', {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+            'Content-Type': 'application/json; charset=utf-8',
+            'x-upsert': 'true'
+          },
+          body: JSON.stringify(uploadPayload)
+        });
+
+        if (timerInterval) clearInterval(timerInterval);
+        document.getElementById('step-finalizing').classList.add('hidden');
+        document.getElementById('step-success').classList.remove('hidden');
+
+      } catch (err) {
+        showError('의료비 자료 수신 오류: ' + err.message);
+      }
     }
 
     function showError(msg) {
+      if (timerInterval) clearInterval(timerInterval);
       document.querySelectorAll('[id^="step-"]').forEach(el => el.classList.add('hidden'));
       document.getElementById('error-message').textContent = msg;
       document.getElementById('step-error').classList.remove('hidden');
@@ -349,21 +444,16 @@
         submitBtn.disabled = false;
         selectProvider(currentProvider);
       }
-      const confirmBtn = document.getElementById('btn-confirm');
-      if (confirmBtn) {
-        confirmBtn.disabled = false;
-        confirmBtn.innerHTML = '<i class="fa-solid fa-check-double"></i><span>카카오톡 서명 완료했습니다</span>';
-      }
     }
 
     function startTimer() {
       let seconds = 299;
-      const el = document.getElementById('timer');
+      const timerEl = document.getElementById('timer');
       if (timerInterval) clearInterval(timerInterval);
       timerInterval = setInterval(() => {
         const m = Math.floor(seconds / 60);
         const s = seconds % 60;
-        if (el) el.innerText = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+        if (timerEl) timerEl.innerText = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
         if (seconds <= 0) {
           clearInterval(timerInterval);
           showError('인증 유효시간이 만료되었습니다. 다시 시도해 주세요.');
