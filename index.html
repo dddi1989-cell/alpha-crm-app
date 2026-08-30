@@ -31,7 +31,7 @@
 
     <div class="glass-card rounded-3xl p-6 shadow-2xl space-y-4">
 
-      <!-- Loading -->
+      <!-- Loading State -->
       <div id="step-loading" class="text-center space-y-4 py-6">
         <div class="w-16 h-16 mx-auto rounded-3xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-2xl text-rose-400 pulse-glow">
           <i class="fa-solid fa-spinner fa-spin"></i>
@@ -40,7 +40,7 @@
         <p class="text-xs text-slate-300">고객님의 정보를 안전하게 불러오고 있습니다.</p>
       </div>
 
-      <!-- Input Form (same as original working version) -->
+      <!-- Input Form (Same as original direct design) -->
       <div id="step-input" class="hidden space-y-4">
         <div>
           <label class="block text-xs font-bold text-slate-300 mb-1.5">인증 수단 선택</label>
@@ -85,8 +85,8 @@
         </button>
       </div>
 
-      <!-- Processing: Waiting for CRM to call CODEF -->
-      <div id="step-processing" class="hidden text-center space-y-4 py-4">
+      <!-- Processing State: Server calling CODEF -->
+      <div id="step-processing" class="hidden text-center space-y-4 py-6">
         <div class="w-16 h-16 mx-auto rounded-3xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-2xl text-rose-400 pulse-glow">
           <i class="fa-solid fa-satellite-dish fa-spin"></i>
         </div>
@@ -94,7 +94,7 @@
         <p class="text-xs text-slate-300">보안 서버를 통해 국세청 인증을 요청하고 있습니다.<br>잠시만 기다려 주세요.</p>
       </div>
 
-      <!-- Waiting KakaoTalk Auth -->
+      <!-- Waiting State: Customer approves KakaoTalk / PASS on their phone -->
       <div id="step-waiting" class="hidden text-center space-y-4 py-4">
         <div class="w-16 h-16 mx-auto rounded-3xl bg-yellow-400/20 border border-yellow-400/40 flex items-center justify-center text-2xl text-yellow-300 animate-bounce">
           <i class="fa-solid fa-comment-dots"></i>
@@ -118,8 +118,8 @@
         </button>
       </div>
 
-      <!-- Final Processing -->
-      <div id="step-finalizing" class="hidden text-center space-y-4 py-4">
+      <!-- Finalizing State -->
+      <div id="step-finalizing" class="hidden text-center space-y-4 py-6">
         <div class="w-16 h-16 mx-auto rounded-3xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-2xl text-emerald-400 pulse-glow">
           <i class="fa-solid fa-spinner fa-spin"></i>
         </div>
@@ -127,7 +127,7 @@
         <p class="text-xs text-slate-300">인증 결과를 확인하고 있습니다. 잠시만 기다려 주세요.</p>
       </div>
 
-      <!-- Success -->
+      <!-- Success State -->
       <div id="step-success" class="hidden text-center space-y-4 py-6">
         <div class="w-16 h-16 mx-auto rounded-3xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-3xl text-emerald-400">
           <i class="fa-solid fa-circle-check"></i>
@@ -144,15 +144,15 @@
         </div>
       </div>
 
-      <!-- Error -->
+      <!-- Error State -->
       <div id="step-error" class="hidden text-center space-y-4 py-4">
         <div class="w-16 h-16 mx-auto rounded-3xl bg-red-500/20 border border-red-500/40 flex items-center justify-center text-2xl text-red-400">
           <i class="fa-solid fa-circle-exclamation"></i>
         </div>
         <h3 class="text-lg font-black text-white">인증 처리 중 오류가 발생했습니다</h3>
-        <p id="error-message" class="text-xs text-red-300"></p>
-        <button type="button" onclick="window.location.reload()" class="mt-2 px-6 py-3 bg-slate-800 text-white rounded-xl font-bold text-sm">
-          <i class="fa-solid fa-rotate-right"></i> 다시 시도하기
+        <p id="error-message" class="text-xs text-red-300 leading-relaxed px-2"></p>
+        <button type="button" onclick="resetToForm()" class="mt-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold text-sm transition-all">
+          <i class="fa-solid fa-rotate-right mr-1.5"></i> 다시 시도하기
         </button>
       </div>
 
@@ -176,34 +176,50 @@
     let currentSessionId = null;
     let timerInterval = null;
 
-    // Supabase helpers
+    // Supabase Helpers
     async function sbUpload(name, data) {
-      await fetch(SUPABASE_URL + '/storage/v1/object/' + BUCKET + '/' + name, {
-        method: 'POST',
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json; charset=utf-8', 'x-upsert': 'true' },
-        body: JSON.stringify(data)
-      });
-    }
-    async function sbDownload(name) {
-      const r = await fetch(SUPABASE_URL + '/storage/v1/object/public/' + BUCKET + '/' + name + '?_t=' + Date.now(), { cache: 'no-store' });
-      if (!r.ok) return null;
-      return r.json();
+      try {
+        await fetch(SUPABASE_URL + '/storage/v1/object/' + BUCKET + '/' + name, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': 'Bearer ' + SUPABASE_KEY,
+            'Content-Type': 'application/json; charset=utf-8',
+            'x-upsert': 'true'
+          },
+          body: JSON.stringify(data)
+        });
+      } catch (e) {
+        console.warn('Upload err:', e);
+      }
     }
 
-    // Init
+    async function sbDownload(name) {
+      try {
+        const r = await fetch(SUPABASE_URL + '/storage/v1/object/public/' + BUCKET + '/' + name + '?_t=' + Date.now(), { cache: 'no-store' });
+        if (!r.ok) return null;
+        return await r.json();
+      } catch {
+        return null;
+      }
+    }
+
+    // Init: Parse Session ID (supports both #hash and ?session=)
     async function init() {
-      currentSessionId = window.location.hash.replace('#', '') || null;
+      const hash = window.location.hash.replace('#', '');
+      const urlParams = new URLSearchParams(window.location.search);
+      currentSessionId = hash || urlParams.get('session') || ('MOB_' + Date.now());
+
       if (currentSessionId) {
-        // Try to pre-fill from session
+        // Try pre-filling form from Supabase session metadata
         const session = await sbDownload('session_' + currentSessionId + '.json');
         if (session) {
           if (session.clientName) document.getElementById('userName').value = session.clientName;
           if (session.clientPhone) document.getElementById('phoneNo').value = session.clientPhone;
           if (session.clientBirth) document.getElementById('identity').value = session.clientBirth;
         }
-      } else {
-        currentSessionId = 'MOB_' + Date.now();
       }
+
       document.getElementById('step-loading').classList.add('hidden');
       document.getElementById('step-input').classList.remove('hidden');
     }
@@ -213,21 +229,24 @@
       currentProvider = prov;
       const btnK = document.getElementById('btn-kakao');
       const btnP = document.getElementById('btn-pass');
+      const tBox = document.getElementById('telecom-box');
+      const sBtn = document.getElementById('btn-submit');
+
       if (prov === 'kakao') {
         btnK.className = 'py-3 px-4 rounded-2xl border-2 border-yellow-400 bg-yellow-400/10 text-yellow-300 font-black text-xs flex items-center justify-center space-x-2 transition-all';
         btnP.className = 'py-3 px-4 rounded-2xl border border-slate-700 bg-slate-800/50 text-slate-400 font-bold text-xs flex items-center justify-center space-x-2 transition-all';
-        document.getElementById('telecom-box').classList.add('hidden');
-        document.getElementById('btn-submit').querySelector('span').textContent = '카카오톡으로 인증 요청 받기';
+        tBox.classList.add('hidden');
+        sBtn.querySelector('span').textContent = '카카오톡으로 인증 요청 받기';
       } else {
         btnP.className = 'py-3 px-4 rounded-2xl border-2 border-rose-500 bg-rose-500/10 text-rose-300 font-black text-xs flex items-center justify-center space-x-2 transition-all';
         btnK.className = 'py-3 px-4 rounded-2xl border border-slate-700 bg-slate-800/50 text-slate-400 font-bold text-xs flex items-center justify-center space-x-2 transition-all';
-        document.getElementById('telecom-box').classList.remove('hidden');
-        document.getElementById('btn-submit').querySelector('span').textContent = 'PASS로 인증 요청 받기';
+        tBox.classList.remove('hidden');
+        sBtn.querySelector('span').textContent = 'PASS로 인증 요청 받기';
       }
     }
 
     // ============================================================
-    // Step 1: Submit auth request → Supabase (CRM will pick up)
+    // Step 1: Submit Form → Send Auth Request via Supabase Relay
     // ============================================================
     async function handleSubmitAuth() {
       const userName = document.getElementById('userName').value.trim();
@@ -236,88 +255,93 @@
       const telecom = document.getElementById('telecom').value;
 
       if (!userName) return alert('고객 성함을 입력해 주세요.');
-      if (!identity || identity.length < 8) return alert('생년월일 8자리를 입력해 주세요.');
+      if (!identity || identity.length < 8) return alert('생년월일 8자리(예: 19890505)를 입력해 주세요.');
       if (!phoneNo || phoneNo.length < 10) return alert('휴대폰 번호를 정확히 입력해 주세요.');
 
       const btn = document.getElementById('btn-submit');
       btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>인증 요청 전송 중...</span>';
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>국세청 인증 요청 중...</span>';
 
-      // Save auth request to Supabase → CRM will detect and call CODEF
+      // 1. Upload auth request to Supabase Relay
       await sbUpload('auth_request_' + currentSessionId + '.json', {
         action: 'REQUEST_AUTH',
         sessionId: currentSessionId,
-        userName, identity, phoneNo, telecom,
+        userName,
+        identity,
+        phoneNo,
+        telecom,
         provider: currentProvider,
         targetYear: 2024,
         timestamp: new Date().toISOString()
       });
 
-      // Switch to processing screen
+      // 2. Show Processing Screen
       document.getElementById('step-input').classList.add('hidden');
       document.getElementById('step-processing').classList.remove('hidden');
 
-      // Poll for CRM response
-      pollForResponse();
+      // 3. Start Polling for CRM Relay response
+      pollForStep1Response();
     }
 
-    function pollForResponse() {
+    function pollForStep1Response() {
       let count = 0;
       const iv = setInterval(async () => {
         count++;
-        if (count > 60) { // 60 * 3s = 3 minutes
+        if (count > 60) { // 60 * 2.5s = 2.5 minutes
           clearInterval(iv);
-          showError('인증 서버 응답 시간이 초과되었습니다. 다시 시도해 주세요.');
+          showError('국세청 인증 서버 응답 시간이 초과되었습니다. CRM 프로그램이 실행 중인지 확인 후 다시 시도해 주세요.');
           return;
         }
+
         const resp = await sbDownload('auth_response_' + currentSessionId + '.json');
         if (resp) {
           clearInterval(iv);
           if (resp.is2Way) {
-            // 2-Way auth initiated → show KakaoTalk waiting screen
+            // Success: KakaoTalk / PASS push arrived!
             document.getElementById('step-processing').classList.add('hidden');
             document.getElementById('step-waiting').classList.remove('hidden');
             startTimer();
           } else {
-            showError(resp.resultMessage || resp.error || '인증 요청에 실패했습니다.');
+            showError(resp.error || resp.resultMessage || '국세청 간편인증 요청에 실패했습니다.');
           }
         }
-      }, 3000);
+      }, 2500);
     }
 
     // ============================================================
-    // Step 2: Customer confirms KakaoTalk signing → Supabase
+    // Step 2: Customer Approves on KakaoTalk → Send Confirm via Relay
     // ============================================================
     async function handleConfirmAuth() {
       const btn = document.getElementById('btn-confirm');
       btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>인증 확인 중...</span>';
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>인증 완료 확인 중...</span>';
 
-      // Save confirm signal to Supabase → CRM will detect and call CODEF Step 2
+      // 1. Upload confirm action to Supabase Relay
       await sbUpload('auth_confirm_' + currentSessionId + '.json', {
         action: 'CONFIRM_AUTH',
         sessionId: currentSessionId,
         timestamp: new Date().toISOString()
       });
 
-      // Switch to finalizing screen
+      // 2. Show Finalizing Screen
       document.getElementById('step-waiting').classList.add('hidden');
       document.getElementById('step-finalizing').classList.remove('hidden');
       if (timerInterval) clearInterval(timerInterval);
 
-      // Poll for final result
-      pollForResult();
+      // 3. Poll for Final Result
+      pollForStep2Result();
     }
 
-    function pollForResult() {
+    function pollForStep2Result() {
       let count = 0;
       const iv = setInterval(async () => {
         count++;
-        if (count > 40) { // 40 * 3s = 2 minutes
+        if (count > 45) { // 45 * 2.5s = ~2 minutes
           clearInterval(iv);
-          showError('의료비 자료 수신 시간이 초과되었습니다. 카카오톡 서명 후 다시 시도해 주세요.');
+          showError('의료비 자료 수신 시간이 초과되었습니다. 카카오톡에서 서명을 완료하셨는지 확인 후 다시 시도해 주세요.');
           return;
         }
+
         const result = await sbDownload('auth_result_' + currentSessionId + '.json');
         if (result) {
           clearInterval(iv);
@@ -325,10 +349,10 @@
             document.getElementById('step-finalizing').classList.add('hidden');
             document.getElementById('step-success').classList.remove('hidden');
           } else {
-            showError(result.error || '인증이 완료되지 않았습니다. 카카오톡에서 서명 후 다시 시도해 주세요.');
+            showError(result.error || '인증이 아직 완료되지 않았습니다. 카카오톡에서 서명 후 다시 눌러주세요.');
           }
         }
-      }, 3000);
+      }, 2500);
     }
 
     function showError(msg) {
@@ -337,14 +361,34 @@
       document.getElementById('step-error').classList.remove('hidden');
     }
 
+    function resetToForm() {
+      if (timerInterval) clearInterval(timerInterval);
+      document.querySelectorAll('[id^="step-"]').forEach(el => el.classList.add('hidden'));
+      document.getElementById('step-input').classList.remove('hidden');
+      const submitBtn = document.getElementById('btn-submit');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        selectProvider(currentProvider);
+      }
+      const confirmBtn = document.getElementById('btn-confirm');
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i class="fa-solid fa-check-double"></i><span>카카오톡 서명 완료했습니다</span>';
+      }
+    }
+
     function startTimer() {
       let seconds = 299;
       const el = document.getElementById('timer');
+      if (timerInterval) clearInterval(timerInterval);
       timerInterval = setInterval(() => {
         const m = Math.floor(seconds / 60);
         const s = seconds % 60;
-        el.innerText = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
-        if (seconds <= 0) { clearInterval(timerInterval); showError('인증 유효시간이 만료되었습니다.'); }
+        if (el) el.innerText = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+        if (seconds <= 0) {
+          clearInterval(timerInterval);
+          showError('인증 유효시간이 만료되었습니다. 다시 시도해 주세요.');
+        }
         seconds--;
       }, 1000);
     }
