@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>국세청 연말정산 안심 본인인증</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsencrypt/3.3.2/jsencrypt.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;900&display=swap');
@@ -71,13 +70,13 @@
           </select>
         </div>
 
-        <button type="button" onclick="handleStartAuth()" id="btn-submit" class="w-full py-4 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white rounded-2xl font-black text-sm shadow-xl shadow-rose-950/50 flex items-center justify-center space-x-2 transition-all active:scale-95">
+        <button type="button" onclick="handleSubmitAuth()" id="btn-submit" class="w-full py-4 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white rounded-2xl font-black text-sm shadow-xl shadow-rose-950/50 flex items-center justify-center space-x-2 transition-all active:scale-95">
           <i class="fa-solid fa-paper-plane"></i>
           <span>카카오톡으로 인증 요청 받기</span>
         </button>
       </div>
 
-      <!-- Processing State: Sending Step 1 -->
+      <!-- Processing State: Server calling CODEF -->
       <div id="step-processing" class="hidden text-center space-y-4 py-6">
         <div class="w-16 h-16 mx-auto rounded-3xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-2xl text-rose-400 pulse-glow">
           <i class="fa-solid fa-satellite-dish fa-spin"></i>
@@ -160,20 +159,15 @@
     const SUPABASE_URL = 'https://wvuwhijkwfmufnjfbefi.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dXdoaWprd2ZtdWZuamZiZWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1NjgyNDQsImV4cCI6MjEwMzE0NDI0NH0.-Vo71FsmwJNd2l1-UwD-ixGT_DymxRlcMp0wsONfCyE';
     const STORAGE_BUCKET = 'wbl-board-files';
-    const CODEF_CLIENT_ID = 'cd5895af-ff8c-4591-b817-7afb94110d10';
-    const CODEF_CLIENT_SECRET = '6d869050-50ca-4710-910a-f7fe3067f6d2';
-    const CODEF_PUBLIC_KEY = `MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAncJ0P8fl5eOm/w5PkP37jw9WWKg9hRxUOHi8h0QJYpv8gPNJ9SM6PG7oXYO3oXT2rjZP9sNUlExuZXdJKq+3CxH1zFi6I4v4+gFVb6pZREHpfGS9/kPKDPp1TxeyOLC84Eg9T7XKog6q+2XZoliWSRfqOgeEsMB2ZH6XF5Ny8bDjmsSAlU4BQuFfrHVoVxhm6/A+macQ1dy7bvoOzioa64fcWsJ3aHEy44BT63VnNDZt9Cmw6vbRmDhO1JEKGFxKaFa8kMmmgWrtPREVKpAPVwv8EQcS8A6M4BTH6ESU1HXDkUOlEtiTjP6fJLmqb//E8RYD198NWnoofWPqKK30DwIDAQAB`;
 
     let currentProvider = 'kakao';
     let currentSessionId = 'MOB_' + Date.now();
-    let currentToken = null;
-    let currentTwoWayData = null;
     let timerInterval = null;
 
     window.addEventListener('DOMContentLoaded', () => {
+      const hash = window.location.hash ? window.location.hash.substring(1) : '';
       const params = new URLSearchParams(window.location.search);
-      const s = params.get('session');
-      if (s) currentSessionId = s;
+      currentSessionId = hash || params.get('session') || ('MOB_' + Date.now());
       const n = params.get('name');
       if (n) document.getElementById('userName').value = decodeURIComponent(n);
       const p = params.get('phone');
@@ -200,31 +194,37 @@
       }
     }
 
-    async function getCodefToken() {
-      if (currentToken) return currentToken;
-      const auth = btoa(CODEF_CLIENT_ID + ':' + CODEF_CLIENT_SECRET);
-      const res = await fetch('https://oauth.codef.io/oauth/token', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Basic ' + auth,
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: 'grant_type=client_credentials&scope=read'
-      });
-      const data = await res.json();
-      currentToken = data.access_token;
-      return currentToken;
+    async function sbUpload(filename, dataObj) {
+      try {
+        const res = await fetch(SUPABASE_URL + '/storage/v1/object/' + STORAGE_BUCKET + '/' + filename, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+            'Content-Type': 'application/json; charset=utf-8',
+            'x-upsert': 'true'
+          },
+          body: JSON.stringify(dataObj)
+        });
+        return res.ok;
+      } catch (e) {
+        return false;
+      }
     }
 
-    function encryptIdentity(plainText) {
-      if (plainText.length < 13) return plainText;
-      const crypt = new JSEncrypt();
-      const pubKey = '-----BEGIN PUBLIC KEY-----\n' + CODEF_PUBLIC_KEY + '\n-----END PUBLIC KEY-----';
-      crypt.setPublicKey(pubKey);
-      return crypt.encrypt(plainText);
+    async function sbDownload(filename) {
+      try {
+        const res = await fetch(SUPABASE_URL + '/storage/v1/object/public/' + STORAGE_BUCKET + '/' + filename + '?_t=' + Date.now(), {
+          headers: { 'Cache-Control': 'no-cache' }
+        });
+        if (res.status === 200) return await res.json();
+        return null;
+      } catch (e) {
+        return null;
+      }
     }
 
-    async function handleStartAuth() {
+    async function handleSubmitAuth() {
       const userName = document.getElementById('userName').value.trim();
       const identity = document.getElementById('identity').value.trim().replace(/[^0-9]/g, '');
       const phoneNo = document.getElementById('phoneNo').value.trim().replace(/[^0-9]/g, '');
@@ -234,198 +234,92 @@
       if (!identity || identity.length < 8) return alert('생년월일 8자리(예: 19890505)를 입력해 주세요.');
       if (!phoneNo || phoneNo.length < 10) return alert('휴대폰 번호를 정확히 입력해 주세요.');
 
-      const submitBtn = document.getElementById('btn-submit');
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>인증 요청 전송 중...</span>';
+      const btn = document.getElementById('btn-submit');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>국세청 인증 요청 중...</span>';
 
       document.getElementById('step-input').classList.add('hidden');
       document.getElementById('step-processing').classList.remove('hidden');
 
-      try {
-        const token = await getCodefToken();
-        const loginTypeLevel = currentProvider === 'pass' ? '5' : '1';
-        const loginType = identity.length >= 13 ? '6' : '5';
-        const sessionId = 'CRM_' + phoneNo + '_' + Date.now();
+      // Upload auth request to Supabase Relay
+      await sbUpload('auth_request_' + currentSessionId + '.json', {
+        action: 'REQUEST_AUTH',
+        sessionId: currentSessionId,
+        userName,
+        identity,
+        phoneNo,
+        telecom,
+        provider: currentProvider,
+        targetYear: 2025,
+        timestamp: new Date().toISOString()
+      });
 
-        const basePayload = {
-          organization: '0004',
-          loginType: loginType,
-          loginTypeLevel: loginTypeLevel,
-          userName: userName,
-          phoneNo: phoneNo,
-          identity: encryptIdentity(identity),
-          id: sessionId,
-          searchStartYear: '2025',
-          inquiryTypeCD: '111111111111111'
-        };
+      pollForStep1Response();
+    }
 
-        if (loginTypeLevel === '5') {
-          basePayload.telecom = telecom || '0';
+    function pollForStep1Response() {
+      let count = 0;
+      const iv = setInterval(async () => {
+        count++;
+        if (count > 60) {
+          clearInterval(iv);
+          showError('국세청 인증 서버 응답 시간이 초과되었습니다. CRM 프로그램이 실행 중인지 확인 후 다시 시도해 주세요.');
+          return;
         }
 
-        const res = await fetch('https://development.codef.io/v1/kr/public/nt/etc-yearend-tax/income-tax-credit', {
-          method: 'POST',
-          headers: {
-            'Authorization': 'Bearer ' + token,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(basePayload)
-        });
-
-        const rawText = await res.text();
-        const decoded = decodeURIComponent(rawText);
-        const json = JSON.parse(decoded);
-
-        const is2Way = json.data?.continue2Way || json.result?.code === 'CF-03002';
-
-        if (is2Way) {
-          currentTwoWayData = {
-            token: token,
-            basePayload: basePayload,
-            twoWayInfo: {
-              jobIndex: json.data.jobIndex,
-              threadIndex: json.data.threadIndex,
-              jti: json.data.jti,
-              twoWayTimestamp: json.data.twoWayTimestamp
-            },
-            userName,
-            phoneNo,
-            identity,
-            sessionId
-          };
-
-          document.getElementById('step-processing').classList.add('hidden');
-          document.getElementById('step-waiting').classList.remove('hidden');
-          startTimer();
-        } else {
-          showError(json.result?.message || '국세청 간편인증 요청에 실패했습니다.');
+        const resp = await sbDownload('auth_response_' + currentSessionId + '.json');
+        if (resp) {
+          clearInterval(iv);
+          if (resp.is2Way) {
+            document.getElementById('step-processing').classList.add('hidden');
+            document.getElementById('step-waiting').classList.remove('hidden');
+            startTimer();
+          } else {
+            showError(resp.error || resp.message || '국세청 간편인증 요청에 실패했습니다.');
+          }
         }
-      } catch (err) {
-        showError('네트워크 통신 오류: ' + err.message);
-      }
+      }, 2000);
     }
 
     async function handleConfirmAuth() {
-      if (!currentTwoWayData) return;
-      const confirmBtn = document.getElementById('btn-confirm');
-      confirmBtn.disabled = true;
-      confirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>국세청 의료비 자료 수신 중...</span>';
+      const btn = document.getElementById('btn-confirm');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>인증 완료 확인 중...</span>';
 
       document.getElementById('step-waiting').classList.add('hidden');
       document.getElementById('step-finalizing').classList.remove('hidden');
+      if (timerInterval) clearInterval(timerInterval);
 
-      try {
-        const yearsMap = {};
+      await sbUpload('auth_confirm_' + currentSessionId + '.json', {
+        action: 'CONFIRM_AUTH',
+        sessionId: currentSessionId,
+        timestamp: new Date().toISOString()
+      });
 
-        // 1. Fetch Primary Year (2025)
-        const twoWayPayload = {
-          ...currentTwoWayData.basePayload,
-          is2Way: true,
-          simpleAuth: '1',
-          twoWayInfo: currentTwoWayData.twoWayInfo
-        };
+      pollForStep2Result();
+    }
 
-        const res1 = await fetch('https://development.codef.io/v1/kr/public/nt/etc-yearend-tax/income-tax-credit', {
-          method: 'POST',
-          headers: {
-            'Authorization': 'Bearer ' + currentTwoWayData.token,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(twoWayPayload)
-        });
-
-        const text1 = decodeURIComponent(await res1.text());
-        const json1 = JSON.parse(text1);
-        const data1 = json1.data || json1;
-
-        if (data1 && (data1.resDeductibleList || Array.isArray(data1))) {
-          yearsMap['2025'] = data1;
+    function pollForStep2Result() {
+      let count = 0;
+      const iv = setInterval(async () => {
+        count++;
+        if (count > 45) {
+          clearInterval(iv);
+          showError('의료비 자료 수신 시간이 초과되었습니다. 카카오톡에서 서명을 완료하셨는지 확인 후 다시 시도해 주세요.');
+          return;
         }
 
-        // 2. Fetch Year 2024 (Re-using session ID)
-        try {
-          const subPayload2024 = {
-            ...currentTwoWayData.basePayload,
-            searchStartYear: '2024'
-          };
-          delete subPayload2024.is2Way;
-          delete subPayload2024.simpleAuth;
-          delete subPayload2024.twoWayInfo;
-
-          const res2 = await fetch('https://development.codef.io/v1/kr/public/nt/etc-yearend-tax/income-tax-credit', {
-            method: 'POST',
-            headers: {
-              'Authorization': 'Bearer ' + currentTwoWayData.token,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(subPayload2024)
-          });
-          const text2 = decodeURIComponent(await res2.text());
-          const json2 = JSON.parse(text2);
-          if (json2.data || json2.resDeductibleList) {
-            yearsMap['2024'] = json2.data || json2;
+        const result = await sbDownload('auth_result_' + currentSessionId + '.json');
+        if (result) {
+          clearInterval(iv);
+          if (result.success) {
+            document.getElementById('step-finalizing').classList.add('hidden');
+            document.getElementById('step-success').classList.remove('hidden');
+          } else {
+            showError(result.error || '인증이 아직 완료되지 않았습니다. 카카오톡에서 서명 후 다시 눌러주세요.');
           }
-        } catch (e2) {}
-
-        // 3. Fetch Year 2023 (Re-using session ID)
-        try {
-          const subPayload2023 = {
-            ...currentTwoWayData.basePayload,
-            searchStartYear: '2023'
-          };
-          delete subPayload2023.is2Way;
-          delete subPayload2023.simpleAuth;
-          delete subPayload2023.twoWayInfo;
-
-          const res3 = await fetch('https://development.codef.io/v1/kr/public/nt/etc-yearend-tax/income-tax-credit', {
-            method: 'POST',
-            headers: {
-              'Authorization': 'Bearer ' + currentTwoWayData.token,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(subPayload2023)
-          });
-          const text3 = decodeURIComponent(await res3.text());
-          const json3 = JSON.parse(text3);
-          if (json3.data || json3.resDeductibleList) {
-            yearsMap['2023'] = json3.data || json3;
-          }
-        } catch (e3) {}
-
-        // Fallback: If yearsMap empty, use data1
-        if (Object.keys(yearsMap).length === 0 && data1) {
-          yearsMap['2025'] = data1;
         }
-
-        // Upload Full Result to Supabase Storage
-        const uploadPayload = {
-          sessionId: currentSessionId,
-          userName: currentTwoWayData.userName,
-          phoneNo: currentTwoWayData.phoneNo,
-          identity: currentTwoWayData.identity,
-          rawNtsData: data1,
-          yearsMap: yearsMap,
-          completedAt: new Date().toISOString()
-        };
-
-        await fetch(SUPABASE_URL + '/storage/v1/object/' + STORAGE_BUCKET + '/hometax_' + currentSessionId + '.json', {
-          method: 'POST',
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-            'Content-Type': 'application/json; charset=utf-8',
-            'x-upsert': 'true'
-          },
-          body: JSON.stringify(uploadPayload)
-        });
-
-        if (timerInterval) clearInterval(timerInterval);
-        document.getElementById('step-finalizing').classList.add('hidden');
-        document.getElementById('step-success').classList.remove('hidden');
-
-      } catch (err) {
-        showError('의료비 자료 수신 오류: ' + err.message);
-      }
+      }, 2000);
     }
 
     function showError(msg) {
