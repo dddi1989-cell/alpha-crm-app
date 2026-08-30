@@ -10,6 +10,8 @@
     @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;900&display=swap');
     body { font-family: 'Pretendard', -apple-system, sans-serif; background-color: #0b0f19; color: #f8fafc; }
     .glass-card { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); border: 1px solid rgba(244, 63, 94, 0.25); }
+    @keyframes pulse-glow { 0%,100%{box-shadow:0 0 20px rgba(244,63,94,0.3)} 50%{box-shadow:0 0 40px rgba(244,63,94,0.6)} }
+    .pulse-glow { animation: pulse-glow 2s infinite; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between p-4 sm:p-6 antialiased">
@@ -26,15 +28,49 @@
       </h1>
       <p class="text-xs text-slate-400 leading-relaxed">
         놓치신 의료비 및 숨은 실손보험금을 정밀 분석하기 위해<br>
-        <strong>국세청 홈택스 본인인증</strong>을 진행해 주세요.
+        <strong>국세청 홈택스 본인인증</strong>을 진행합니다.
       </p>
     </div>
 
-    <!-- Main Form Card -->
+    <!-- Main Card -->
     <div class="glass-card rounded-3xl p-6 shadow-2xl space-y-4">
-      
-      <!-- Step 1: Input Details -->
-      <div id="step-input" class="space-y-4">
+
+      <!-- Loading State: Fetching session -->
+      <div id="step-loading" class="text-center space-y-4 py-6">
+        <div class="w-16 h-16 mx-auto rounded-3xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-2xl text-rose-400 pulse-glow">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+        </div>
+        <div class="space-y-1">
+          <h3 class="text-lg font-black text-white">인증 준비 중...</h3>
+          <p class="text-xs text-slate-300">고객님의 인증 정보를 안전하게 불러오고 있습니다.</p>
+        </div>
+      </div>
+
+      <!-- Step 0: One-Click Auth Start (auto-filled, just click to go) -->
+      <div id="step-ready" class="hidden space-y-4">
+        <div class="p-4 bg-slate-900/90 rounded-2xl border border-slate-800 space-y-2">
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-slate-400 text-xs">고객 성명</span>
+            <span id="display-name" class="text-white font-bold"></span>
+          </div>
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-slate-400 text-xs">인증 수단</span>
+            <span class="text-yellow-300 font-bold">카카오톡 간편인증</span>
+          </div>
+        </div>
+
+        <button type="button" onclick="handleAutoAuth()" id="btn-auto-auth" class="w-full py-4 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white rounded-2xl font-black text-sm shadow-xl shadow-rose-950/50 flex items-center justify-center space-x-2 transition-all active:scale-95">
+          <i class="fa-solid fa-paper-plane"></i>
+          <span>카카오톡으로 본인인증 시작하기</span>
+        </button>
+
+        <p class="text-center text-[11px] text-slate-500">
+          버튼을 누르면 카카오톡으로 국세청 인증 알림이 전송됩니다.
+        </p>
+      </div>
+
+      <!-- Step 1: Manual Input Fallback (if session not found) -->
+      <div id="step-manual" class="hidden space-y-4">
         <div>
           <label class="block text-xs font-bold text-slate-300 mb-1.5">인증 수단 선택</label>
           <div class="grid grid-cols-2 gap-2">
@@ -51,7 +87,7 @@
 
         <div>
           <label class="block text-xs font-bold text-slate-300 mb-1">고객 성명</label>
-          <input type="text" id="userName" placeholder="예: 이재성" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-bold text-sm focus:border-rose-500 focus:outline-none">
+          <input type="text" id="userName" placeholder="예: 홍길동" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-bold text-sm focus:border-rose-500 focus:outline-none">
         </div>
 
         <div>
@@ -61,10 +97,9 @@
 
         <div>
           <label class="block text-xs font-bold text-slate-300 mb-1">휴대폰 번호</label>
-          <input type="tel" id="phoneNo" maxlength="11" placeholder="예: 01076797880" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-bold text-sm focus:border-rose-500 focus:outline-none">
+          <input type="tel" id="phoneNo" maxlength="11" placeholder="예: 01012345678" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-bold text-sm focus:border-rose-500 focus:outline-none">
         </div>
 
-        <!-- Telecom for PASS -->
         <div id="telecom-box" class="hidden">
           <label class="block text-xs font-bold text-slate-300 mb-1">통신사 선택</label>
           <select id="telecom" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-bold text-sm focus:border-rose-500 focus:outline-none">
@@ -77,7 +112,7 @@
           </select>
         </div>
 
-        <button type="button" onclick="handleRequestAuth()" id="btn-submit" class="w-full py-4 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white rounded-2xl font-black text-sm shadow-xl shadow-rose-950/50 flex items-center justify-center space-x-2 transition-all active:scale-95">
+        <button type="button" onclick="handleManualAuth()" id="btn-submit" class="w-full py-4 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white rounded-2xl font-black text-sm shadow-xl shadow-rose-950/50 flex items-center justify-center space-x-2 transition-all active:scale-95">
           <i class="fa-solid fa-paper-plane"></i>
           <span>카카오톡으로 인증 요청 받기</span>
         </button>
@@ -126,7 +161,7 @@
 
     </div>
 
-    <!-- Footer Privacy Notice -->
+    <!-- Footer -->
     <div class="text-center space-y-1 text-[11px] text-slate-500">
       <p class="flex items-center justify-center space-x-1.5">
         <i class="fa-solid fa-lock text-slate-400"></i>
@@ -141,16 +176,51 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dXdoaWprd2ZtdWZuamZiZWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1NjgyNDQsImV4cCI6MjEwMzE0NDI0NH0.-Vo71FsmwJNd2l1-UwD-ixGT_DymxRlcMp0wsONfCyE';
 
     let currentProvider = 'kakao';
-    let currentSessionId = 'MOB_' + Date.now();
+    let currentSessionId = null;
     let currentTwoWayData = null;
+    let sessionData = null;
     let timerInterval = null;
 
-    // Parse URL params
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('session')) currentSessionId = urlParams.get('session');
-    if (urlParams.get('name')) document.getElementById('userName').value = urlParams.get('name');
-    if (urlParams.get('phone')) document.getElementById('phoneNo').value = urlParams.get('phone');
-    if (urlParams.get('birth')) document.getElementById('identity').value = urlParams.get('birth');
+    // ============================================================
+    // INIT: Get session ID from URL hash (clean, no query params)
+    // Format: https://domain/#SESSION_ID
+    // ============================================================
+    async function init() {
+      // Try hash first, then query param as fallback
+      const hash = window.location.hash.replace('#', '');
+      const urlParams = new URLSearchParams(window.location.search);
+      currentSessionId = hash || urlParams.get('session') || null;
+
+      if (!currentSessionId) {
+        // No session — show manual form
+        document.getElementById('step-loading').classList.add('hidden');
+        document.getElementById('step-manual').classList.remove('hidden');
+        return;
+      }
+
+      // Fetch session data from Supabase
+      try {
+        const res = await fetch(
+          SUPABASE_URL + '/storage/v1/object/public/wbl-board-files/session_' + currentSessionId + '.json?_t=' + Date.now()
+        );
+        if (res.ok) {
+          sessionData = await res.json();
+          // Show pre-filled ready screen
+          document.getElementById('display-name').textContent = sessionData.clientName || '고객';
+          document.getElementById('step-loading').classList.add('hidden');
+          document.getElementById('step-ready').classList.remove('hidden');
+        } else {
+          // Session not found — show manual form
+          document.getElementById('step-loading').classList.add('hidden');
+          document.getElementById('step-manual').classList.remove('hidden');
+        }
+      } catch (e) {
+        document.getElementById('step-loading').classList.add('hidden');
+        document.getElementById('step-manual').classList.remove('hidden');
+      }
+    }
+
+    init();
 
     function selectProvider(prov) {
       currentProvider = prov;
@@ -172,7 +242,29 @@
       }
     }
 
-    async function handleRequestAuth() {
+    // ============================================================
+    // Auto Auth: Session data pre-loaded from Supabase
+    // One click → Direct CODEF auth
+    // ============================================================
+    async function handleAutoAuth() {
+      if (!sessionData) return;
+      const btn = document.getElementById('btn-auto-auth');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>국세청 인증 요청 중...</span>';
+
+      await requestCodefAuth({
+        userName: sessionData.clientName,
+        identity: sessionData.clientBirth || '',
+        phoneNo: (sessionData.clientPhone || '').replace(/[^0-9]/g, ''),
+        telecom: '0',
+        provider: 'kakao'
+      }, btn);
+    }
+
+    // ============================================================
+    // Manual Auth: User fills in form themselves
+    // ============================================================
+    async function handleManualAuth() {
       const userName = document.getElementById('userName').value.trim();
       const identity = document.getElementById('identity').value.trim().replace(/[^0-9]/g, '');
       const phoneNo = document.getElementById('phoneNo').value.trim().replace(/[^0-9]/g, '');
@@ -182,20 +274,28 @@
       if (!identity || (identity.length !== 8 && identity.length !== 13)) return alert('생년월일 8자리(예: 19890505)를 입력해 주세요.');
       if (!phoneNo || phoneNo.length < 10) return alert('휴대폰 번호를 정확히 입력해 주세요.');
 
+      if (!currentSessionId) currentSessionId = 'MOB_' + Date.now();
+
       const submitBtn = document.getElementById('btn-submit');
       submitBtn.disabled = true;
       submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>국세청 인증 요청 중...</span>';
 
+      await requestCodefAuth({ userName, identity, phoneNo, telecom, provider: currentProvider }, submitBtn);
+    }
+
+    // ============================================================
+    // Core CODEF 2-Way Auth Request
+    // ============================================================
+    async function requestCodefAuth({ userName, identity, phoneNo, telecom, provider }, submitBtn) {
       try {
-        // Direct CODEF API Client-Side Engine via Supabase Relay
         const payload = {
           organization: '0004',
           loginType: identity.length >= 13 ? '6' : '5',
-          loginTypeLevel: currentProvider === 'kakao' ? '1' : '5',
+          loginTypeLevel: provider === 'kakao' ? '1' : '5',
           userName,
           phoneNo,
           identity,
-          telecom: currentProvider === 'pass' ? telecom : '0',
+          telecom: provider === 'pass' ? telecom : '0',
           searchStartYear: '2024',
           inquiryTypeCD: '111111111111111'
         };
@@ -227,27 +327,22 @@
         const json = JSON.parse(decoded);
 
         if (json.data?.continue2Way || json.result?.code === 'CF-03002') {
-          currentTwoWayData = {
-            token,
-            basePayload: payload,
-            twoWayInfo: json.data,
-            userName,
-            phoneNo,
-            identity
-          };
+          currentTwoWayData = { token, basePayload: payload, twoWayInfo: json.data, userName, phoneNo, identity };
 
-          document.getElementById('step-input').classList.add('hidden');
+          document.getElementById('step-loading').classList.add('hidden');
+          document.getElementById('step-ready').classList.add('hidden');
+          document.getElementById('step-manual').classList.add('hidden');
           document.getElementById('step-waiting').classList.remove('hidden');
           startTimer();
         } else {
           alert('인증 요청 실패: ' + (json.result?.message || '국세청 서버 응답 오류'));
           submitBtn.disabled = false;
-          submitBtn.innerHTML = '다시 시도하기';
+          submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i><span>다시 시도하기</span>';
         }
       } catch (err) {
         alert('네트워크 오류: ' + err.message);
         submitBtn.disabled = false;
-        submitBtn.innerHTML = '다시 시도하기';
+        submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i><span>다시 시도하기</span>';
       }
     }
 
@@ -279,7 +374,6 @@
         const json = JSON.parse(decoded);
 
         if (json.data || json.result?.code === 'CF-00000') {
-          // Save completed data to Supabase Storage session file
           const sessionPayload = {
             sessionId: currentSessionId,
             userName: currentTwoWayData.userName,
