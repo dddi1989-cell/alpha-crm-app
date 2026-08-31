@@ -1,14 +1,21 @@
 {
   "version": "1.7.0",
-  "releaseDate": "2026-08-30T07:48:41.528Z",
-  "minSupportedVersion": "1.0.0",
+  "latestVersion": "1.7.0",
+  "productionVersion": "1.7.0",
+  "adminTestVersion": "1.7.0",
   "title": "WLB CRM Tool v1.7.0 정식 업데이트",
-  "changelog": [
-    "국세청 연말정산 의료비·숨은 실손보험금 3개년(2025, 2024, 2023) 실시간 일괄 수집 탑재",
-    "병의원 실제 진료 발생일자 정밀 표기 및 미청구 실손보험금 정밀 분석 리포트",
-    "시스템 트레이 백그라운드 구동 및 완전 종료 제어 지원",
-    "12명 전체 고객 목록 영구 보존 및 동기화 무결성 확보"
-  ],
+  "releaseTitle": "WLB CRM Tool v1.7.0 정식 업데이트",
+  "productionTitle": "WLB CRM Tool v1.7.0 정식 업데이트",
+  "releaseDate": "2026-08-31T00:25:32.074Z",
+  "releaseNotes": "국세청 3개년(2025, 2024, 2023) 연말정산 의료비·숨은 실손보험금 실시간 연동 및 진료일자 정밀 분석",
+  "productionNotes": "국세청 3개년(2025, 2024, 2023) 연말정산 의료비·숨은 실손보험금 실시간 연동 및 진료일자 정밀 분석",
+  "notes": "국세청 3개년(2025, 2024, 2023) 연말정산 의료비·숨은 실손보험금 실시간 연동 및 진료일자 정밀 분석",
+  "downloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.7.0/WLB_CRM_Setup_1.7.0.exe",
+  "installerUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.7.0/WLB_CRM_Setup_1.7.0.exe",
+  "fixedDownloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/latest/download/WLB_CRM_Setup.exe",
+  "productionDownloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.7.0/app.asar",
+  "patchUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.7.0/app.asar",
+  "microPatchUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.7.0/app.asar",
   "asarUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.7.0/app.asar",
-  "installerUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.7.0/WLB_CRM_Setup_1.7.0.exe"
+  "mandatory": false
 }
