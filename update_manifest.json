@@ -1,19 +1,11 @@
 {
-  "version": "1.7.3",
-  "latestVersion": "1.7.3",
-  "productionVersion": "1.7.3",
-  "title": "v1.7.3 동기화 복구 · 계정 ID 체계 · 자료실 표지 개선",
-  "releaseTitle": "v1.7.3 동기화 복구 · 계정 ID 체계 · 자료실 표지 개선",
-  "productionTitle": "v1.7.3 동기화 복구 · 계정 ID 체계 · 자료실 표지 개선",
-  "releaseDate": "2026-09-02T14:11:19.204Z",
-  "releaseNotes": "조직원 고객/일정 조회 정상화, 상품전략자료실 PDF 표지 렌더링 개선, 사용자 간 데이터 충돌 방지",
-  "productionNotes": "조직원 고객/일정 조회 정상화, 상품전략자료실 PDF 표지 렌더링 개선, 사용자 간 데이터 충돌 방지",
-  "notes": "조직원 고객/일정 조회 정상화, 상품전략자료실 PDF 표지 렌더링 개선, 사용자 간 데이터 충돌 방지",
-  "downloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.7.3/WLB_CRM_Setup_1.7.3.exe",
-  "installerUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.7.3/WLB_CRM_Setup_1.7.3.exe",
-  "fixedDownloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.7.3/WLB_CRM_Setup_1.7.3.exe",
-  "productionDownloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.7.3/ALPHA_CRM_MicroPatch_v1.7.3.asar",
-  "patchUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.7.3/ALPHA_CRM_MicroPatch_v1.7.3.asar",
-  "microPatchUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.7.3/ALPHA_CRM_MicroPatch_v1.7.3.asar",
-  "mandatory": false
+  "latestVersion": "1.6.3",
+  "minRequiredVersion": "1.0.0",
+  "title": "v1.6.3 공식 정식 배포 버전",
+  "releaseDate": "2026-09-02",
+  "downloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.3/ALPHA_CRM_MicroPatch_v1.6.3.asar",
+  "installerUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.3/ALPHA_CRM_Setup_1.6.3.exe",
+  "releaseNotes": "상품전략자료실 공유 게시판 및 읽기전용 권한 강화",
+  "forceUpdate": false,
+  "targetFile": "resources/app.asar"
 }
