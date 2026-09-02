@@ -1,11 +1,19 @@
 {
-  "latestVersion": "1.6.3",
-  "minRequiredVersion": "1.0.0",
-  "title": "v1.6.3 공식 정식 배포 버전",
-  "releaseDate": "2026-09-02",
-  "downloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.3/ALPHA_CRM_MicroPatch_v1.6.3.asar",
-  "installerUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.6.3/ALPHA_CRM_Setup_1.6.3.exe",
-  "releaseNotes": "상품전략자료실 공유 게시판 및 읽기전용 권한 강화",
-  "forceUpdate": false,
-  "targetFile": "resources/app.asar"
+  "version": "1.7.1",
+  "latestVersion": "1.7.1",
+  "productionVersion": "1.7.1",
+  "title": "v1.7.1 동기화 복구 및 계정별 ID 체계 적용",
+  "releaseTitle": "v1.7.1 동기화 복구 및 계정별 ID 체계 적용",
+  "productionTitle": "v1.7.1 동기화 복구 및 계정별 ID 체계 적용",
+  "releaseDate": "2026-09-02T11:59:57.943Z",
+  "releaseNotes": "클라우드 동기화 복구, 사용자 간 데이터 덮어쓰기 방지, 신규 계정 사번 기반 ID 발급",
+  "productionNotes": "클라우드 동기화 복구, 사용자 간 데이터 덮어쓰기 방지, 신규 계정 사번 기반 ID 발급",
+  "notes": "클라우드 동기화 복구, 사용자 간 데이터 덮어쓰기 방지, 신규 계정 사번 기반 ID 발급",
+  "downloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.7.1/WLB_CRM_Setup_1.7.1.exe",
+  "installerUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.7.1/WLB_CRM_Setup_1.7.1.exe",
+  "fixedDownloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.7.1/WLB_CRM_Setup_1.7.1.exe",
+  "productionDownloadUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.7.1/WLB_CRM_Setup_1.7.1.exe",
+  "patchUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.7.1/ALPHA_CRM_MicroPatch_v1.7.1.asar",
+  "microPatchUrl": "https://github.com/dddi1989-cell/alpha-crm-app/releases/download/v1.7.1/ALPHA_CRM_MicroPatch_v1.7.1.asar",
+  "mandatory": false
 }
