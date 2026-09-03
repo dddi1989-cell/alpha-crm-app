@@ -65,12 +65,12 @@
         <div id="telecom-box" class="hidden">
           <label class="block text-xs font-bold text-slate-300 mb-1.5">통신사 선택</label>
           <select id="telecom" class="w-full bg-slate-900 border border-slate-700 focus:border-rose-500 rounded-2xl px-4 py-3 text-sm text-white font-bold outline-none">
-            <option value="0">SKT</option>
-            <option value="1">KT</option>
-            <option value="2">LGU+</option>
-            <option value="3">SKT 알뜰폰</option>
-            <option value="4">KT 알뜰폰</option>
-            <option value="5">LGU+ 알뜰폰</option>
+            <!-- CODEF 규격: "0":SKT(SKT알뜰폰) "1":KT(KT알뜰폰) "2":LG U+(LG U+알뜰폰)
+                 알뜰폰은 별도 코드가 없고 원 통신사 코드에 포함된다.
+                 기존의 3·4·5 는 규격에 없는 값이라 인증 실패의 원인이 될 수 있었다. -->
+            <option value="0">SKT (SKT 알뜰폰 포함)</option>
+            <option value="1">KT (KT 알뜰폰 포함)</option>
+            <option value="2">LG U+ (LG U+ 알뜰폰 포함)</option>
           </select>
         </div>
 
@@ -104,24 +104,22 @@
 
         <div class="p-3 bg-slate-900/90 rounded-2xl border border-slate-800 text-xs text-slate-400 flex items-center justify-between">
           <span>인증 유효시간:</span>
-          <span id="timer" class="text-amber-400 font-mono font-bold text-sm">04:59</span>
+          <span id="timer" class="text-amber-400 font-mono font-bold text-sm">04:30</span>
         </div>
 
-        <div class="p-3 bg-emerald-950/40 rounded-2xl border border-emerald-800/60 flex items-center justify-center space-x-2 text-emerald-300">
-          <i class="fa-solid fa-spinner fa-spin"></i>
-          <span class="text-xs font-bold">서명이 완료되면 자동으로 진행됩니다</span>
-        </div>
-
-        <p class="text-[11px] text-slate-400">
-          💡 이 화면을 <strong>닫지 말고 그대로 두세요.</strong><br>
-          카카오톡에서 서명만 완료하시면 됩니다.
+        <p class="text-[11px] text-amber-300 font-bold">
+          ① 카카오톡에서 서명을 <u>먼저</u> 완료해 주세요.<br>
+          ② 그 다음 아래 버튼을 눌러주세요.
         </p>
 
-        <!-- 보조 수단: 자동 진행이 안 될 때만 사용 -->
-        <button type="button" onclick="handleConfirmAuth()" id="btn-confirm" class="w-full py-3 bg-slate-800/80 hover:bg-slate-700 text-slate-300 rounded-2xl font-bold text-xs border border-slate-700 flex items-center justify-center space-x-2 transition-all active:scale-95">
-          <i class="fa-solid fa-rotate-right"></i>
-          <span>진행이 안 되면 눌러주세요</span>
+        <button type="button" onclick="handleConfirmAuth()" id="btn-confirm" class="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-2xl font-black text-sm shadow-xl shadow-emerald-950/50 flex items-center justify-center space-x-2 transition-all active:scale-95">
+          <i class="fa-solid fa-check-double"></i>
+          <span>카카오톡 서명 완료했습니다</span>
         </button>
+
+        <p class="text-[11px] text-slate-400">
+          💡 서명하지 않은 채로 버튼을 누르면 인증이 취소될 수 있습니다.
+        </p>
       </div>
 
       <!-- Finalizing State -->
@@ -306,7 +304,6 @@
             document.getElementById('step-waiting').classList.remove('hidden');
             startTimer();
             startAutoConfirmListener();
-            startAutoConfirm();
           } else {
             showError(resp.error || resp.resultMessage || '국세청 간편인증 요청에 실패했습니다.');
           }
@@ -471,7 +468,7 @@
     }
 
     function startTimer() {
-      let timeLeft = 300;
+      let timeLeft = 270;
       const tEl = document.getElementById('timer');
       if (timerInterval) clearInterval(timerInterval);
       timerInterval = setInterval(() => {
