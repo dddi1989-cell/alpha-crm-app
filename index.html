@@ -95,9 +95,9 @@
           <i class="fa-solid fa-comment-dots"></i>
         </div>
         <div class="space-y-1">
-          <h3 class="text-lg font-black text-white">카카오톡 인증 요청 발송 완료!</h3>
-          <p class="text-xs text-slate-300 leading-relaxed">
-            카카오톡 앱으로 도착한 <strong>국세청 전자서명 알림톡</strong>을 열고<br>
+          <h3 id="wait-title" class="text-lg font-black text-white">인증 요청 발송 완료!</h3>
+          <p id="wait-desc" class="text-xs text-slate-300 leading-relaxed">
+            휴대폰으로 도착한 <strong>국세청 전자서명 요청</strong>을 열고<br>
             <strong class="text-yellow-400">[서명하기 / 확인]</strong>을 완료해 주세요.
           </p>
         </div>
@@ -108,13 +108,13 @@
         </div>
 
         <p class="text-[11px] text-amber-300 font-bold">
-          ① 카카오톡에서 서명을 <u>먼저</u> 완료해 주세요.<br>
+          ① <span id="wait-step1">앱</span>에서 서명을 <u>먼저</u> 완료해 주세요.<br>
           ② 그 다음 아래 버튼을 눌러주세요.
         </p>
 
         <button type="button" onclick="handleConfirmAuth()" id="btn-confirm" class="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-2xl font-black text-sm shadow-xl shadow-emerald-950/50 flex items-center justify-center space-x-2 transition-all active:scale-95">
           <i class="fa-solid fa-check-double"></i>
-          <span>카카오톡 서명 완료했습니다</span>
+          <span id="wait-btn">서명 완료했습니다</span>
         </button>
 
         <p class="text-[11px] text-slate-400">
@@ -213,6 +213,20 @@
       }
     }
 
+    // ============================================================
+    // 이 인증을 누가 처리하는가
+    //
+    //   handler 가 'worker' 면 클라우드 서버(Cloudflare Worker)가 처리한다.
+    //   -> 설계사 PC 가 꺼져 있어도 조회가 된다. (모바일에서 보낸 문자)
+    //
+    //   그 외에는 예전처럼 설계사 PC 의 CRM 이 처리한다.
+    //   -> PC 가 켜져 있어야 한다. (PC 에서 보낸 문자)
+    //
+    // 둘이 같은 세션을 동시에 처리하면 인증이 두 번 날아간다.
+    // 그래서 세션을 만든 쪽이 남긴 표시를 그대로 따른다.
+    // ============================================================
+    let workerUrl = null;
+
     // Init: Parse Session ID
     function init() {
       const hash = window.location.hash.replace('#', '');
@@ -221,8 +235,28 @@
     }
     init();
 
+    async function loadSessionInfo() {
+      const info = await sbDownload('session_' + currentSessionId + '.json');
+      if (!info) return;
+
+      if (info.handler === 'worker' && info.workerUrl) {
+        workerUrl = String(info.workerUrl).replace(/\/+$/, '');
+      }
+      // 설계사가 이미 입력해 둔 이름은 미리 채워 준다.
+      if (info.clientName) {
+        const el = document.getElementById('userName');
+        if (el && !el.value) el.value = info.clientName;
+      }
+      if (info.clientPhone) {
+        const el = document.getElementById('phoneNo');
+        if (el && !el.value) el.value = info.clientPhone;
+      }
+    }
+    loadSessionInfo();
+
     function selectProvider(prov) {
       currentProvider = prov;
+      applyProviderTexts();
       const btnK = document.getElementById('btn-kakao');
       const btnP = document.getElementById('btn-pass');
       const tBox = document.getElementById('telecom-box');
@@ -239,6 +273,32 @@
         tBox.classList.remove('hidden');
         sBtn.querySelector('span').textContent = 'PASS로 인증 요청 받기';
       }
+    }
+
+    // ============================================================
+    // 인증수단(카카오톡 / PASS)에 따라 안내 문구를 바꾼다.
+    //   [2026-09-03] PASS 로 인증했는데도 대기 화면이 "카카오톡으로 보냈다"고
+    //   안내해, 고객이 카카오톡을 열어보다 시간을 흘려보내는 문제가 있었다.
+    // ============================================================
+    function providerLabel() {
+      return currentProvider === 'pass' ? 'PASS' : '카카오톡';
+    }
+
+    function applyProviderTexts() {
+      var name = providerLabel();
+      var t = document.getElementById('wait-title');
+      var d = document.getElementById('wait-desc');
+      var s1 = document.getElementById('wait-step1');
+      var b = document.getElementById('wait-btn');
+      if (t) t.textContent = name + ' 인증 요청 발송 완료!';
+      if (d) {
+        d.innerHTML = (currentProvider === 'pass'
+          ? 'PASS 앱으로 도착한 <strong>국세청 전자서명 요청</strong>을 열고<br>'
+          : '카카오톡 앱으로 도착한 <strong>국세청 전자서명 알림톡</strong>을 열고<br>')
+          + '<strong class="text-yellow-400">[서명하기 / 확인]</strong>을 완료해 주세요.';
+      }
+      if (s1) s1.textContent = name;
+      if (b) b.textContent = name + ' 서명 완료했습니다';
     }
 
     // ============================================================
@@ -279,8 +339,85 @@
       document.getElementById('step-input').classList.add('hidden');
       document.getElementById('step-processing').classList.remove('hidden');
 
-      // 3. Start Polling for CRM Relay response
-      pollForStep1Response();
+      // 3. 처리 주체에 따라 갈린다.
+      if (workerUrl) {
+        // 클라우드 서버가 처리한다. 이 화면이 연결을 붙들고 있어야
+        // 나머지 연도 요청이 살아 있으므로, 창을 닫지 않도록 안내한다.
+        runViaWorker({ userName, identity, phoneNo, telecom });
+      } else {
+        // 예전 방식: 설계사 PC 의 CRM 이 받아서 처리한다.
+        pollForStep1Response();
+      }
+    }
+
+    /**
+     * 클라우드 서버에 조회를 맡기고 진행 상황을 받아 화면을 넘긴다.
+     *
+     * 서버는 결과를 한 번에 주지 않고 한 줄씩 흘려보낸다.
+     * 서명 대기가 1~2분이라 그동안 화면이 멈춰 보이지 않게 하려는 것이고,
+     * 연결이 유휴로 판단돼 끊기는 것도 막아준다.
+     */
+    async function runViaWorker({ userName, identity, phoneNo, telecom }) {
+      try {
+        const res = await fetch(workerUrl + '/nts/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: currentSessionId,
+            clientName: userName,
+            clientPhone: phoneNo,
+            clientBirth: identity,
+            provider: currentProvider,
+            telecom
+          })
+        });
+
+        if (!res.body) {
+          // 스트리밍이 안 되는 환경에서는 결과 파일을 기다린다.
+          pollForStep1Response();
+          return;
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const lines = buf.split('\n');
+          buf = lines.pop();
+          for (const line of lines) handleWorkerEvent(line);
+        }
+        if (buf.trim()) handleWorkerEvent(buf);
+      } catch (e) {
+        isRequesting = false;
+        showError('국세청 조회 서버와 통신하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+      }
+    }
+
+    function handleWorkerEvent(line) {
+      if (!line || !line.trim()) return;
+      let ev;
+      try { ev = JSON.parse(line); } catch (e) { return; }
+
+      if (ev.type === 'pushed') {
+        isRequesting = false;
+        document.getElementById('step-processing').classList.add('hidden');
+        applyProviderTexts();
+        document.getElementById('step-waiting').classList.remove('hidden');
+        startTimer();
+      } else if (ev.type === 'signed') {
+        if (timerInterval) clearInterval(timerInterval);
+        document.querySelectorAll('[id^="step-"]').forEach(el => el.classList.add('hidden'));
+        document.getElementById('step-finalizing').classList.remove('hidden');
+      } else if (ev.type === 'done') {
+        finishWithSuccess();
+      } else if (ev.type === 'error') {
+        isRequesting = false;
+        showError(ev.message || '국세청 자료를 받아오지 못했습니다.');
+      }
     }
 
     function pollForStep1Response() {
@@ -301,6 +438,7 @@
           if (resp.is2Way) {
             // Success: KakaoTalk / PASS push arrived!
             document.getElementById('step-processing').classList.add('hidden');
+            applyProviderTexts();
             document.getElementById('step-waiting').classList.remove('hidden');
             startTimer();
             startAutoConfirmListener();
@@ -430,7 +568,7 @@
         count++;
         if (count > 45) { // 45 * 2s = 90s
           clearInterval(iv);
-          showError('의료비 자료 수신 시간이 초과되었습니다. 카카오톡에서 서명을 완료하셨는지 확인 후 다시 시도해 주세요.');
+          showError('의료비 자료 수신 시간이 초과되었습니다. ' + providerLabel() + '에서 서명을 완료하셨는지 확인 후 다시 시도해 주세요.');
           return;
         }
 
@@ -441,7 +579,7 @@
             document.getElementById('step-finalizing').classList.add('hidden');
             document.getElementById('step-success').classList.remove('hidden');
           } else {
-            showError(result.error || '인증이 아직 완료되지 않았습니다. 카카오톡에서 서명 후 다시 눌러주세요.');
+            showError(result.error || ('인증이 아직 완료되지 않았습니다. ' + providerLabel() + '에서 서명 후 다시 눌러주세요.'));
           }
         }
       }, 2000);
