@@ -213,20 +213,6 @@
       }
     }
 
-    // ============================================================
-    // 이 인증을 누가 처리하는가
-    //
-    //   handler 가 'worker' 면 클라우드 서버(Cloudflare Worker)가 처리한다.
-    //   -> 설계사 PC 가 꺼져 있어도 조회가 된다. (모바일에서 보낸 문자)
-    //
-    //   그 외에는 예전처럼 설계사 PC 의 CRM 이 처리한다.
-    //   -> PC 가 켜져 있어야 한다. (PC 에서 보낸 문자)
-    //
-    // 둘이 같은 세션을 동시에 처리하면 인증이 두 번 날아간다.
-    // 그래서 세션을 만든 쪽이 남긴 표시를 그대로 따른다.
-    // ============================================================
-    let workerUrl = null;
-
     // Init: Parse Session ID
     function init() {
       const hash = window.location.hash.replace('#', '');
@@ -239,9 +225,6 @@
       const info = await sbDownload('session_' + currentSessionId + '.json');
       if (!info) return;
 
-      if (info.handler === 'worker' && info.workerUrl) {
-        workerUrl = String(info.workerUrl).replace(/\/+$/, '');
-      }
       // 설계사가 이미 입력해 둔 이름은 미리 채워 준다.
       if (info.clientName) {
         const el = document.getElementById('userName');
@@ -339,95 +322,26 @@
       document.getElementById('step-input').classList.add('hidden');
       document.getElementById('step-processing').classList.remove('hidden');
 
-      // 3. 처리 주체에 따라 갈린다.
-      if (workerUrl) {
-        // 클라우드 서버가 처리한다. 이 화면이 연결을 붙들고 있어야
-        // 나머지 연도 요청이 살아 있으므로, 창을 닫지 않도록 안내한다.
-        runViaWorker({ userName, identity, phoneNo, telecom });
-      } else {
-        // 예전 방식: 설계사 PC 의 CRM 이 받아서 처리한다.
-        pollForStep1Response();
-      }
-    }
-
-    /**
-     * 클라우드 서버에 조회를 맡기고 진행 상황을 받아 화면을 넘긴다.
-     *
-     * 서버는 결과를 한 번에 주지 않고 한 줄씩 흘려보낸다.
-     * 서명 대기가 1~2분이라 그동안 화면이 멈춰 보이지 않게 하려는 것이고,
-     * 연결이 유휴로 판단돼 끊기는 것도 막아준다.
-     */
-    async function runViaWorker({ userName, identity, phoneNo, telecom }) {
-      try {
-        const res = await fetch(workerUrl + '/nts/run', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionId: currentSessionId,
-            clientName: userName,
-            clientPhone: phoneNo,
-            clientBirth: identity,
-            provider: currentProvider,
-            telecom
-          })
-        });
-
-        if (!res.body) {
-          // 스트리밍이 안 되는 환경에서는 결과 파일을 기다린다.
-          pollForStep1Response();
-          return;
-        }
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buf = '';
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buf += decoder.decode(value, { stream: true });
-          const lines = buf.split('\n');
-          buf = lines.pop();
-          for (const line of lines) handleWorkerEvent(line);
-        }
-        if (buf.trim()) handleWorkerEvent(buf);
-      } catch (e) {
-        isRequesting = false;
-        showError('국세청 조회 서버와 통신하지 못했습니다. 잠시 후 다시 시도해 주세요.');
-      }
-    }
-
-    function handleWorkerEvent(line) {
-      if (!line || !line.trim()) return;
-      let ev;
-      try { ev = JSON.parse(line); } catch (e) { return; }
-
-      if (ev.type === 'pushed') {
-        isRequesting = false;
-        document.getElementById('step-processing').classList.add('hidden');
-        applyProviderTexts();
-        document.getElementById('step-waiting').classList.remove('hidden');
-        startTimer();
-      } else if (ev.type === 'signed') {
-        if (timerInterval) clearInterval(timerInterval);
-        document.querySelectorAll('[id^="step-"]').forEach(el => el.classList.add('hidden'));
-        document.getElementById('step-finalizing').classList.remove('hidden');
-      } else if (ev.type === 'done') {
-        finishWithSuccess();
-      } else if (ev.type === 'error') {
-        isRequesting = false;
-        showError(ev.message || '국세청 자료를 받아오지 못했습니다.');
-      }
+      // 3. 요청을 올려두고 응답을 기다린다.
+      //
+      // [2026-09-04] 예전에는 이 화면이 클라우드 서버를 직접 불러 조회를
+      // 끝까지 붙들고 있었다. 그런데 고객은 서명하러 카카오톡으로 나가야 하고,
+      // 아이폰 사파리는 탭이 뒤로 가면 페이지를 통째로 버린다.
+      // 돌아오면 연결도 화면 상태도 사라져 "자료 수신 실패"로 끝났다.
+      //
+      // 조회를 붙드는 일은 자리를 뜨지 않는 쪽(설계사 화면 또는 PC)이 맡는다.
+      // 이 화면은 짧은 신호만 주고받으므로 앱을 오가도 안전하다.
+      pollForStep1Response();
     }
 
     function pollForStep1Response() {
       let count = 0;
       const iv = setInterval(async () => {
         count++;
-        if (count > 60) { // 60 * 2.5s = 2.5 minutes
+        if (count > 90) { // 90 * 2s = 3 minutes
           clearInterval(iv);
           isRequesting = false;
-          showError('국세청 인증 서버 응답 시간이 초과되었습니다. CRM 프로그램이 실행 중인지 확인 후 다시 시도해 주세요.');
+          showError('인증 요청이 처리되지 않았습니다. 담당 설계사에게 문의해 주세요. (설계사 화면이 켜져 있어야 합니다)');
           return;
         }
 
