@@ -500,6 +500,25 @@ function registerBoardHandlers(mainWindow, triggerDualBackup) {
       db.prepare('DELETE FROM post_attachments WHERE post_id = ?').run(id);
       db.prepare('DELETE FROM posts WHERE id = ?').run(id);
 
+      // Also delete from Supabase so mobile web stays in sync
+      try {
+        const https = require('https');
+        const SUPABASE_URL = 'wvuwhijkwfmufnjfbefi.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dXdoaWprd2ZtdWZuamZiZWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1NjgyNDQsImV4cCI6MjEwMzE0NDI0NH0.-Vo71FsmwJNd2l1-UwD-ixGT_DymxRlcMp0wsONfCyE';
+        const headers = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
+        // Delete attachments first
+        const delAtt = https.request({ hostname: SUPABASE_URL, path: `/rest/v1/post_attachments?post_id=eq.${id}`, method: 'DELETE', headers }, () => {});
+        delAtt.on('error', () => {});
+        delAtt.end();
+        // Delete post
+        const delPost = https.request({ hostname: SUPABASE_URL, path: `/rest/v1/posts?id=eq.${id}`, method: 'DELETE', headers }, () => {});
+        delPost.on('error', () => {});
+        delPost.end();
+        console.log(`[Board] ✓ Deleted post ${id} from Supabase`);
+      } catch (syncErr) {
+        console.warn('[Board] Supabase delete sync warning:', syncErr.message);
+      }
+
       if (triggerDualBackup) triggerDualBackup();
       try {
         const { syncCloudData } = require('../services/cloudSyncService');
