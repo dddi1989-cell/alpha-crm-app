@@ -173,7 +173,7 @@
     const SUPABASE_URL = 'https://wvuwhijkwfmufnjfbefi.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dXdoaWprd2ZtdWZuamZiZWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1NjgyNDQsImV4cCI6MjEwMzE0NDI0NH0.-Vo71FsmwJNd2l1-UwD-ixGT_DymxRlcMp0wsONfCyE';
     const BUCKET = 'wbl-board-files';
-    const EDGE_API = 'https://alpha-crm-app.pages.dev/api';
+    const EDGE_API = 'https://wlb-nts.dddi1989.workers.dev';
 
     let currentProvider = 'kakao';
     let currentSessionId = null;
@@ -321,7 +321,7 @@
       // 4. Direct Edge Trigger: Instantly calls CODEF Step 1 → KakaoTalk/PASS push
       //    This works even when the PC CRM program is off.
       try {
-        fetch(EDGE_API + '/request-auth', {
+        fetch(EDGE_API + '/nts/auto', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(authReqPayload)
@@ -389,10 +389,10 @@
         });
         // Also trigger edge function for confirm
         try {
-          fetch(EDGE_API + '/confirm-auth', {
+          fetch(EDGE_API + '/nts/auto/confirm', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId: currentSessionId })
+            body: JSON.stringify({ sessionId: currentSessionId, auto: true })
           }).catch(function() {});
         } catch (e) {}
       } catch (e) {}
@@ -473,7 +473,7 @@
 
       // 2. Direct Edge Trigger for Step 2
       try {
-        fetch(EDGE_API + '/confirm-auth', {
+        fetch(EDGE_API + '/nts/auto/confirm', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sessionId: currentSessionId })
