@@ -895,7 +895,7 @@ export const webAdapter = {
     ntsCreateMobileAuthSession: async (params) => {
       try {
         const sessionId = `MOB_${Date.now()}`;
-        const authUrl = `https://wvuwhijkwfmufnjfbefi.supabase.co/storage/v1/object/public/wbl-board-files/direct_auth_relay_v3.html#${sessionId}`;
+        const authUrl = `https://dddi1989-cell.github.io/alpha-crm-app/#${sessionId}`;
         
         // 1. Save initial session to Supabase
         await supabase.storage.from('wbl-board-files').upload(`session_${sessionId}.json`, JSON.stringify({

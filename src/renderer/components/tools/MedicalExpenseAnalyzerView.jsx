@@ -302,7 +302,7 @@ export default function MedicalExpenseAnalyzerView() {
     try {
       const caller = api.tools?.ntsCreateMobileLink || api.tools?.ntsCreateMobileAuthSession;
       let sessId = 'MOB_' + Date.now();
-      let authUrl = 'https://wvuwhijkwfmufnjfbefi.supabase.co/storage/v1/object/public/wbl-board-files/direct_auth_relay_v3.html#' + sessId;
+      let authUrl = `https://dddi1989-cell.github.io/alpha-crm-app/#${sessId}`;
 
       if (caller) {
         const res = await caller({
