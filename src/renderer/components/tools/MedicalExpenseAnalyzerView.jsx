@@ -329,28 +329,42 @@ export default function MedicalExpenseAnalyzerView() {
 
       // Start Polling every 2.5s
       if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = setInterval(async () => {
-        setRemainingTime(prev => {
-          if (prev <= 1) {
-            clearInterval(pollingIntervalRef.current);
-            setAuthStep('IDLE');
-            setStatusMsg({ type: 'error', text: '인증 유효시간(5분)이 만료되었습니다. 다시 시도해 주세요.' });
-            return 0;
-          }
-          return prev - 1;
-        });
+      let bgPollingStarted = false;
 
+      const pollOnce = async () => {
         try {
           if (api.tools?.ntsCheckMobileSession) {
             const checkRes = await api.tools.ntsCheckMobileSession({ sessionId: sessId });
             if (checkRes.success && checkRes.status === 'COMPLETED' && checkRes.data) {
               clearInterval(pollingIntervalRef.current);
               handleCompleteAuthSuccess(checkRes.data);
+              return true;
             }
           }
         } catch (pollErr) {
           console.error('Polling error:', pollErr);
         }
+        return false;
+      };
+
+      pollingIntervalRef.current = setInterval(async () => {
+        setRemainingTime(prev => {
+          if (prev <= 1 && !bgPollingStarted) {
+            // 타이머 만료: 빠른 폴링 → 느린 백그라운드 폴링으로 전환 (10초 간격)
+            bgPollingStarted = true;
+            clearInterval(pollingIntervalRef.current);
+            setAuthStep('IDLE');
+            setStatusMsg({ type: 'info', text: '고객 인증 대기 중... 인증이 완료되면 자동으로 반영됩니다.' });
+            pollingIntervalRef.current = setInterval(async () => {
+              const done = await pollOnce();
+              if (done) clearInterval(pollingIntervalRef.current);
+            }, 10000);
+            return 0;
+          }
+          return prev > 0 ? prev - 1 : 0;
+        });
+
+        await pollOnce();
       }, 2500);
 
     } catch (err) {
