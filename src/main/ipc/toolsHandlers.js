@@ -803,8 +803,12 @@ function registerToolsHandlers(mainWindow) {
   // ==========================================
   const {
     createMobileAuthSession,
-    checkMobileAuthSessionStatus
+    checkMobileAuthSessionStatus,
+    startCustomerAuthServer
   } = require('../services/customerAuthServer');
+
+  // Start background global relay listener for mobile sessions
+  startCustomerAuthServer();
 
   // 1. Create Mobile Auth Link for Customer and Auto Dispatch SMS
   ipcMain.handle('tools:nts-create-mobile-link', async (event, params) => {

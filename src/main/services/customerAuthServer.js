@@ -11,7 +11,7 @@
 const https = require('https');
 const { parseHometaxMultiYearsData } = require('./hometaxDataParser');
 const { sendCustomerAuthSms } = require('./solapiSmsService');
-const { requestCodef2WayAuth, fetchCodefAuthenticatedData } = require('./codefNtsService');
+const { requestCodef2WayAuth, fetchCodefAuthenticatedData, fetchCodefMultiYearsData } = require('./codefNtsService');
 
 const SUPABASE_URL = 'https://wvuwhijkwfmufnjfbefi.supabase.co';
 const SUPABASE_ANON_KEY = ['eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.', 'eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dXdoaWprd2ZtdWZuamZiZWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1NjgyNDQsImV4cCI6MjEwMzE0NDI0NH0.', '-Vo71FsmwJNd2l1-UwD-ixGT_DymxRlcMp0wsONfCyE'].join('');
@@ -22,9 +22,92 @@ const PERMANENT_AUTH_BASE_URL = 'https://dddi1989-cell.github.io/alpha-crm-app/'
 // In-Memory active session mapping
 const activeSessions = new Map();
 const activePollingIntervals = new Map();
+let globalRelayInterval = null;
+
+function supabaseList(prefix = '') {
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname: 'wvuwhijkwfmufnjfbefi.supabase.co',
+      port: 443,
+      path: '/storage/v1/object/list/' + STORAGE_BUCKET,
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    }, (res) => {
+      let body = '';
+      res.on('data', c => body += c);
+      res.on('end', () => {
+        try { resolve(JSON.parse(body)); }
+        catch { resolve([]); }
+      });
+    });
+    req.on('error', () => resolve([]));
+    req.write(JSON.stringify({ prefix: prefix, limit: 50, sortBy: { column: 'created_at', order: 'desc' } }));
+    req.end();
+  });
+}
 
 function startCustomerAuthServer() {
   console.log('[CustomerAuthServer] Supabase Relay Architecture Active (GitHub Pages ↔ Supabase ↔ CRM)');
+  if (globalRelayInterval) return;
+
+  globalRelayInterval = setInterval(async () => {
+    try {
+      const files = await supabaseList('');
+      if (!Array.isArray(files)) return;
+
+      for (const f of files) {
+        if (!f.name) continue;
+
+        // Step 1: Detect incoming mobile auth request
+        if (f.name.startsWith('auth_request_')) {
+          const sessionId = f.name.replace('auth_request_', '').replace('.json', '');
+          if (!activeProcessingSet.has('REQ_' + sessionId)) {
+            const authReq = await supabaseDownload(f.name);
+            if (authReq && authReq.action === 'REQUEST_AUTH' && !authReq._processed) {
+              activeProcessingSet.add('REQ_' + sessionId);
+              authReq._processed = true;
+              await supabaseUpload(f.name, authReq);
+              console.log(`[CustomerAuthServer-Global] Auto-processing Step 1 for session ${sessionId} (${authReq.userName})`);
+              try {
+                await handleAuthRequest(sessionId, authReq);
+              } catch (e) {
+                console.error(`[CustomerAuthServer-Global] Step 1 error:`, e);
+              } finally {
+                activeProcessingSet.delete('REQ_' + sessionId);
+              }
+            }
+          }
+        }
+
+        // Step 2: Detect incoming mobile auth confirm
+        if (f.name.startsWith('auth_confirm_')) {
+          const sessionId = f.name.replace('auth_confirm_', '').replace('.json', '');
+          if (!activeProcessingSet.has('CONF_' + sessionId)) {
+            const authConfirm = await supabaseDownload(f.name);
+            if (authConfirm && authConfirm.action === 'CONFIRM_AUTH' && !authConfirm._processed) {
+              activeProcessingSet.add('CONF_' + sessionId);
+              authConfirm._processed = true;
+              await supabaseUpload(f.name, authConfirm);
+              console.log(`[CustomerAuthServer-Global] Auto-processing Step 2 for session ${sessionId}`);
+              try {
+                await handleConfirmAuth(sessionId, authConfirm);
+              } catch (e) {
+                console.error(`[CustomerAuthServer-Global] Step 2 error:`, e);
+              } finally {
+                activeProcessingSet.delete('CONF_' + sessionId);
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // quiet tick
+    }
+  }, 3000);
 }
 
 // ====================================================================
@@ -388,6 +471,31 @@ async function handleConfirmAuth(sessionId, authConfirm) {
       }
     } catch (dbSaveErr) {
       console.warn('[CustomerAuthServer] Customer DB save warning:', dbSaveErr.message);
+    }
+
+    // Auto save to Supabase cloud customers table
+    try {
+      const cleanPhone = (clientPhone || '').replace(/[^0-9]/g, '');
+      const hometaxJsonStr = JSON.stringify(parsedData);
+      const updatePayload = JSON.stringify({ hometax_data: hometaxJsonStr, updated_at: new Date().toISOString() });
+      
+      const req = https.request({
+        hostname: 'wvuwhijkwfmufnjfbefi.supabase.co',
+        port: 443,
+        path: `/rest/v1/customers?phone=eq.${cleanPhone}`,
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        }
+      }, () => {});
+      req.on('error', () => {});
+      req.write(updatePayload);
+      req.end();
+    } catch (sbErr) {
+      console.warn('[CustomerAuthServer] Supabase DB update warning:', sbErr.message);
     }
 
     // 1. Upload result for WebApp
