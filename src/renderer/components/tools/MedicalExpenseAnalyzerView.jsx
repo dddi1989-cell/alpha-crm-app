@@ -41,35 +41,19 @@ export default function MedicalExpenseAnalyzerView() {
   const organizations = useCrmStore((state) => state.organizations);
   const accessibleUsers = useCrmStore((state) => state.accessibleUsers);
 
-  // Role & Scope based customer filtering (Strictly match PC CRM permissions)
+  // 숨은보험금찾기: 본인 담당 고객만 표시 (리스트 간소화)
   const allowedCustomers = useMemo(() => {
     if (!Array.isArray(customers)) return [];
     if (!currentUser) return [];
 
-    const role = (currentUser.role || 'Agent').toLowerCase();
     const myId = Number(currentUser.id);
 
-    // 1. Top Admin: View all
-    if (role === 'admin' || currentUser.username === 'admin') {
-      return customers;
-    }
-
-    // 2. Manager / Head / Team Leader: View own + subordinates in org hierarchy
-    if (role === 'manager' || role === 'head' || role === 'team_leader' || role === 'teamleader') {
-      const hierarchy = getDescendantOrgAndUserIds(currentUser.org_id || currentUser.org_name, organizations, accessibleUsers);
-      return customers.filter(c => {
-        const cOwnerId = c.user_id !== null && c.user_id !== undefined ? Number(c.user_id) : myId;
-        if (cOwnerId === myId) return true;
-        return matchesOrgFilter(c, hierarchy);
-      });
-    }
-
-    // 3. General Agent / FA: Strictly ONLY view own customers (Never see superior's customers)
+    // 본인 담당 고객만 표시 (모든 직급 동일)
     return customers.filter(c => {
-      const cOwnerId = c.user_id !== null && c.user_id !== undefined ? Number(c.user_id) : myId;
+      const cOwnerId = c.user_id !== null && c.user_id !== undefined ? Number(c.user_id) : null;
       return cOwnerId === myId;
     });
-  }, [customers, currentUser, organizations, accessibleUsers]);
+  }, [customers, currentUser]);
 
   // Input states (Planner only enters Name & Phone!)
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
