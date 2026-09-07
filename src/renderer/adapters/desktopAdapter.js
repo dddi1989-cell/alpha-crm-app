@@ -64,6 +64,7 @@ export const desktopAdapter = {
     syncPensionCatalog: () => window.electronAPI.tools.syncPensionCatalog(),
     updatePensionProduct: (product) => window.electronAPI.tools.updatePensionProduct(product),
     generatePresentationPdf: (planData) => window.electronAPI.tools.generatePresentationPdf(planData),
+    exportPensionPdf: (data) => window.electronAPI.tools.exportPensionPdf(data),
     parseDollarProposal: (data) => window.electronAPI.tools.parseDollarProposal(data),
     generateDollarProposalPdf: (data) => window.electronAPI.tools.generateDollarProposalPdf(data),
     ntsOpenAuthWindow: (data) => window.electronAPI.tools.ntsOpenAuthWindow(data),
