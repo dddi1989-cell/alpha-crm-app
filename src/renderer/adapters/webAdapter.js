@@ -897,7 +897,7 @@ export const webAdapter = {
         const sessionId = `MOB_${Date.now()}`;
         const authUrl = `https://wvuwhijkwfmufnjfbefi.supabase.co/storage/v1/object/public/wbl-board-files/direct_auth_relay_v3.html#${sessionId}`;
         
-        // Save initial session to Supabase
+        // 1. Save initial session to Supabase
         await supabase.storage.from('wbl-board-files').upload(`session_${sessionId}.json`, JSON.stringify({
           sessionId,
           clientName: params.clientName || '고객',
@@ -908,7 +908,31 @@ export const webAdapter = {
           createdAt: new Date().toISOString()
         }), { upsert: true, contentType: 'application/json' });
 
-        return { success: true, sessionId, authUrl, smsSent: true };
+        // 2. Dispatch real SMS via Solapi Web Service
+        let smsResult = { success: false };
+        if (params.clientPhone) {
+          try {
+            const { sendCustomerAuthSmsWeb } = await import('../services/solapiWebSmsService.js');
+            smsResult = await sendCustomerAuthSmsWeb({
+              clientName: params.clientName || '고객',
+              clientPhone: params.clientPhone,
+              authUrl,
+              plannerName: params.plannerName,
+              plannerPhone: params.plannerPhone
+            });
+          } catch (smsErr) {
+            console.warn('[Web-Solapi] SMS dispatch error:', smsErr);
+            smsResult = { success: false, error: smsErr.message };
+          }
+        }
+
+        return { 
+          success: true, 
+          sessionId, 
+          authUrl, 
+          smsSent: smsResult.success, 
+          smsError: smsResult.error 
+        };
       } catch (e) {
         return { success: false, error: e.message };
       }
