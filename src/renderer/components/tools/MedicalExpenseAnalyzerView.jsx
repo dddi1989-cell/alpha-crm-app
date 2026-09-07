@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   ShieldAlert, 
   Smartphone, 
@@ -33,15 +33,48 @@ import {
 } from 'lucide-react';
 import { useCrmStore } from '../../store/useCrmStore';
 import { api } from '../../utils/api';
+import { getDescendantOrgAndUserIds, matchesOrgFilter } from '../../utils/orgHierarchy';
 
 export default function MedicalExpenseAnalyzerView() {
   const customers = useCrmStore((state) => state.customers);
   const currentUser = useCrmStore((state) => state.currentUser);
+  const organizations = useCrmStore((state) => state.organizations);
+  const accessibleUsers = useCrmStore((state) => state.accessibleUsers);
+
+  // Role & Scope based customer filtering (Strictly match PC CRM permissions)
+  const allowedCustomers = useMemo(() => {
+    if (!Array.isArray(customers)) return [];
+    if (!currentUser) return [];
+
+    const role = (currentUser.role || 'Agent').toLowerCase();
+    const myId = Number(currentUser.id);
+
+    // 1. Top Admin: View all
+    if (role === 'admin' || currentUser.username === 'admin') {
+      return customers;
+    }
+
+    // 2. Manager / Head / Team Leader: View own + subordinates in org hierarchy
+    if (role === 'manager' || role === 'head' || role === 'team_leader' || role === 'teamleader') {
+      const hierarchy = getDescendantOrgAndUserIds(currentUser.org_id || currentUser.org_name, organizations, accessibleUsers);
+      return customers.filter(c => {
+        const cOwnerId = c.user_id !== null && c.user_id !== undefined ? Number(c.user_id) : myId;
+        if (cOwnerId === myId) return true;
+        return matchesOrgFilter(c, hierarchy);
+      });
+    }
+
+    // 3. General Agent / FA: Strictly ONLY view own customers (Never see superior's customers)
+    return customers.filter(c => {
+      const cOwnerId = c.user_id !== null && c.user_id !== undefined ? Number(c.user_id) : myId;
+      return cOwnerId === myId;
+    });
+  }, [customers, currentUser, organizations, accessibleUsers]);
 
   // Input states (Planner only enters Name & Phone!)
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
-  const [clientName, setClientName] = useState('이재성');
-  const [clientPhone, setClientPhone] = useState('01076797880');
+  const [clientName, setClientName] = useState(currentUser?.name || '고객');
+  const [clientPhone, setClientPhone] = useState(currentUser?.phone || '');
 
   // Mobile Auth Tracking states
   const [authStep, setAuthStep] = useState('IDLE'); // 'IDLE' | 'SMS_WAITING' | 'DONE'
@@ -508,23 +541,23 @@ export default function MedicalExpenseAnalyzerView() {
             {/* Quick Customer Picker - Always Visible */}
             <div className="space-y-1 text-xs">
               <label className="text-slate-400 font-semibold block flex items-center justify-between">
-                <span>등록 고객 불러오기</span>
-                <span className="text-[10px] text-rose-400 font-normal">총 {customers?.length || 0}명</span>
+                <span>내 담당 고객 불러오기</span>
+                <span className="text-[10px] text-rose-400 font-normal">총 {allowedCustomers?.length || 0}명</span>
               </label>
               <select
                 value={selectedCustomerId}
                 onChange={(e) => handleSelectCustomer(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-medium focus:border-rose-500 focus:outline-none"
               >
-                <option value="">-- CRM 등록 고객 직접 선택 ({customers?.length || 0}명) --</option>
-                {customers && customers.length > 0 ? (
-                  customers.map(c => (
+                <option value="">-- 내 담당 고객 선택 ({allowedCustomers?.length || 0}명) --</option>
+                {allowedCustomers && allowedCustomers.length > 0 ? (
+                  allowedCustomers.map(c => (
                     <option key={c.id} value={c.id}>
                       {c.name} ({c.phone || '연락처 없음'})
                     </option>
                   ))
                 ) : (
-                  <option disabled>고객 목록을 불러오는 중입니다...</option>
+                  <option disabled>조회 가능한 담당 고객이 없습니다.</option>
                 )}
               </select>
             </div>

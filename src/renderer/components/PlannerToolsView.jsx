@@ -33,6 +33,7 @@ import {
 import { useCrmStore } from '../store/useCrmStore';
 import { api } from '../utils/api';
 import { simulatePensionComparison, calculateAge } from '../utils/pensionEngine';
+import { getDescendantOrgAndUserIds, matchesOrgFilter } from '../utils/orgHierarchy';
 import DollarUniversalPlannerView from './tools/DollarUniversalPlannerView';
 import MedicalExpenseAnalyzerView from './tools/MedicalExpenseAnalyzerView';
 
@@ -53,6 +54,35 @@ export default function PlannerToolsView() {
   };
   const customers = useCrmStore((state) => state.customers);
   const currentUser = useCrmStore((state) => state.currentUser);
+  const organizations = useCrmStore((state) => state.organizations);
+  const accessibleUsers = useCrmStore((state) => state.accessibleUsers);
+
+  // Role & Scope based customer filtering (Strictly match PC CRM permissions)
+  const allowedCustomers = useMemo(() => {
+    if (!Array.isArray(customers)) return [];
+    if (!currentUser) return [];
+
+    const role = (currentUser.role || 'Agent').toLowerCase();
+    const myId = Number(currentUser.id);
+
+    if (role === 'admin' || currentUser.username === 'admin') {
+      return customers;
+    }
+
+    if (role === 'manager' || role === 'head' || role === 'team_leader' || role === 'teamleader') {
+      const hierarchy = getDescendantOrgAndUserIds(currentUser.org_id || currentUser.org_name, organizations, accessibleUsers);
+      return customers.filter(c => {
+        const cOwnerId = c.user_id !== null && c.user_id !== undefined ? Number(c.user_id) : myId;
+        if (cOwnerId === myId) return true;
+        return matchesOrgFilter(c, hierarchy);
+      });
+    }
+
+    return customers.filter(c => {
+      const cOwnerId = c.user_id !== null && c.user_id !== undefined ? Number(c.user_id) : myId;
+      return cOwnerId === myId;
+    });
+  }, [customers, currentUser, organizations, accessibleUsers]);
 
   // Is Top Admin
   const isAdmin = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'admin' || currentUser.username === 'admin');
@@ -388,7 +418,7 @@ export default function PlannerToolsView() {
                 className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500 transition-colors"
               >
                 <option value="">직접 정보 입력 (기본 고객)</option>
-                {customers.map((c) => (
+                {allowedCustomers.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name} ({c.birth_date || '생일미등록'} / {c.gender || '성별미지정'})
                   </option>
