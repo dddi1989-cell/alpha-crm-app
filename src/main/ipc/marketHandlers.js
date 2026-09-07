@@ -367,6 +367,7 @@ function registerMarketHandlers(mainWindow) {
   });
 
   // 2. Real-time Live Quotes & Breaking News (For live auto-polling every 30s)
+  let lastMarketSyncTime = 0;
   safeRegisterHandle('market:get-live-quote', async () => {
     try {
       const [domestic, overseas, news] = await Promise.all([
@@ -382,13 +383,46 @@ function registerMarketHandlers(mainWindow) {
         hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
       }).format(now);
 
-      return {
+      const result = {
         success: true,
         updated_at: kstTime + ' (실시간 라이브)',
         domestic: domestic?.indices?.length ? domestic : undefined,
         overseas: overseas?.indices?.length ? overseas : undefined,
         news: news?.length ? news : undefined
       };
+
+      // Throttled Supabase sync (every 5 minutes)
+      if (Date.now() - lastMarketSyncTime > 5 * 60 * 1000) {
+        lastMarketSyncTime = Date.now();
+        try {
+          const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dXdoaWprd2ZtdWZuamZiZWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1NjgyNDQsImV4cCI6MjEwMzE0NDI0NH0.-Vo71FsmwJNd2l1-UwD-ixGT_DymxRlcMp0wsONfCyE';
+          const livePayload = JSON.stringify({
+            date: now.toISOString().split('T')[0],
+            title: `실시간 증시 브리핑`,
+            updated_at: kstTime + ' (실시간 라이브)',
+            summary_3lines: [],
+            domestic: domestic || {},
+            overseas: overseas || {},
+            news: news || []
+          });
+          const req = https.request({
+            hostname: 'wvuwhijkwfmufnjfbefi.supabase.co',
+            path: '/storage/v1/object/wbl-board-files/market_latest.json',
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+              'x-upsert': 'true'
+            }
+          }, () => {});
+          req.on('error', () => {});
+          req.write(livePayload);
+          req.end();
+        } catch {}
+      }
+
+      return result;
     } catch (err) {
       console.error('market:get-live-quote error:', err);
       return { success: false, error: err.message };
@@ -501,6 +535,29 @@ async function doFullMarketRefresh() {
       JSON.stringify(liveBriefing.news),
       new Date().toISOString()
     );
+
+    // Sync to Supabase Storage for mobile web access
+    try {
+      const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dXdoaWprd2ZtdWZuamZiZWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1NjgyNDQsImV4cCI6MjEwMzE0NDI0NH0.-Vo71FsmwJNd2l1-UwD-ixGT_DymxRlcMp0wsONfCyE';
+      const payload = JSON.stringify(liveBriefing);
+      const req = https.request({
+        hostname: 'wvuwhijkwfmufnjfbefi.supabase.co',
+        path: '/storage/v1/object/wbl-board-files/market_latest.json',
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          'x-upsert': 'true'
+        }
+      }, () => {});
+      req.on('error', () => {});
+      req.write(payload);
+      req.end();
+      console.log('[Market] ✓ Synced market_latest.json to Supabase Storage');
+    } catch (syncErr) {
+      console.warn('[Market] Supabase sync warning:', syncErr.message);
+    }
 
     return { success: true, briefing: liveBriefing };
   } catch (err) {
