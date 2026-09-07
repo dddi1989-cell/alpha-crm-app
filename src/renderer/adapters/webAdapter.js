@@ -845,14 +845,39 @@ export const webAdapter = {
         } else if (customerName) {
           query = query.eq('name', customerName);
         }
-        const { data, error } = await query.limit(1);
-        if (error || !data || data.length === 0 || !data[0].hometax_data) {
-          return { success: false, error: '저장된 국세청 의료비 데이터가 없습니다.' };
+        const { data } = await query.limit(1);
+        if (data && data.length > 0 && data[0].hometax_data) {
+          const parsed = typeof data[0].hometax_data === 'string' 
+            ? JSON.parse(data[0].hometax_data) 
+            : data[0].hometax_data;
+          return { success: true, data: parsed };
         }
-        const parsed = typeof data[0].hometax_data === 'string' 
-          ? JSON.parse(data[0].hometax_data) 
-          : data[0].hometax_data;
-        return { success: true, data: parsed };
+
+        // Fallback: check recent hometax_ files in Supabase storage like PC does!
+        const searchName = (customerName || '').trim();
+        const searchPhone = (customerPhone || '').replace(/[^0-9]/g, '');
+        const { data: files } = await supabase.storage.from('wbl-board-files').list('', {
+          limit: 30,
+          sortBy: { column: 'created_at', order: 'desc' }
+        });
+
+        if (Array.isArray(files)) {
+          for (const f of files) {
+            if (f.name && f.name.startsWith('hometax_')) {
+              const res = await fetch(`https://wvuwhijkwfmufnjfbefi.supabase.co/storage/v1/object/public/wbl-board-files/${f.name}?_t=${Date.now()}`);
+              if (res.ok) {
+                const fData = await res.json();
+                const fName = (fData.userName || fData.clientName || '').trim();
+                const fPhone = (fData.phoneNo || fData.clientPhone || '').replace(/[^0-9]/g, '');
+                if ((searchName && fName === searchName) || (searchPhone && fPhone && fPhone === searchPhone)) {
+                  return { success: true, data: fData.parsedData || fData };
+                }
+              }
+            }
+          }
+        }
+
+        return { success: false, error: '저장된 국세청 의료비 데이터가 없습니다.' };
       } catch (e) {
         return { success: false, error: e.message };
       }
@@ -892,6 +917,7 @@ export const webAdapter = {
         return { success: false, error: e.message };
       }
     },
+    ntsCreateMobileLink: async (params) => api.tools.ntsCreateMobileAuthSession(params),
     ntsCreateMobileAuthSession: async (params) => {
       try {
         const sessionId = `MOB_${Date.now()}`;
