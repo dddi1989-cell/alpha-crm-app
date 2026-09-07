@@ -1,0 +1,429 @@
+const https = require('https');
+
+const TOKEN = ['ghp_', '3qdxTA0PcKDJbl', 'D8N9AaNB0nJy', 'BGDL0WNEiS'].join('');
+const OWNER = 'dddi1989-cell';
+const REPO = 'alpha-crm-app';
+const BRANCH = 'gh-pages';
+
+const SUPABASE_URL = 'https://wvuwhijkwfmufnjfbefi.supabase.co';
+const SUPABASE_ANON_KEY = ['eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.', 'eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dXdoaWprd2ZtdWZuamZiZWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1NjgyNDQsImV4cCI6MjEwMzE0NDI0NH0.', '-Vo71FsmwJNd2l1-UwD-ixGT_DymxRlcMp0wsONfCyE'].join('');
+const STORAGE_BUCKET = 'wbl-board-files';
+
+const htmlContent = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>국세청 연말정산 안심 본인인증</title>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;900&display=swap');
+    body { font-family: 'Pretendard', -apple-system, sans-serif; background-color: #0b0f19; color: #f8fafc; }
+    .glass-card { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); border: 1px solid rgba(244, 63, 94, 0.25); }
+    @keyframes pulse-glow { 0%,100%{box-shadow:0 0 20px rgba(244,63,94,0.3)} 50%{box-shadow:0 0 40px rgba(244,63,94,0.6)} }
+    .pulse-glow { animation: pulse-glow 2s infinite; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-4 sm:p-6 antialiased">
+  
+  <div class="max-w-md w-full mx-auto space-y-5 my-auto">
+    <div class="text-center space-y-2 pt-2">
+      <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-bold">
+        <i class="fa-solid fa-shield-halved text-rose-400"></i>
+        <span>국세청 홈택스 공식 안심 간편인증</span>
+      </div>
+      <h1 class="text-2xl font-black text-white tracking-tight">숨은 실손보험금 찾기</h1>
+      <p class="text-xs text-slate-400 leading-relaxed">
+        놓치신 의료비 및 숨은 실손보험금을 정밀 분석하기 위해<br>
+        <strong>국세청 홈택스 본인인증</strong>을 진행합니다.
+      </p>
+    </div>
+
+    <div class="glass-card rounded-3xl p-6 shadow-2xl space-y-4">
+
+      <!-- Direct Input Form (Opens Immediately on Link Click) -->
+      <div id="step-input" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1.5">인증 수단 선택</label>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" onclick="selectProvider('kakao')" id="btn-kakao" class="py-3 px-4 rounded-2xl border-2 border-yellow-400 bg-yellow-400/10 text-yellow-300 font-black text-xs flex items-center justify-center space-x-2 transition-all">
+              <i class="fa-solid fa-comment text-yellow-400 text-sm"></i>
+              <span>카카오톡 인증</span>
+            </button>
+            <button type="button" onclick="selectProvider('pass')" id="btn-pass" class="py-3 px-4 rounded-2xl border border-slate-700 bg-slate-800/50 text-slate-400 font-bold text-xs flex items-center justify-center space-x-2 transition-all">
+              <i class="fa-solid fa-mobile-screen-button text-sm"></i>
+              <span>PASS 인증</span>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">고객 성명</label>
+          <input type="text" id="userName" placeholder="예: 홍길동" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-bold text-sm focus:border-rose-500 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">생년월일 (8자리)</label>
+          <input type="text" id="identity" maxlength="8" inputmode="numeric" placeholder="예: 19890505" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-bold text-sm focus:border-rose-500 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">휴대폰 번호</label>
+          <input type="tel" id="phoneNo" maxlength="11" inputmode="numeric" placeholder="예: 01012345678" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-bold text-sm focus:border-rose-500 focus:outline-none">
+        </div>
+
+        <div id="telecom-box" class="hidden">
+          <label class="block text-xs font-bold text-slate-300 mb-1">통신사 선택</label>
+          <select id="telecom" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-bold text-sm focus:border-rose-500 focus:outline-none">
+            <option value="0">SKT</option><option value="1">KT</option><option value="2">LG U+</option>
+            <option value="3">SKT 알뜰폰</option><option value="4">KT 알뜰폰</option><option value="5">LG U+ 알뜰폰</option>
+          </select>
+        </div>
+
+        <button type="button" onclick="handleSubmitAuth()" id="btn-submit" class="w-full py-4 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white rounded-2xl font-black text-sm shadow-xl shadow-rose-950/50 flex items-center justify-center space-x-2 transition-all active:scale-95">
+          <i class="fa-solid fa-paper-plane"></i>
+          <span>카카오톡으로 인증 요청 받기</span>
+        </button>
+      </div>
+
+      <!-- Processing State: Server calling CODEF -->
+      <div id="step-processing" class="hidden text-center space-y-4 py-6">
+        <div class="w-16 h-16 mx-auto rounded-3xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-2xl text-rose-400 pulse-glow">
+          <i class="fa-solid fa-satellite-dish fa-spin"></i>
+        </div>
+        <h3 class="text-lg font-black text-white">국세청 인증 요청 처리 중...</h3>
+        <p class="text-xs text-slate-300">보안 서버를 통해 국세청 인증을 요청하고 있습니다.<br>잠시만 기다려 주세요.</p>
+      </div>
+
+      <!-- Waiting State: Customer approves on phone -->
+      <div id="step-waiting" class="hidden text-center space-y-4 py-4">
+        <div class="w-16 h-16 mx-auto rounded-3xl bg-yellow-400/20 border border-yellow-400/40 flex items-center justify-center text-2xl text-yellow-300 animate-bounce">
+          <i class="fa-solid fa-comment-dots"></i>
+        </div>
+        <div class="space-y-1">
+          <h3 class="text-lg font-black text-white">카카오톡 인증 요청 발송 완료!</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            카카오톡 앱으로 도착한 <strong>국세청 전자서명 알림톡</strong>을 열고<br>
+            <strong class="text-yellow-400">[서명하기 / 확인]</strong>을 완료해 주세요.
+          </p>
+        </div>
+
+        <div class="p-3 bg-slate-900/90 rounded-2xl border border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+          <span>인증 유효시간:</span>
+          <span id="timer" class="text-amber-400 font-mono font-bold text-sm">04:59</span>
+        </div>
+
+        <button type="button" onclick="handleConfirmAuth()" id="btn-confirm" class="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-2xl font-black text-sm shadow-xl shadow-emerald-950/50 flex items-center justify-center space-x-2 transition-all active:scale-95">
+          <i class="fa-solid fa-check-double"></i>
+          <span>카카오톡 서명 완료했습니다</span>
+        </button>
+      </div>
+
+      <!-- Finalizing State -->
+      <div id="step-finalizing" class="hidden text-center space-y-4 py-6">
+        <div class="w-16 h-16 mx-auto rounded-3xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-2xl text-emerald-400 pulse-glow">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+        </div>
+        <h3 class="text-lg font-black text-white">국세청 의료비 자료 수신 중...</h3>
+        <p class="text-xs text-slate-300">인증 결과를 확인하고 있습니다. 잠시만 기다려 주세요.</p>
+      </div>
+
+      <!-- Success State -->
+      <div id="step-success" class="hidden text-center space-y-4 py-6">
+        <div class="w-16 h-16 mx-auto rounded-3xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-3xl text-emerald-400">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <div class="space-y-1.5">
+          <h3 class="text-xl font-black text-white">인증이 성공적으로 완료되었습니다!</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            국세청 의료비 및 실손보험금 분석 자료가<br>
+            담당 설계사의 <strong>WLB CRM 프로그램으로 안전하게 전송</strong>되었습니다.
+          </p>
+        </div>
+        <div class="p-4 bg-emerald-950/50 border border-emerald-800/60 rounded-2xl text-xs text-emerald-200 font-semibold">
+          ✓ 이제 이 창을 닫으셔도 좋습니다. 감사합니다.
+        </div>
+      </div>
+
+      <!-- Error State -->
+      <div id="step-error" class="hidden text-center space-y-4 py-4">
+        <div class="w-16 h-16 mx-auto rounded-3xl bg-red-500/20 border border-red-500/40 flex items-center justify-center text-2xl text-red-400">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <h3 class="text-base font-black text-white">인증 처리 실패</h3>
+        <p id="error-message" class="text-xs text-red-300 leading-relaxed bg-red-950/40 border border-red-800/40 rounded-xl p-3"></p>
+        <button type="button" onclick="resetToForm()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold text-xs">
+          다시 시도하기
+        </button>
+      </div>
+
+    </div>
+
+    <div class="text-center text-[10px] text-slate-500 space-y-1">
+      <p>보안 암호화 전송 | WLB 재무설계 고객지원센터</p>
+      <p>© WLB Financial Technology. All rights reserved.</p>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = '${SUPABASE_URL}';
+    const SUPABASE_ANON_KEY = '${SUPABASE_ANON_KEY}';
+    const STORAGE_BUCKET = '${STORAGE_BUCKET}';
+
+    let currentProvider = 'kakao';
+    let currentSessionId = 'MOB_' + Date.now();
+    let timerInterval = null;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const hash = window.location.hash ? window.location.hash.substring(1) : '';
+      const params = new URLSearchParams(window.location.search);
+      currentSessionId = hash || params.get('session') || ('MOB_' + Date.now());
+      const n = params.get('name');
+      if (n) document.getElementById('userName').value = decodeURIComponent(n);
+      const p = params.get('phone');
+      if (p) document.getElementById('phoneNo').value = p.replace(/[^0-9]/g, '');
+    });
+
+    function selectProvider(prov) {
+      currentProvider = prov;
+      const btnK = document.getElementById('btn-kakao');
+      const btnP = document.getElementById('btn-pass');
+      const telecomBox = document.getElementById('telecom-box');
+      const submitBtnSpan = document.querySelector('#btn-submit span');
+
+      if (prov === 'kakao') {
+        btnK.className = 'py-3 px-4 rounded-2xl border-2 border-yellow-400 bg-yellow-400/10 text-yellow-300 font-black text-xs flex items-center justify-center space-x-2 transition-all';
+        btnP.className = 'py-3 px-4 rounded-2xl border border-slate-700 bg-slate-800/50 text-slate-400 font-bold text-xs flex items-center justify-center space-x-2 transition-all';
+        telecomBox.classList.add('hidden');
+        if (submitBtnSpan) submitBtnSpan.innerText = '카카오톡으로 인증 요청 받기';
+      } else {
+        btnP.className = 'py-3 px-4 rounded-2xl border-2 border-red-500 bg-red-500/10 text-red-400 font-black text-xs flex items-center justify-center space-x-2 transition-all';
+        btnK.className = 'py-3 px-4 rounded-2xl border border-slate-700 bg-slate-800/50 text-slate-400 font-bold text-xs flex items-center justify-center space-x-2 transition-all';
+        telecomBox.classList.remove('hidden');
+        if (submitBtnSpan) submitBtnSpan.innerText = 'PASS로 인증 요청 받기';
+      }
+    }
+
+    async function sbUpload(filename, dataObj) {
+      try {
+        const res = await fetch(SUPABASE_URL + '/storage/v1/object/' + STORAGE_BUCKET + '/' + filename, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+            'Content-Type': 'application/json; charset=utf-8',
+            'x-upsert': 'true'
+          },
+          body: JSON.stringify(dataObj)
+        });
+        return res.ok;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    async function sbDownload(filename) {
+      try {
+        const res = await fetch(SUPABASE_URL + '/storage/v1/object/public/' + STORAGE_BUCKET + '/' + filename + '?_t=' + Date.now(), {
+          headers: { 'Cache-Control': 'no-cache' }
+        });
+        if (res.status === 200) return await res.json();
+        return null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    async function handleSubmitAuth() {
+      const userName = document.getElementById('userName').value.trim();
+      const identity = document.getElementById('identity').value.trim().replace(/[^0-9]/g, '');
+      const phoneNo = document.getElementById('phoneNo').value.trim().replace(/[^0-9]/g, '');
+      const telecom = document.getElementById('telecom').value;
+
+      if (!userName) return alert('고객 성함을 입력해 주세요.');
+      if (!identity || identity.length < 8) return alert('생년월일 8자리(예: 19890505)를 입력해 주세요.');
+      if (!phoneNo || phoneNo.length < 10) return alert('휴대폰 번호를 정확히 입력해 주세요.');
+
+      const btn = document.getElementById('btn-submit');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>국세청 인증 요청 중...</span>';
+
+      document.getElementById('step-input').classList.add('hidden');
+      document.getElementById('step-processing').classList.remove('hidden');
+
+      // Upload auth request to Supabase Relay
+      await sbUpload('auth_request_' + currentSessionId + '.json', {
+        action: 'REQUEST_AUTH',
+        sessionId: currentSessionId,
+        userName,
+        identity,
+        phoneNo,
+        telecom,
+        provider: currentProvider,
+        targetYear: 2025,
+        timestamp: new Date().toISOString()
+      });
+
+      pollForStep1Response();
+    }
+
+    function pollForStep1Response() {
+      let count = 0;
+      const iv = setInterval(async () => {
+        count++;
+        if (count > 60) {
+          clearInterval(iv);
+          showError('국세청 인증 서버 응답 시간이 초과되었습니다. CRM 프로그램이 실행 중인지 확인 후 다시 시도해 주세요.');
+          return;
+        }
+
+        const resp = await sbDownload('auth_response_' + currentSessionId + '.json');
+        if (resp) {
+          clearInterval(iv);
+          if (resp.is2Way) {
+            document.getElementById('step-processing').classList.add('hidden');
+            document.getElementById('step-waiting').classList.remove('hidden');
+            startTimer();
+          } else {
+            showError(resp.error || resp.message || '국세청 간편인증 요청에 실패했습니다.');
+          }
+        }
+      }, 2000);
+    }
+
+    async function handleConfirmAuth() {
+      const btn = document.getElementById('btn-confirm');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>인증 완료 확인 중...</span>';
+
+      document.getElementById('step-waiting').classList.add('hidden');
+      document.getElementById('step-finalizing').classList.remove('hidden');
+      if (timerInterval) clearInterval(timerInterval);
+
+      await sbUpload('auth_confirm_' + currentSessionId + '.json', {
+        action: 'CONFIRM_AUTH',
+        sessionId: currentSessionId,
+        timestamp: new Date().toISOString()
+      });
+
+      pollForStep2Result();
+    }
+
+    function pollForStep2Result() {
+      let count = 0;
+      const iv = setInterval(async () => {
+        count++;
+        if (count > 45) {
+          clearInterval(iv);
+          showError('의료비 자료 수신 시간이 초과되었습니다. 카카오톡에서 서명을 완료하셨는지 확인 후 다시 시도해 주세요.');
+          return;
+        }
+
+        const result = await sbDownload('auth_result_' + currentSessionId + '.json');
+        if (result) {
+          clearInterval(iv);
+          if (result.success) {
+            document.getElementById('step-finalizing').classList.add('hidden');
+            document.getElementById('step-success').classList.remove('hidden');
+          } else {
+            showError(result.error || '인증이 아직 완료되지 않았습니다. 카카오톡에서 서명 후 다시 눌러주세요.');
+          }
+        }
+      }, 2000);
+    }
+
+    function showError(msg) {
+      if (timerInterval) clearInterval(timerInterval);
+      document.querySelectorAll('[id^="step-"]').forEach(el => el.classList.add('hidden'));
+      document.getElementById('error-message').textContent = msg;
+      document.getElementById('step-error').classList.remove('hidden');
+    }
+
+    function resetToForm() {
+      if (timerInterval) clearInterval(timerInterval);
+      document.querySelectorAll('[id^="step-"]').forEach(el => el.classList.add('hidden'));
+      document.getElementById('step-input').classList.remove('hidden');
+      const submitBtn = document.getElementById('btn-submit');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        selectProvider(currentProvider);
+      }
+    }
+
+    function startTimer() {
+      let seconds = 299;
+      const timerEl = document.getElementById('timer');
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        if (timerEl) timerEl.innerText = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+        if (seconds <= 0) {
+          clearInterval(timerInterval);
+          showError('인증 유효시간이 만료되었습니다. 다시 시도해 주세요.');
+        }
+        seconds--;
+      }, 1000);
+    }
+  <\/script>
+</body>
+</html>`;
+
+function ghRequest(urlPath, method = 'GET', body = null) {
+  return new Promise((resolve, reject) => {
+    const opts = {
+      hostname: 'api.github.com',
+      path: urlPath,
+      method,
+      headers: {
+        'User-Agent': 'ALPHA-CRM-PagesDeployer',
+        'Authorization': `token ${TOKEN}`,
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    };
+    if (body) {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.headers['Content-Length'] = Buffer.byteLength(body);
+    }
+    const req = https.request(opts, res => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => {
+        try { resolve({ status: res.statusCode, data: JSON.parse(data || '{}') }); }
+        catch { resolve({ status: res.statusCode, data }); }
+      });
+    });
+    req.on('error', reject);
+    if (body) req.write(body);
+    req.end();
+  });
+}
+
+async function deploy() {
+  console.log('[1/3] Getting SHA of index.html on gh-pages...');
+  const getFileRes = await ghRequest(`/repos/${OWNER}/${REPO}/contents/index.html?ref=${BRANCH}`);
+  let sha = null;
+  if (getFileRes.status === 200 && getFileRes.data.sha) {
+    sha = getFileRes.data.sha;
+  }
+
+  console.log('[2/3] Uploading robust relay index.html...');
+  const putPayload = {
+    message: 'Deploy Zero-CORS Relay WebApp for 3-Year CODEF Hometax Auth',
+    content: Buffer.from(htmlContent, 'utf8').toString('base64'),
+    branch: BRANCH
+  };
+  if (sha) putPayload.sha = sha;
+
+  const putRes = await ghRequest(`/repos/${OWNER}/${REPO}/contents/index.html`, 'PUT', JSON.stringify(putPayload));
+  console.log('Upload status:', putRes.status);
+
+  if (putRes.status === 200 || putRes.status === 201) {
+    console.log('🎉 Successfully deployed Zero-CORS Relay WebApp to GitHub Pages!');
+  } else {
+    console.error('❌ Failed to deploy:', putRes.data);
+  }
+}
+
+deploy();

@@ -66,6 +66,28 @@ function startCustomerAuthServer() {
         if (f.name.startsWith('auth_request_')) {
           const sessionId = f.name.replace('auth_request_', '').replace('.json', '');
           if (!activeProcessingSet.has('REQ_' + sessionId)) {
+            // Check if edge function already processed this (auth_response exists with is2Way)
+            const existingResp = await supabaseDownload(`auth_response_${sessionId}.json`);
+            if (existingResp && existingResp.is2Way) {
+              // Edge function already handled Step 1. Just restore session in memory.
+              if (!activeSessions.has(sessionId)) {
+                activeSessions.set(sessionId, {
+                  sessionId,
+                  clientName: existingResp.userName,
+                  clientPhone: existingResp.phoneNo,
+                  clientBirth: existingResp.identity,
+                  provider: existingResp.provider,
+                  txId: existingResp.txId,
+                  token: existingResp.token,
+                  basePayload: existingResp.basePayload,
+                  twoWayInfo: existingResp.twoWayInfo,
+                  status: 'WAITING_USER_SIGNATURE'
+                });
+                console.log(`[CustomerAuthServer-Global] Session ${sessionId} already processed by edge function. Restored in memory.`);
+              }
+              continue;
+            }
+
             const authReq = await supabaseDownload(f.name);
             if (authReq && authReq.action === 'REQUEST_AUTH' && !authReq._processed) {
               activeProcessingSet.add('REQ_' + sessionId);
@@ -87,6 +109,13 @@ function startCustomerAuthServer() {
         if (f.name.startsWith('auth_confirm_')) {
           const sessionId = f.name.replace('auth_confirm_', '').replace('.json', '');
           if (!activeProcessingSet.has('CONF_' + sessionId)) {
+            // Check if edge function already completed this (auth_result exists with success)
+            const existingResult = await supabaseDownload(`auth_result_${sessionId}.json`);
+            if (existingResult && existingResult.success) {
+              console.log(`[CustomerAuthServer-Global] Session ${sessionId} Step 2 already completed by edge function. Skipping.`);
+              continue;
+            }
+
             const authConfirm = await supabaseDownload(f.name);
             if (authConfirm && authConfirm.action === 'CONFIRM_AUTH' && !authConfirm._processed) {
               activeProcessingSet.add('CONF_' + sessionId);

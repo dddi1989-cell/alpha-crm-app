@@ -836,6 +836,7 @@ export const webAdapter = {
     },
     ntsGetCustomerHometaxData: async ({ customerId, customerName, customerPhone }) => {
       try {
+        // Try fetching hometax_data from Supabase DB (column may or may not exist)
         let query = supabase.from('customers').select('id, name, phone, hometax_data');
         if (customerId) {
           query = query.eq('id', customerId);
@@ -846,16 +847,48 @@ export const webAdapter = {
           query = query.eq('name', customerName);
         }
         const { data, error } = await query.limit(1);
-        if (error || !data || data.length === 0 || !data[0].hometax_data) {
-          return { success: false, error: '저장된 국세청 의료비 데이터가 없습니다.' };
+        if (!error && data && data.length > 0 && data[0].hometax_data) {
+          const parsed = typeof data[0].hometax_data === 'string' 
+            ? JSON.parse(data[0].hometax_data) 
+            : data[0].hometax_data;
+          if (parsed && (parsed.expenseList?.length > 0 || parsed.totalExpenseCount > 0)) {
+            return { success: true, data: parsed };
+          }
         }
-        const parsed = typeof data[0].hometax_data === 'string' 
-          ? JSON.parse(data[0].hometax_data) 
-          : data[0].hometax_data;
-        return { success: true, data: parsed };
-      } catch (e) {
-        return { success: false, error: e.message };
+      } catch (dbErr) {
+        console.warn('[Web-Adapter] ntsGetCustomerHometaxData DB fallback:', dbErr.message);
       }
+
+      // Fallback: Search Supabase Storage for matching hometax files
+      try {
+        const { data: files } = await supabase.storage.from('wbl-board-files').list('', {
+          limit: 30,
+          sortBy: { column: 'created_at', order: 'desc' }
+        });
+        if (!files) return { success: false, error: '저장된 국세청 의료비 데이터가 없습니다.' };
+        
+        const hometaxFiles = files.filter(f => f.name.startsWith('hometax_'));
+        for (const hf of hometaxFiles) {
+          try {
+            const res = await fetch(`https://wvuwhijkwfmufnjfbefi.supabase.co/storage/v1/object/public/wbl-board-files/${hf.name}?_t=${Date.now()}`);
+            if (!res.ok) continue;
+            const json = await res.json();
+            const pd = json.parsedData || json;
+            const matchName = (customerName && (json.userName === customerName || pd.clientName === customerName));
+            const matchPhone = customerPhone && (
+              (json.phoneNo || '').replace(/[^0-9]/g, '') === customerPhone.replace(/[^0-9]/g, '') ||
+              (pd.clientPhone || '').replace(/[^0-9]/g, '') === customerPhone.replace(/[^0-9]/g, '')
+            );
+            if (matchName || matchPhone) {
+              return { success: true, data: pd };
+            }
+          } catch {}
+        }
+      } catch (storageErr) {
+        console.warn('[Web-Adapter] Storage hometax search error:', storageErr.message);
+      }
+
+      return { success: false, error: '저장된 국세청 의료비 데이터가 없습니다.' };
     },
     ntsGetLastRetrievedData: async () => {
       try {

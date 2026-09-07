@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>간편인증 | 국세청 홈택스 HomeTax</title>
+  <!-- JSEncrypt for Client-Side RSA PKCS#1 Encryption adhering to CODEF Spec -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsencrypt/3.3.2/jsencrypt.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Malgun Gothic", "맑은 고딕", -apple-system, BlinkMacSystemFont, "Pretendard", Roboto, sans-serif; }
+    body { background: #f4f6fb; color: #333; min-height: 100vh; display: flex; flex-direction: column; }
+    
+    /* Top Hometax Header */
+    .header { background: #13203c; color: #fff; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0056b3; }
+    .header-title { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+    .hometax-logo { font-size: 14px; font-weight: 900; color: #fff; letter-spacing: -0.5px; text-align: right; }
+    .hometax-sub { font-size: 10px; color: #94a3b8; font-weight: 400; display: block; }
+    
+    .container { flex: 1; padding: 14px; max-width: 500px; margin: 0 auto; width: 100%; }
+    
+    /* Main Box */
+    .main-card { background: #fff; border: 1px solid #d1d5db; border-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); padding: 16px; margin-bottom: 12px; }
+    .section-title { font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1.5px solid #13203c; }
+    
+    /* Provider Grid */
+    .provider-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+    .prov-btn { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 4px; text-align: center; cursor: pointer; transition: 0.15s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+    .prov-btn:hover { border-color: #0d6efd; background: #eff6ff; }
+    .prov-btn.active { border: 2px solid #0d6efd; background: #e0edff; font-weight: 700; color: #0d6efd; }
+    .prov-icon-wrap { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 900; }
+    .prov-name { font-size: 11px; color: #475569; letter-spacing: -0.5px; }
+    
+    /* Form Inputs */
+    .form-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+    .form-table th { width: 95px; background: #f8fafc; padding: 10px 10px; font-size: 12px; font-weight: 600; color: #475569; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; text-align: left; }
+    .form-table td { padding: 8px 10px; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; }
+    .input-text { width: 100%; height: 36px; padding: 0 10px; border: 1px solid #cbd5e1; border-radius: 3px; font-size: 13px; font-weight: 600; outline: none; }
+    .input-text:focus { border-color: #0d6efd; }
+    .jumin-row { display: flex; align-items: center; gap: 6px; }
+    .phone-row { display: flex; gap: 6px; }
+    .phone-select { width: 80px; height: 36px; border: 1px solid #cbd5e1; border-radius: 3px; padding: 0 6px; font-size: 13px; }
+    
+    /* Terms Box */
+    .terms-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 12px; margin-bottom: 16px; font-size: 12px; }
+    .terms-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: 700; color: #1e293b; }
+    .terms-items { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px; color: #64748b; }
+    
+    /* Action Buttons */
+    .btn-group { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }
+    .btn-cancel { height: 46px; background: #64748b; color: #fff; border: none; border-radius: 4px; font-size: 14px; font-weight: 700; cursor: pointer; }
+    .btn-request { height: 46px; background: #0066cc; color: #fff; border: none; border-radius: 4px; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 6px rgba(0,102,204,0.3); }
+    .btn-request:active { background: #0052a3; }
+    
+    /* Waiting & Success States */
+    .waiting-box, .success-box { display: none; text-align: center; padding: 24px 10px; }
+    .spinner { width: 44px; height: 44px; border: 4px solid #0066cc; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .btn-confirm { width: 100%; height: 48px; background: #10b981; color: #fff; border: none; border-radius: 4px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 14px; box-shadow: 0 2px 6px rgba(16,185,129,0.3); }
+    
+    .footer { text-align: center; padding: 14px; font-size: 11px; color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-title">
+      <span>민간인증서 간편인증</span>
+    </div>
+    <div class="hometax-logo">
+      <span>국세청 홈택스</span>
+      <span class="hometax-sub">HomeTax</span>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="main-card" id="form-card">
+      <div class="section-title">민간 인증서 선택</div>
+      
+      <div class="provider-grid">
+        <button type="button" class="prov-btn active" data-provider="kakao" data-level="1">
+          <div class="prov-icon-wrap" style="background:#FEE500; color:#3C1E1E;">TALK</div>
+          <span class="prov-name">카카오톡</span>
+        </button>
+        <button type="button" class="prov-btn" data-provider="pass" data-level="5">
+          <div class="prov-icon-wrap" style="background:#E11837; color:#fff;">PASS</div>
+          <span class="prov-name">통신사PASS</span>
+        </button>
+        <button type="button" class="prov-btn" data-provider="toss" data-level="8">
+          <div class="prov-icon-wrap" style="background:#0064FF; color:#fff;">토스</div>
+          <span class="prov-name">토스</span>
+        </button>
+        <button type="button" class="prov-btn" data-provider="naver" data-level="6">
+          <div class="prov-icon-wrap" style="background:#03C75A; color:#fff;">N</div>
+          <span class="prov-name">네이버</span>
+        </button>
+        <button type="button" class="prov-btn" data-provider="kb" data-level="4">
+          <div class="prov-icon-wrap" style="background:#FFBC00; color:#333;">KB</div>
+          <span class="prov-name">KB국민</span>
+        </button>
+        <button type="button" class="prov-btn" data-provider="shinhan" data-level="7">
+          <div class="prov-icon-wrap" style="background:#0046FF; color:#fff;">신한</div>
+          <span class="prov-name">신한은행</span>
+        </button>
+        <button type="button" class="prov-btn" data-provider="nh" data-level="10">
+          <div class="prov-icon-wrap" style="background:#02973F; color:#fff;">NH</div>
+          <span class="prov-name">NH인증서</span>
+        </button>
+        <button type="button" class="prov-btn" data-provider="samsung" data-level="3">
+          <div class="prov-icon-wrap" style="background:#1428A0; color:#fff;">삼성</div>
+          <span class="prov-name">삼성패스</span>
+        </button>
+      </div>
+
+      <div class="section-title">본인인증 정보 입력</div>
+      <form id="auth-form">
+        <table class="form-table">
+          <tr>
+            <th>이름</th>
+            <td>
+              <input type="text" id="userName" class="input-text" placeholder="홍길동" required>
+            </td>
+          </tr>
+          <tr>
+            <th>주민등록번호</th>
+            <td>
+              <div class="jumin-row">
+                <input type="text" id="jumin1" class="input-text" placeholder="앞 6자리" maxlength="6" style="text-align:center;" required>
+                <span>-</span>
+                <input type="password" id="jumin2" class="input-text" placeholder="뒤 7자리" maxlength="7" style="text-align:center;" required>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <th>휴대폰 번호</th>
+            <td>
+              <div class="phone-row">
+                <select id="phonePrefix" class="phone-select">
+                  <option value="010" selected>010</option>
+                  <option value="011">011</option>
+                </select>
+                <input type="tel" id="phoneSuffix" class="input-text" placeholder="12345678" required>
+              </div>
+            </td>
+          </tr>
+          <tr id="telecom-row" style="display:none;">
+            <th>통신사</th>
+            <td>
+              <select id="telecom" class="input-text">
+                <option value="0">SKT (SKT 알뜰폰 포함)</option>
+                <option value="1">KT (KT 알뜰폰 포함)</option>
+                <option value="2">LG U+ (LG U+ 알뜰폰 포함)</option>
+              </select>
+            </td>
+          </tr>
+        </table>
+
+        <div class="terms-card">
+          <div class="terms-header">
+            <span>서비스 이용에 대한 동의</span>
+            <label style="font-size:12px; cursor:pointer; font-weight:bold; color:#0066cc;">
+              <input type="checkbox" id="agree-all" checked> 전체동의
+            </label>
+          </div>
+          <div class="terms-items">
+            <div>☑ 개인정보 이용 동의 (필수)</div>
+            <div>☑ 제3자 정보제공 동의 (필수)</div>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button type="button" class="btn-cancel" onclick="window.close()">닫기</button>
+          <button type="submit" id="submit-btn" class="btn-request">국세청 간편인증 요청</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="main-card waiting-box" id="waiting-card">
+      <div class="spinner"></div>
+      <h2 style="font-size:16px; font-weight:bold; color:#1e293b; margin-bottom:8px;">스마트폰 앱에서 서명을 진행해주세요!</h2>
+      <p style="font-size:12px; color:#64748b; line-height:1.5; margin-bottom:14px;">
+        고객님의 <strong id="prov-label" style="color:#0066cc;">카카오톡</strong> 앱으로 <strong>국세청 홈택스 전자서명 요청</strong>이 발송되었습니다.<br>
+        앱을 열고 <strong>[인증하기 / 비밀번호 입력]</strong>을 완료하신 후 아래 버튼을 눌러주세요.
+      </p>
+      <button type="button" id="confirm-btn" class="btn-confirm">
+        ✓ 카카오톡에서 서명 완료 (자료 전송)
+      </button>
+    </div>
+
+    <div class="main-card success-box" id="success-card">
+      <div style="font-size:36px; color:#10b981; margin-bottom:10px;">✓</div>
+      <h2 style="font-size:16px; font-weight:bold; color:#1e293b; margin-bottom:6px;">국세청 본인인증 완료!</h2>
+      <p style="font-size:12px; color:#64748b; line-height:1.5; margin-bottom:16px;">
+        최근 2개년 연말정산 의료비 지출 및 실손보험금 수령 내역이 담당 설계사님의 <strong>WLB CRM 프로그램으로 안전하게 전송</strong>되었습니다.
+      </p>
+      <p style="font-size:12px; color:#0066cc; font-weight:bold;">
+        이제 이 창을 닫으셔도 됩니다.
+      </p>
+    </div>
+  </div>
+
+  <div class="footer">
+    이 누리집은 대한민국 국세청 연말정산 간소화 공식 간편인증 연계 서비스입니다.
+  </div>
+
+  <script>
+    // CODEF Config (Adhering to Official PDF Spec)
+    const CODEF_PUBLIC_KEY = \`-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAncJ0P8fl5eOm/w5PkP37jw9WWKg9hRxUOHi8h0QJYpv8gPNJ9SM6PG7oXYO3oXT2rjZP9sNUlExuZXdJKq+3CxH1zFi6I4v4+gFVb6pZREHpfGS9/kPKDPp1TxeyOLC84Eg9T7XKog6q+2XZoliWSRfqOgeEsMB2ZH6XF5Ny8bDjmsSAlU4BQuFfrHVoVxhm6/A+macQ1dy7bvoOzioa64fcWsJ3aHEy44BT63VnNDZt9Cmw6vbRmDhO1JEKGFxKaFa8kMmmgWrtPREVKpAPVwv8EQcS8A6M4BTH6ESU1HXDkUOlEtiTjP6fJLmqb//E8RYD198NWnoofWPqKK30DwIDAQAB
+-----END PUBLIC KEY-----\`;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session') || ('MOB_' + Date.now());
+    const queryName = urlParams.get('name');
+    const queryPhone = urlParams.get('phone');
+
+    if (queryName) document.getElementById('userName').value = queryName;
+    if (queryPhone) {
+      const cleanP = queryPhone.replace(/[^0-9]/g, '');
+      if (cleanP.length >= 10) {
+        document.getElementById('phonePrefix').value = cleanP.substring(0, 3);
+        document.getElementById('phoneSuffix').value = cleanP.substring(3);
+      }
+    }
+
+    let selectedProvider = 'kakao';
+    let selectedLevel = '1';
+    let twoWaySessionData = null;
+
+    document.querySelectorAll('.prov-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.prov-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedProvider = btn.getAttribute('data-provider');
+        selectedLevel = btn.getAttribute('data-level');
+        document.getElementById('telecom-row').style.display = (selectedProvider === 'pass') ? 'table-row' : 'none';
+      });
+    });
+
+    // RSA PKCS#1 Encryption
+    function rsaEncryptText(plainText) {
+      const encrypt = new JSEncrypt();
+      encrypt.setPublicKey(CODEF_PUBLIC_KEY);
+      return encrypt.encrypt(plainText);
+    }
+
+    // Step 1: Request 2-Way Auth
+    document.getElementById('auth-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const userName = document.getElementById('userName').value.trim();
+      const jumin1 = document.getElementById('jumin1').value.trim().replace(/[^0-9]/g, '');
+      const jumin2 = document.getElementById('jumin2').value.trim().replace(/[^0-9]/g, '');
+      const identity = jumin1 + jumin2;
+
+      const phonePrefix = document.getElementById('phonePrefix').value;
+      const phoneSuffix = document.getElementById('phoneSuffix').value.trim().replace(/[^0-9]/g, '');
+      const phoneNo = phonePrefix + phoneSuffix;
+      const telecom = document.getElementById('telecom').value;
+      const submitBtn = document.getElementById('submit-btn');
+
+      if (!userName || identity.length !== 13 || phoneNo.length < 10) {
+        alert('이름, 주민등록번호 13자리, 휴대폰 번호를 정확하게 입력해주세요.');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerText = '국세청 인증 요청 중...';
+
+      try {
+        const encIdentity = rsaEncryptText(identity);
+
+        const payload = {
+          organization: '0004',
+          loginType: '6',
+          loginTypeLevel: selectedLevel,
+          userName: userName,
+          phoneNo: phoneNo,
+          identity: encIdentity,
+          searchStartYear: '2024',
+          inquiryTypeCD: '111111111111111'
+        };
+
+        if (selectedLevel === '5') {
+          payload.telecom = telecom;
+        }
+
+        // Send to cloud relay or API gateway
+        const res = await fetch('https://wvuwhijkwfmufnjfbefi.supabase.co/functions/v1/hometax-2way-relay', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            step: 'REQUEST',
+            sessionId,
+            payload
+          })
+        });
+
+        const data = await res.json();
+        if (data.success && data.is2Way) {
+          twoWaySessionData = {
+            txId: data.txId,
+            basePayload: payload,
+            twoWayInfo: data.twoWayInfo,
+            userName,
+            phoneNo,
+            identity
+          };
+
+          document.getElementById('form-card').style.display = 'none';
+          document.getElementById('waiting-card').style.display = 'block';
+          const pName = selectedProvider === 'kakao' ? '카카오톡' : selectedProvider === 'pass' ? '통신사 PASS' : selectedProvider === 'toss' ? '토스' : '네이버';
+          document.getElementById('prov-label').innerText = pName;
+        } else {
+          alert('인증 요청 실패: ' + (data.error || data.message || '오류가 발생했습니다.'));
+          submitBtn.disabled = false;
+          submitBtn.innerText = '국세청 간편인증 요청';
+        }
+      } catch (err) {
+        alert('통신 오류: ' + err.message);
+        submitBtn.disabled = false;
+        submitBtn.innerText = '국세청 간편인증 요청';
+      }
+    });
+
+    // Step 2: Confirm 2-Way Auth
+    document.getElementById('confirm-btn').addEventListener('click', async () => {
+      const confirmBtn = document.getElementById('confirm-btn');
+      confirmBtn.disabled = true;
+      confirmBtn.innerText = '국세청 의료비 자료 수신 중...';
+
+      try {
+        const res = await fetch('https://wvuwhijkwfmufnjfbefi.supabase.co/functions/v1/hometax-2way-relay', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            step: 'CONFIRM',
+            sessionId,
+            sessionData: twoWaySessionData
+          })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('waiting-card').style.display = 'none';
+          document.getElementById('success-card').style.display = 'block';
+        } else {
+          alert('자료 수신 중 오류: ' + (data.error || data.message || '다시 시도해 주세요.'));
+          confirmBtn.disabled = false;
+          confirmBtn.innerText = '✓ 카카오톡에서 서명 완료 (다시 시도)';
+        }
+      } catch (err) {
+        alert('오류: ' + err.message);
+        confirmBtn.disabled = false;
+        confirmBtn.innerText = '✓ 카카오톡에서 서명 완료 (다시 시도)';
+      }
+    });
+  </script>
+</body>
+</html>

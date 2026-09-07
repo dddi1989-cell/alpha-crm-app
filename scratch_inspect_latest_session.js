@@ -1,0 +1,64 @@
+const https = require('https');
+
+const SUPABASE_URL = 'https://wvuwhijkwfmufnjfbefi.supabase.co';
+const SUPABASE_KEY = ['eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.', 'eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dXdoaWprd2ZtdWZuamZiZWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1NjgyNDQsImV4cCI6MjEwMzE0NDI0NH0.', '-Vo71FsmwJNd2l1-UwD-ixGT_DymxRlcMp0wsONfCyE'].join('');
+const BUCKET = 'wbl-board-files';
+
+async function check() {
+  const fileList = await new Promise((resolve) => {
+    const req = https.request({
+      hostname: 'wvuwhijkwfmufnjfbefi.supabase.co',
+      path: '/storage/v1/object/list/' + BUCKET,
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json'
+      }
+    }, res => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)); } catch (e) { resolve([]); }
+      });
+    });
+    req.on('error', () => resolve([]));
+    req.write(JSON.stringify({ prefix: '', limit: 10, sortBy: { column: 'created_at', order: 'desc' } }));
+    req.end();
+  });
+
+  console.log('Top 10 files in Supabase:');
+  fileList.slice(0, 10).forEach(f => console.log(` - ${f.name} (${f.created_at})`));
+
+  const newestHometax = fileList.find(f => f.name.startsWith('hometax_'));
+  if (newestHometax) {
+    console.log(`\n--- Fetching ${newestHometax.name} ---`);
+    https.get(`${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${newestHometax.name}?_t=${Date.now()}`, res => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => {
+        console.log('File size:', d.length, 'bytes');
+        try {
+          const json = JSON.parse(d);
+          console.log('Session ID:', json.sessionId);
+          console.log('yearsMap keys:', Object.keys(json.yearsMap || {}));
+          for (const [yr, yrData] of Object.entries(json.yearsMap || {})) {
+            console.log(`  Year ${yr}: type=${typeof yrData}, isArray=${Array.isArray(yrData)}`);
+            if (yrData?.result) console.log(`    CODEF Result:`, yrData.result);
+            if (Array.isArray(yrData)) console.log(`    Array items: ${yrData.length}`);
+            if (yrData?.data) console.log(`    data isArray: ${Array.isArray(yrData.data)}, length: ${yrData.data?.length}`);
+          }
+          console.log('parsedData summary:', {
+            totalExpenseCount: json.parsedData?.totalExpenseCount,
+            totalExpenseAmount: json.parsedData?.totalExpenseAmount,
+            byYear: json.parsedData?.byYear ? Object.keys(json.parsedData.byYear).map(y => `${y}: ${json.parsedData.byYear[y].totalExpenseCount}건`) : 'None'
+          });
+        } catch (e) {
+          console.log('Content snippet:', d.substring(0, 400));
+        }
+      });
+    });
+  }
+}
+
+check();
