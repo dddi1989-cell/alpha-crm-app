@@ -16,6 +16,7 @@ import TodayMarketView from './components/TodayMarketView';
 import PlannerToolsView from './components/PlannerToolsView';
 import SystemView from './components/SystemView';
 import LoginView from './components/LoginView';
+import CustomerMobileAuthView from './components/mobile/CustomerMobileAuthView';
 
 import CustomerModal from './components/CustomerModal';
 import CustomerDetailModal from './components/CustomerDetailModal';
@@ -86,6 +87,16 @@ class ErrorBoundary extends React.Component {
 
 export default function App() {
   const isWidgetMode = window.location.hash === '#widget';
+  const isCustomerAuthMode = typeof window !== 'undefined' && window.location.hash.startsWith('#MOB_');
+  const customerSessionId = isCustomerAuthMode ? window.location.hash.slice(1) : null;
+
+  if (isCustomerAuthMode) {
+    return (
+      <ErrorBoundary>
+        <CustomerMobileAuthView sessionId={customerSessionId} />
+      </ErrorBoundary>
+    );
+  }
 
   const currentUser = useCrmStore((state) => state.currentUser);
   const activeTab = useCrmStore((state) => state.activeTab);

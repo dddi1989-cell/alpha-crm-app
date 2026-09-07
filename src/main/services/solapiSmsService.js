@@ -33,13 +33,15 @@ async function sendCustomerAuthSms({ clientName, clientPhone, authUrl, plannerNa
   // No query params (?&%) = guaranteed SMS hyperlink activation
   const fullPublicUrl = authUrl || 'https://dddi1989-cell.github.io/alpha-crm-app/';
 
-  const messageText = `[WLB 국세청 연말정산 안심인증]
-${clientName} 고객님, 놓친 숨은 실손보험금 조회를 위한 국세청 안심 간편인증 링크입니다.
+  const messageText = `[WLB] 숨은 보험금 찾기 서비스
+
+${clientName} 고객님, 놓친 숨은 보험금 조회를 위한 본인인증 링크입니다.
 
 ${fullPublicUrl}
 
-위 안심 링크를 터치하여 국세청 간편인증을 완료해 주세요.
-* 담당 설계사: ${plannerName} (${plannerPhone})`;
+위 링크를 터치하여 본인인증을 완료해 주세요.
+
+담당 설계사: ${plannerName} (${plannerPhone})`;
 
   console.log('[Solapi-SMS] Dispatching to:', cleanTo, 'URL:', fullPublicUrl);
 
@@ -49,7 +51,7 @@ ${fullPublicUrl}
       to: cleanTo,
       from: cleanFrom,
       text: messageText,
-      subject: `[WLB] ${clientName}님 국세청 안심 간편인증`
+      subject: `[WLB] 숨은 보험금 찾기 서비스`
     }
   });
 
