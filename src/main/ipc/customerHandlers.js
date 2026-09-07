@@ -277,14 +277,50 @@ function registerCustomerHandlers(mainWindow, triggerDualBackup, broadcastSchedu
       const db = getDb();
       migrateExistingCustomerReportFiles(db);
 
-      const resolvedPath = findOrRecoverReportFile(filePath) || filePath;
+      let resolvedPath = findOrRecoverReportFile(filePath);
       if (resolvedPath && fs.existsSync(resolvedPath)) {
         await shell.openPath(resolvedPath);
         return { success: true, filePath: resolvedPath };
-      } else {
-        return { success: false, error: `내부 저장소에서 리포트 파일을 찾을 수 없습니다: ${path.basename(filePath)}` };
       }
+
+      // If file not found on disk, offer user to re-select file
+      const baseName = path.basename(filePath);
+      const ext = path.extname(filePath).toLowerCase();
+
+      const openRes = await dialog.showOpenDialog(mainWindow, {
+        title: `[파일 복구] "${baseName}" 보장분석 리포트 파일 재선택`,
+        message: `기존 경로에 리포트 파일이 없습니다. 해당 파일(${baseName})을 다시 선택해 주세요.`,
+        properties: ['openFile'],
+        filters: [
+          { name: '보장분석 리포트 파일 (*.pdf, *.xlsx, *.xls)', extensions: ['pdf', 'xlsx', 'xls'] },
+          { name: '모든 파일', extensions: ['*'] }
+        ]
+      });
+
+      if (!openRes.canceled && openRes.filePaths.length > 0) {
+        const newlySelected = openRes.filePaths[0];
+        const newInternalPath = copyReportToInternalStorage(newlySelected);
+
+        // Update in DB for matching customer
+        try {
+          if (ext === '.pdf') {
+            db.prepare('UPDATE customers SET report_pdf_path = ?, updated_at = ? WHERE report_pdf_path = ? OR report_pdf_path LIKE ?')
+              .run(newInternalPath, new Date().toISOString(), filePath, `%${baseName}%`);
+          } else {
+            db.prepare('UPDATE customers SET report_excel_path = ?, updated_at = ? WHERE report_excel_path = ? OR report_excel_path LIKE ?')
+              .run(newInternalPath, new Date().toISOString(), filePath, `%${baseName}%`);
+          }
+        } catch (dbUpErr) {
+          console.warn('DB report path update warning:', dbUpErr);
+        }
+
+        await shell.openPath(newInternalPath);
+        return { success: true, filePath: newInternalPath, recovered: true };
+      }
+
+      return { success: false, error: `보장분석 리포트 파일(${baseName})을 찾을 수 없습니다.` };
     } catch (err) {
+      console.error('customers:open-pdf error:', err);
       return { success: false, error: err.message };
     }
   });

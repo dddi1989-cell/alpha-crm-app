@@ -24,20 +24,28 @@ export default function MobileDrawer({ isOpen, onClose }) {
   const currentUser = useCrmStore((state) => state.currentUser);
   const logout = useCrmStore((state) => state.logout);
   const openThemeModal = useCrmStore((state) => state.openThemeModal);
+  const setPlannerSubTab = useCrmStore((state) => state.setPlannerSubTab);
 
   if (!isOpen) return null;
 
   const menuItems = [
     { id: 'customers', label: '고객 정보 확인', icon: Users, desc: '내 고객 및 가망고객 POOL 리스트' },
     { id: 'schedules', label: '일정 관리', icon: Calendar, desc: '상담 및 미팅 캘린더' },
+    { id: 'medical_tool', label: '🔍 숨은 보험금 찾기', icon: ShieldCheck, badge: 'HOT', desc: '국세청 연말정산 의료비·실손보험금 실시간 분석', isHot: true },
+    { id: 'tools', label: '설계사 도구 (연금/달러)', icon: Calculator, desc: '노후 연금 계산기 & 달러종신 VIP 플래너' },
     { id: 'market', label: '오늘의 증시/시황', icon: TrendingUp, desc: '국내/해외 증시 및 속보' },
-    { id: 'tools', label: '설계사 도구', icon: Calculator, badge: 'HOT', desc: '4대 보험사 대조 연금설계 및 시뮬레이션' },
     { id: 'board', label: '상품전략자료실', icon: BookOpen, desc: '보험사별 전략 및 약관 자료실' },
     { id: 'claims', label: '보험사 정보', icon: FileText, desc: '30대 보험사 콜센터 & 약관 정보' }
   ];
 
   const handleSelectTab = (tabId) => {
-    setActiveTab(tabId);
+    if (tabId === 'medical_tool') {
+      if (setPlannerSubTab) setPlannerSubTab('medical');
+      setActiveTab('tools');
+    } else {
+      if (tabId === 'tools' && setPlannerSubTab) setPlannerSubTab('pension');
+      setActiveTab(tabId);
+    }
     onClose();
   };
 

@@ -30,6 +30,8 @@ export const useCrmStore = create((set, get) => ({
   isLoading: false,
   showRollbackAlert: false,
   isRestoring: false,
+  plannerSubTab: 'pension', // 'pension' | 'dollar' | 'medical'
+  setPlannerSubTab: (subTab) => set({ plannerSubTab: subTab }),
 
   setScheduleViewScope: (scope) => {
     if (typeof window !== 'undefined') {

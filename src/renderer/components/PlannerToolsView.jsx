@@ -34,9 +34,23 @@ import { useCrmStore } from '../store/useCrmStore';
 import { api } from '../utils/api';
 import { simulatePensionComparison, calculateAge } from '../utils/pensionEngine';
 import DollarUniversalPlannerView from './tools/DollarUniversalPlannerView';
+import MedicalExpenseAnalyzerView from './tools/MedicalExpenseAnalyzerView';
 
 export default function PlannerToolsView() {
-  const [activeSubTab, setActiveSubTab] = useState('pension'); // 'pension' | 'dollar'
+  const plannerSubTab = useCrmStore((state) => state.plannerSubTab);
+  const setPlannerSubTab = useCrmStore((state) => state.setPlannerSubTab);
+  const [activeSubTab, setActiveSubTab] = useState(plannerSubTab || 'pension'); // 'pension' | 'dollar' | 'medical'
+
+  useEffect(() => {
+    if (plannerSubTab) {
+      setActiveSubTab(plannerSubTab);
+    }
+  }, [plannerSubTab]);
+
+  const handleSubTabChange = (tab) => {
+    setActiveSubTab(tab);
+    if (setPlannerSubTab) setPlannerSubTab(tab);
+  };
   const customers = useCrmStore((state) => state.customers);
   const currentUser = useCrmStore((state) => state.currentUser);
 
@@ -243,68 +257,87 @@ export default function PlannerToolsView() {
           </div>
         </div>
 
-        {/* Top Sub Tabs & PDF Export Button */}
-        <div className="flex items-center space-x-2.5">
-          <button
-            onClick={handleManualSyncCatalog}
-            disabled={isSyncingCatalog}
-            title="클라우드에서 최신 이율 및 상품 정보를 즉시 갱신합니다."
-            className="flex items-center space-x-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-bold border border-slate-800 transition-all shadow-sm active:scale-95 disabled:opacity-50"
-          >
-            <RefreshCw className={'w-3.5 h-3.5 text-sky-400 ' + (isSyncingCatalog ? 'animate-spin' : '')} />
-            <span>{isSyncingCatalog ? '동기화 중...' : '최신 이율 갱신'}</span>
-          </button>
+        {/* Top Sub Tabs & PDF Export Button (Pension Calculator ONLY) */}
+        {activeSubTab === 'pension' && (
+          <div className="flex items-center space-x-2.5">
+            <button
+              onClick={handleManualSyncCatalog}
+              disabled={isSyncingCatalog}
+              title="클라우드에서 최신 이율 및 상품 정보를 즉시 갱신합니다."
+              className="flex items-center space-x-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-bold border border-slate-800 transition-all shadow-sm active:scale-95 disabled:opacity-50"
+            >
+              <RefreshCw className={'w-3.5 h-3.5 text-sky-400 ' + (isSyncingCatalog ? 'animate-spin' : '')} />
+              <span>{isSyncingCatalog ? '동기화 중...' : '최신 이율 갱신'}</span>
+            </button>
 
-          <button
-            onClick={handleExportPdf}
-            disabled={isExportingPdf}
-            className="hidden md:flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-extrabold text-xs rounded-2xl shadow-lg shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none"
-          >
-            {isExportingPdf ? (
-              <>
-                <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-                <span>PDF 생성 중...</span>
-              </>
-            ) : (
-              <>
-                <FileDown className="w-4 h-4" />
-                <span>📊 프레젠테이션 PDF 제안서 다운로드</span>
-              </>
-            )}
-          </button>
-        </div>
+            <button
+              onClick={handleExportPdf}
+              disabled={isExportingPdf}
+              className="hidden md:flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-extrabold text-xs rounded-2xl shadow-lg shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none"
+            >
+              {isExportingPdf ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                  <span>PDF 생성 중...</span>
+                </>
+              ) : (
+                <>
+                  <FileDown className="w-4 h-4" />
+                  <span>📊 프레젠테이션 PDF 제안서 다운로드</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 2. Sub-Tab Switcher */}
-      <div className="flex items-center space-x-2 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800 w-fit shadow-md">
+      <div className="flex items-center space-x-2 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800 w-full md:w-fit overflow-x-auto custom-scrollbar no-scrollbar flex-nowrap shadow-md">
         <button
-          onClick={() => setActiveSubTab('pension')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center space-x-2 ${
+          onClick={() => handleSubTabChange('pension')}
+          className={`px-3.5 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center space-x-1.5 whitespace-nowrap shrink-0 ${
             activeSubTab === 'pension'
               ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-lg shadow-amber-500/20 scale-105'
               : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
           }`}
         >
-          <Calculator className="w-4 h-4" />
+          <Calculator className="w-4 h-4 shrink-0" />
           <span>💰 노후 연금 계산기</span>
         </button>
 
         <button
-          onClick={() => setActiveSubTab('dollar')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center space-x-2 ${
+          onClick={() => handleSubTabChange('dollar')}
+          className={`px-3.5 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center space-x-1.5 whitespace-nowrap shrink-0 ${
             activeSubTab === 'dollar'
               ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white shadow-lg shadow-indigo-500/30 scale-105'
               : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
           }`}
         >
-          <DollarSign className="w-4 h-4 text-cyan-300" />
-          <span>💵 달러종신 AI 분석 제안서 (5단계)</span>
+          <DollarSign className="w-4 h-4 text-cyan-300 shrink-0" />
+          <span>💵 달러종신 VIP 플래너</span>
+        </button>
+
+        <button
+          onClick={() => handleSubTabChange('medical')}
+          className={`px-3.5 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center space-x-1.5 whitespace-nowrap shrink-0 ${
+            activeSubTab === 'medical'
+              ? 'bg-gradient-to-r from-rose-600 via-pink-600 to-amber-500 text-white shadow-lg shadow-rose-500/30 scale-105'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+          }`}
+        >
+          <ShieldAlert className="w-4 h-4 text-rose-300 shrink-0" />
+          <span className="flex items-center space-x-1">
+            <span>🔍 숨은 보험금 찾기</span>
+            <span className="px-1.5 py-0.2 bg-rose-500 text-[9px] font-black rounded-full animate-pulse text-white">HOT</span>
+          </span>
         </button>
       </div>
 
-      {/* Render Dollar Universal View if active */}
+      {/* Render Active View */}
       {activeSubTab === 'dollar' ? (
         <DollarUniversalPlannerView />
+      ) : activeSubTab === 'medical' ? (
+        <MedicalExpenseAnalyzerView />
       ) : (
         <>
           {/* Success/Error Alerts */}

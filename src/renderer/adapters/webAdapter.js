@@ -813,6 +813,127 @@ export const webAdapter = {
         window.print();
         return { success: true, message: '인쇄 다이얼로그를 통해 PDF로 저장하실 수 있습니다.' };
       }
+    },
+    ntsOpenAuthWindow: async (params) => {
+      const { openHometaxAuthDirect } = await import('../services/medicalExpenseService.js');
+      return openHometaxAuthDirect(params);
+    },
+    ntsRequestAuth: async (params) => {
+      const { sendMobileAuthRequest } = await import('../services/medicalExpenseService.js');
+      return sendMobileAuthRequest(params);
+    },
+    ntsCheckStatus: async (params) => {
+      const { checkAuthStatus } = await import('../services/medicalExpenseService.js');
+      return checkAuthStatus(params);
+    },
+    ntsConfirmAuth: async (params) => {
+      const { confirmAuthSessionDirect } = await import('../services/medicalExpenseService.js');
+      return confirmAuthSessionDirect(params);
+    },
+    ntsFetchData: async (params) => {
+      const { fetchAuthenticatedNtsData } = await import('../services/medicalExpenseService.js');
+      return fetchAuthenticatedNtsData(params);
+    },
+    ntsGetCustomerHometaxData: async ({ customerId, customerName, customerPhone }) => {
+      try {
+        let query = supabase.from('customers').select('id, name, phone, hometax_data');
+        if (customerId) {
+          query = query.eq('id', customerId);
+        } else if (customerPhone) {
+          const cleanPhone = customerPhone.replace(/[^0-9]/g, '');
+          query = query.eq('phone', cleanPhone);
+        } else if (customerName) {
+          query = query.eq('name', customerName);
+        }
+        const { data, error } = await query.limit(1);
+        if (error || !data || data.length === 0 || !data[0].hometax_data) {
+          return { success: false, error: '저장된 국세청 의료비 데이터가 없습니다.' };
+        }
+        const parsed = typeof data[0].hometax_data === 'string' 
+          ? JSON.parse(data[0].hometax_data) 
+          : data[0].hometax_data;
+        return { success: true, data: parsed };
+      } catch (e) {
+        return { success: false, error: e.message };
+      }
+    },
+    ntsGetLastRetrievedData: async () => {
+      try {
+        const { data: files, error } = await supabase.storage.from('wbl-board-files').list('', {
+          limit: 10,
+          sortBy: { column: 'created_at', order: 'desc' }
+        });
+        if (error || !files) return { success: false, error: '최근 조회 내역이 없습니다.' };
+        const hometaxFile = files.find(f => f.name.startsWith('hometax_'));
+        if (!hometaxFile) return { success: false, error: '최근 조회 내역이 없습니다.' };
+        
+        const res = await fetch(`https://wvuwhijkwfmufnjfbefi.supabase.co/storage/v1/object/public/wbl-board-files/${hometaxFile.name}?_t=${Date.now()}`);
+        if (!res.ok) return { success: false, error: '자료를 불러오지 못했습니다.' };
+        const json = await res.json();
+        return { success: true, data: json.parsedData || json };
+      } catch (e) {
+        return { success: false, error: e.message };
+      }
+    },
+    ntsSaveCustomerHometaxData: async ({ customerId, customerName, customerPhone, hometaxData }) => {
+      try {
+        const jsonStr = typeof hometaxData === 'string' ? hometaxData : JSON.stringify(hometaxData);
+        let query = supabase.from('customers');
+        if (customerId) {
+          await query.update({ hometax_data: jsonStr, updated_at: new Date().toISOString() }).eq('id', customerId);
+        } else if (customerPhone) {
+          const cleanPhone = customerPhone.replace(/[^0-9]/g, '');
+          await query.update({ hometax_data: jsonStr, updated_at: new Date().toISOString() }).eq('phone', cleanPhone);
+        } else if (customerName) {
+          await query.update({ hometax_data: jsonStr, updated_at: new Date().toISOString() }).eq('name', customerName);
+        }
+        return { success: true };
+      } catch (e) {
+        return { success: false, error: e.message };
+      }
+    },
+    ntsCreateMobileAuthSession: async (params) => {
+      try {
+        const sessionId = `MOB_${Date.now()}`;
+        const authUrl = `https://wvuwhijkwfmufnjfbefi.supabase.co/storage/v1/object/public/wbl-board-files/direct_auth_relay_v3.html#${sessionId}`;
+        
+        // Save initial session to Supabase
+        await supabase.storage.from('wbl-board-files').upload(`session_${sessionId}.json`, JSON.stringify({
+          sessionId,
+          clientName: params.clientName || '고객',
+          clientPhone: params.clientPhone,
+          plannerName: params.plannerName,
+          plannerPhone: params.plannerPhone,
+          status: 'CREATED',
+          createdAt: new Date().toISOString()
+        }), { upsert: true, contentType: 'application/json' });
+
+        return { success: true, sessionId, authUrl, smsSent: true };
+      } catch (e) {
+        return { success: false, error: e.message };
+      }
+    },
+    ntsCheckMobileSession: async ({ sessionId }) => {
+      try {
+        if (!sessionId) return { success: false, status: 'NO_SESSION' };
+        const res = await fetch(`https://wvuwhijkwfmufnjfbefi.supabase.co/storage/v1/object/public/wbl-board-files/hometax_${sessionId}.json?_t=${Date.now()}`);
+        if (res.ok) {
+          const json = await res.json();
+          return { success: true, status: 'COMPLETED', clientName: json.userName || json.clientName, data: json.parsedData || json };
+        }
+        const respRes = await fetch(`https://wvuwhijkwfmufnjfbefi.supabase.co/storage/v1/object/public/wbl-board-files/auth_response_${sessionId}.json?_t=${Date.now()}`);
+        if (respRes.ok) {
+          const rJson = await respRes.json();
+          if (rJson.is2Way) return { success: true, status: 'WAITING_USER_SIGNATURE' };
+        }
+        return { success: true, status: 'WAITING_CUSTOMER_ACTION' };
+      } catch (e) {
+        return { success: false, error: e.message };
+      }
+    },
+    exportMedicalExpensePdf: async (params) => {
+      window.print();
+      return { success: true, message: '모바일/브라우저에서는 인쇄(PDF 저장) 화면이 열립니다.' };
     }
   },
 

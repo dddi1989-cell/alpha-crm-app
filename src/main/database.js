@@ -346,6 +346,15 @@ function initDatabase(dbPath = null) {
     }
   } catch (userColErr) {}
 
+  // Column migration for customers table (hometax_data)
+  try {
+    const custTableInfo = dbInstance.prepare("PRAGMA table_info(customers)").all();
+    const existingCustCols = custTableInfo.map(c => c.name);
+    if (!existingCustCols.includes('hometax_data')) {
+      dbInstance.exec("ALTER TABLE customers ADD COLUMN hometax_data TEXT;");
+    }
+  } catch (custColErr) {}
+
   // (Default organizations seeding removed - only user-created organizations are retained)
 
   // Ensure default admin account exists (username: admin, password: admin)

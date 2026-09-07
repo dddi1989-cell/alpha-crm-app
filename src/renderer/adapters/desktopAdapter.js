@@ -65,7 +65,19 @@ export const desktopAdapter = {
     updatePensionProduct: (product) => window.electronAPI.tools.updatePensionProduct(product),
     generatePresentationPdf: (planData) => window.electronAPI.tools.generatePresentationPdf(planData),
     parseDollarProposal: (data) => window.electronAPI.tools.parseDollarProposal(data),
-    generateDollarProposalPdf: (data) => window.electronAPI.tools.generateDollarProposalPdf(data)
+    generateDollarProposalPdf: (data) => window.electronAPI.tools.generateDollarProposalPdf(data),
+    ntsOpenAuthWindow: (data) => window.electronAPI.tools.ntsOpenAuthWindow(data),
+    ntsCreateMobileLink: (data) => window.electronAPI.tools.ntsCreateMobileLink(data),
+    ntsCheckMobileSession: (data) => window.electronAPI.tools.ntsCheckMobileSession(data),
+    ntsCompleteMobileSession: (data) => window.electronAPI.tools.ntsCompleteMobileSession(data),
+    ntsRequestAuth: (data) => window.electronAPI.tools.ntsRequestAuth(data),
+    ntsCheckStatus: (data) => window.electronAPI.tools.ntsCheckStatus(data),
+    ntsConfirmAuth: (data) => window.electronAPI.tools.ntsConfirmAuth(data),
+    ntsFetchData: (data) => window.electronAPI.tools.ntsFetchData(data),
+    ntsGetLastRetrievedData: () => window.electronAPI.tools.ntsGetLastRetrievedData(),
+    ntsGetCustomerHometaxData: (data) => window.electronAPI.tools.ntsGetCustomerHometaxData(data),
+    ntsSaveCustomerHometaxData: (data) => window.electronAPI.tools.ntsSaveCustomerHometaxData(data),
+    exportMedicalExpensePdf: (data) => window.electronAPI.tools.exportMedicalExpensePdf(data)
   },
   system: {
     getInfo: (params) => window.electronAPI.system.getInfo(params),

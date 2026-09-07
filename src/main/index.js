@@ -58,27 +58,38 @@ if (!gotTheLock) {
   app.quit();
 } else {
   app.on('second-instance', () => {
-    if (mainWindow) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
       if (mainWindow.isMinimized()) mainWindow.restore();
-      if (!mainWindow.isVisible()) mainWindow.show();
+      mainWindow.show();
       mainWindow.focus();
+      mainWindow.setAlwaysOnTop(true);
+      setTimeout(() => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.setAlwaysOnTop(false);
+        }
+      }, 300);
+    } else {
+      createWindow();
     }
   });
 
   function createTrayIcon() {
     try {
+      if (tray && !tray.isDestroyed()) return;
       const icon = getTrayIcon();
       tray = new Tray(icon);
-      tray.setToolTip('WLB CRM TOOL');
+      tray.setToolTip('WLB CRM TOOL (백그라운드 실행 중)');
 
       const contextMenu = Menu.buildFromTemplate([
         {
           label: 'WLB CRM TOOL 열기',
           click: () => {
-            if (mainWindow) {
+            if (mainWindow && !mainWindow.isDestroyed()) {
               if (mainWindow.isMinimized()) mainWindow.restore();
               mainWindow.show();
               mainWindow.focus();
+            } else {
+              createWindow();
             }
           }
         },
@@ -90,13 +101,16 @@ if (!gotTheLock) {
         },
         { type: 'separator' },
         {
-          label: '앱 종료',
+          label: '앱 완전 종료 (Exit)',
           click: () => {
             isQuitting = true;
             markCleanExit();
             stopNotificationEngine();
             if (widgetWindow && !widgetWindow.isDestroyed()) {
-              widgetWindow.close();
+              widgetWindow.destroy();
+            }
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.destroy();
             }
             app.quit();
           }
@@ -105,7 +119,16 @@ if (!gotTheLock) {
 
       tray.setContextMenu(contextMenu);
       tray.on('double-click', () => {
-        if (mainWindow) {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          if (mainWindow.isMinimized()) mainWindow.restore();
+          mainWindow.show();
+          mainWindow.focus();
+        } else {
+          createWindow();
+        }
+      });
+      tray.on('click', () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
           if (mainWindow.isMinimized()) mainWindow.restore();
           mainWindow.show();
           mainWindow.focus();
@@ -131,15 +154,14 @@ if (!gotTheLock) {
     widgetWindow = new BrowserWindow({
       width: 400,
       height: 600,
-      x: Math.max(20, screenWidth - 420),
-      y: 60,
+      x: screenWidth - 420,
+      y: 80,
       frame: false,
       transparent: true,
       alwaysOnTop: true,
-      skipTaskbar: false,
       resizable: true,
-      minWidth: 320,
-      minHeight: 450,
+      skipTaskbar: true,
+      hasShadow: true,
       show: false,
       title: 'WLB 바탕화면 캘린더 위젯',
       icon: appIcon,
@@ -224,12 +246,13 @@ if (!gotTheLock) {
     }
 
     mainWindow.once('ready-to-show', () => {
-      if (mainWindow) {
+      if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.show();
         mainWindow.focus();
       }
     });
 
+    // Close button (X) hides the window to tray instead of quitting
     mainWindow.on('close', (event) => {
       if (!isQuitting) {
         event.preventDefault();
@@ -292,7 +315,7 @@ if (!gotTheLock) {
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
         createWindow();
-      } else if (mainWindow) {
+      } else if (mainWindow && !mainWindow.isDestroyed()) {
         if (mainWindow.isMinimized()) mainWindow.restore();
         mainWindow.show();
         mainWindow.focus();
@@ -306,9 +329,12 @@ if (!gotTheLock) {
     stopNotificationEngine();
   });
 
-  app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin' && isQuitting) {
+  // Keep app running in background tray when all windows closed
+  app.on('window-all-closed', (e) => {
+    if (isQuitting) {
       app.quit();
+    } else {
+      // Keep background alive for tray & widget
     }
   });
 }

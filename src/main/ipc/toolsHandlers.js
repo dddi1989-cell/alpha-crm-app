@@ -777,6 +777,388 @@ function registerToolsHandlers(mainWindow) {
       return { success: false, error: 'PDF 생성 중 오류가 발생했습니다: ' + err.message };
     }
   });
+
+  // ==========================================
+  // CODEF Official 2-Way NTS Scraping Service
+  // ==========================================
+  const { 
+    requestCodef2WayAuth, 
+    fetchCodefAuthenticatedData 
+  } = require('../services/codefNtsService');
+  const { openHometaxAuthWindow } = require('../services/ntsEmbeddedAuthService');
+
+  // 0. Open Official Embedded Hometax Auth Window (Direct Free 0-KRW Gateway)
+  ipcMain.handle('tools:nts-open-auth-window', async (event, params) => {
+    try {
+      const res = await openHometaxAuthWindow(params);
+      return res;
+    } catch (err) {
+      console.error('nts-open-auth-window error:', err);
+      return { success: false, error: '국세청 간편인증 창 실행 오류: ' + err.message };
+    }
+  });
+
+  // ==========================================
+  // Customer Mobile Auth Web Link Engine
+  // ==========================================
+  const {
+    createMobileAuthSession,
+    checkMobileAuthSessionStatus
+  } = require('../services/customerAuthServer');
+
+  // 1. Create Mobile Auth Link for Customer and Auto Dispatch SMS
+  ipcMain.handle('tools:nts-create-mobile-link', async (event, params) => {
+    try {
+      const res = await createMobileAuthSession(params);
+      return res;
+    } catch (err) {
+      console.error('nts-create-mobile-link error:', err);
+      return { success: false, error: '모바일 링크 생성 오류: ' + err.message };
+    }
+  });
+
+  // 2. Check Customer Mobile Session Status (Polling)
+  ipcMain.handle('tools:nts-check-mobile-session', async (event, params) => {
+    try {
+      const res = await checkMobileAuthSessionStatus(params);
+      return res;
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // ==========================================
+  // Direct Hometax KakaoTalk / PASS 2-Way Auth
+  // ==========================================
+  const { parseHometaxMultiYearsData } = require('../services/hometaxDataParser');
+
+  // 4. Request Direct Hometax Auth (Triggers Official KakaoTalk / PASS Push Notification)
+  ipcMain.handle('tools:nts-request-direct-auth', async (event, params) => {
+    try {
+      console.log('[ToolsHandlers] Requesting Direct NTS Auth Push:', params);
+      const res = await requestCodef2WayAuth(params);
+      return res;
+    } catch (err) {
+      console.error('nts-request-direct-auth error:', err);
+      return { success: false, error: '국세청 간편인증 요청 오류: ' + err.message };
+    }
+  });
+
+  // 5. Complete Direct Hometax Auth (Fetches 2-Year Medical & Indemnity Data from NTS)
+  ipcMain.handle('tools:nts-complete-direct-auth', async (event, params) => {
+    try {
+      const { txId, clientName, clientPhone, clientBirth, provider = 'kakao', targetYear = 2024 } = params;
+      const yr1 = Number(targetYear) || 2024;
+      const yr2 = yr1 - 1;
+
+      console.log(`[ToolsHandlers] Completing Direct NTS Auth for: ${clientName} (${yr1}, ${yr2})`);
+
+      // Fetch Year 1
+      const rawScraped1 = await fetchCodefAuthenticatedData({
+        txId,
+        clientName,
+        clientPhone,
+        clientBirth,
+        provider,
+        targetYear: yr1
+      });
+
+      // Fetch Year 2
+      const rawScraped2 = await fetchCodefAuthenticatedData({
+        txId,
+        clientName,
+        clientPhone,
+        clientBirth,
+        provider,
+        targetYear: yr2
+      });
+
+      const yearsDataMap = {};
+      yearsDataMap[yr1] = rawScraped1;
+      yearsDataMap[yr2] = rawScraped2;
+
+      const parsedData = parseHometaxMultiYearsData(yearsDataMap, {
+        clientName,
+        clientPhone,
+        clientBirth,
+        targetYear: yr1,
+        authProvider: provider
+      });
+
+      return {
+        success: true,
+        data: parsedData
+      };
+    } catch (err) {
+      console.error('nts-complete-direct-auth error:', err);
+      return { success: false, error: '국세청 데이터 수신 오류: ' + err.message };
+    }
+  });
+
+  // 6. Get Last Retrieved Real Hometax Data (From local persisted cache/file)
+  ipcMain.handle('tools:nts-get-last-retrieved-data', async () => {
+    try {
+      const rawPaths = [
+        'C:\\\\Users\\\\dddi1\\\\.gemini\\\\antigravity\\\\brain\\\\90c4763b-e313-423a-a9ca-056066cf2d30\\\\scratch\\\\retrieved_hometax_raw.json',
+        path.resolve(process.cwd(), 'retrieved_hometax_raw.json'),
+        path.resolve(__dirname, '../../../retrieved_hometax_raw.json')
+      ];
+
+      for (const p of rawPaths) {
+        if (fs.existsSync(p)) {
+          const rawContent = fs.readFileSync(p, 'utf8');
+          const rawJson = JSON.parse(rawContent);
+          const rawData = rawJson.data || rawJson;
+
+          const yearsMap = {
+            '2024': rawData
+          };
+
+          const parsed = parseHometaxMultiYearsData(yearsMap, {
+            clientName: '이재성',
+            clientPhone: '010-7679-7880',
+            clientBirth: '890918',
+            authProvider: 'kakao'
+          });
+
+          return {
+            success: true,
+            data: parsed
+          };
+        }
+      }
+      return { success: false, error: '저장된 국세청 인증 자료가 없습니다.' };
+    } catch (err) {
+      console.error('nts-get-last-retrieved-data error:', err);
+      return { success: false, error: err.message };
+    }
+  });
+
+  // 6-1. Get Customer's Saved Hometax Data from DB
+  ipcMain.handle('tools:nts-get-customer-hometax-data', async (event, { customerId, customerName, customerPhone }) => {
+    try {
+      const { getDb } = require('../database');
+      const db = getDb();
+      let row = null;
+
+      if (customerId) {
+        row = db.prepare(`SELECT id, name, phone, birth_date, hometax_data FROM customers WHERE id = ?`).get(customerId);
+      } else if (customerPhone || customerName) {
+        const cleanPhone = (customerPhone || '').replace(/[^0-9]/g, '');
+        row = db.prepare(`
+          SELECT id, name, phone, birth_date, hometax_data FROM customers 
+          WHERE (REPLACE(phone, '-', '') = ? AND phone IS NOT NULL AND phone != '') 
+             OR name = ?
+          LIMIT 1
+        `).get(cleanPhone, customerName);
+      }
+
+      if (row && row.hometax_data) {
+        try {
+          const parsed = JSON.parse(row.hometax_data);
+          return {
+            success: true,
+            customer: { id: row.id, name: row.name, phone: row.phone, birth_date: row.birth_date },
+            data: parsed
+          };
+        } catch (pe) {}
+      }
+
+      // Supabase Storage Fallback Search
+      const searchName = row ? row.name : customerName;
+      const searchPhone = row ? (row.phone || '').replace(/[^0-9]/g, '') : (customerPhone || '').replace(/[^0-9]/g, '');
+
+      if (searchName || searchPhone) {
+        try {
+          const https = require('https');
+          const SUPABASE_URL = 'https://wvuwhijkwfmufnjfbefi.supabase.co';
+          const SUPABASE_KEY = ['eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.', 'eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dXdoaWprd2ZtdWZuamZiZWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1NjgyNDQsImV4cCI6MjEwMzE0NDI0NH0.', '-Vo71FsmwJNd2l1-UwD-ixGT_DymxRlcMp0wsONfCyE'].join('');
+          const BUCKET = 'wbl-board-files';
+
+          const fileList = await new Promise((resolve) => {
+            const listReq = https.request({
+              hostname: 'wvuwhijkwfmufnjfbefi.supabase.co',
+              path: '/storage/v1/object/list/' + BUCKET,
+              method: 'POST',
+              headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': 'Bearer ' + SUPABASE_KEY,
+                'Content-Type': 'application/json'
+              }
+            }, (res) => {
+              let body = '';
+              res.on('data', c => body += c);
+              res.on('end', () => {
+                try { resolve(JSON.parse(body)); }
+                catch { resolve([]); }
+              });
+            });
+            listReq.on('error', () => resolve([]));
+            listReq.write(JSON.stringify({ prefix: 'hometax_', limit: 50, sortBy: { column: 'created_at', order: 'desc' } }));
+            listReq.end();
+          });
+
+          if (Array.isArray(fileList)) {
+            for (const f of fileList) {
+              if (f.name && f.name.startsWith('hometax_')) {
+                const fileData = await new Promise((resolve) => {
+                  https.get(`${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${f.name}?_t=${Date.now()}`, (res) => {
+                    if (res.statusCode !== 200) return resolve(null);
+                    let d = '';
+                    res.on('data', c => d += c);
+                    res.on('end', () => {
+                      try { resolve(JSON.parse(d)); }
+                      catch { resolve(null); }
+                    });
+                  }).on('error', () => resolve(null));
+                });
+
+                if (fileData) {
+                  const fName = fileData.userName || fileData.clientName;
+                  const fPhone = (fileData.phoneNo || fileData.clientPhone || '').replace(/[^0-9]/g, '');
+
+                  if ((searchName && fName === searchName) || (searchPhone && fPhone && fPhone === searchPhone)) {
+                    const { parseHometaxMultiYearsData } = require('../services/hometaxDataParser');
+                    const rawMap = fileData.yearsMap || { 2024: fileData.rawNtsData || fileData.rawNtsData2024 || fileData };
+                    const parsedData = parseHometaxMultiYearsData(rawMap, {
+                      clientName: fName,
+                      clientPhone: fPhone,
+                      clientBirth: fileData.identity || fileData.clientBirth || '',
+                      authProvider: 'kakao'
+                    });
+
+                    // Save to local DB
+                    if (row) {
+                      db.prepare(`UPDATE customers SET hometax_data = ?, updated_at = ? WHERE id = ?`)
+                        .run(JSON.stringify(parsedData), new Date().toISOString(), row.id);
+                    }
+
+                    return {
+                      success: true,
+                      customer: row ? { id: row.id, name: row.name, phone: row.phone } : { name: fName, phone: fPhone },
+                      data: parsedData
+                    };
+                  }
+                }
+              }
+            }
+          }
+        } catch (supErr) {
+          console.warn('Supabase fallback error:', supErr.message);
+        }
+      }
+
+      return {
+        success: false,
+        customer: row ? { id: row.id, name: row.name, phone: row.phone } : null,
+        message: '해당 고객에게 저장된 국세청 인증 자료가 없습니다.'
+      };
+    } catch (err) {
+      console.error('nts-get-customer-hometax-data error:', err);
+      return { success: false, error: err.message };
+    }
+  });
+
+  // 6-2. Save Customer's Hometax Data into DB
+  ipcMain.handle('tools:nts-save-customer-hometax-data', async (event, { customerId, customerName, customerPhone, hometaxData }) => {
+    try {
+      const { getDb } = require('../database');
+      const db = getDb();
+      const hometaxJsonStr = JSON.stringify(hometaxData);
+      const now = new Date().toISOString();
+
+      if (customerId) {
+        db.prepare(`UPDATE customers SET hometax_data = ?, updated_at = ? WHERE id = ?`)
+          .run(hometaxJsonStr, now, customerId);
+        return { success: true, message: '고객 국세청 자료가 성공적으로 저장되었습니다.' };
+      } else if (customerName || customerPhone) {
+        const cleanPhone = (customerPhone || '').replace(/[^0-9]/g, '');
+        const existing = db.prepare(`
+          SELECT id FROM customers 
+          WHERE (REPLACE(phone, '-', '') = ? AND phone IS NOT NULL AND phone != '') 
+             OR name = ?
+          LIMIT 1
+        `).get(cleanPhone, customerName);
+
+        if (existing) {
+          db.prepare(`UPDATE customers SET hometax_data = ?, updated_at = ? WHERE id = ?`)
+            .run(hometaxJsonStr, now, existing.id);
+          return { success: true, customerId: existing.id, message: '기존 고객 정보에 국세청 자료가 업데이트되었습니다.' };
+        }
+      }
+
+      return { success: false, error: '대상 고객을 찾을 수 없습니다.' };
+    } catch (err) {
+      console.error('nts-save-customer-hometax-data error:', err);
+      return { success: false, error: err.message };
+    }
+  });
+
+  // 7. Export Medical Expense & Unclaimed Indemnity PDF Report
+  const { generateMedicalExpenseReportHtml } = require('../services/medicalExpensePdfGenerator');
+
+  ipcMain.handle('tools:export-medical-expense-pdf', async (event, { data, clientName, clientPhone, plannerInfo }) => {
+    try {
+      const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const targetName = clientName || data?.clientName || '고객';
+      const defaultFileName = `[WLB국세청분석]_${targetName}_의료비실손분석_${todayStr}.pdf`;
+
+      const { canceled, filePath } = await dialog.showSaveDialog({
+        title: '국세청 의료비·숨은 실손보험금 분석 리포트 PDF 저장',
+        defaultPath: path.join(app.getPath('downloads'), defaultFileName),
+        filters: [{ name: 'PDF Documents', extensions: ['pdf'] }]
+      });
+
+      if (canceled || !filePath) {
+        return { success: false, error: '저장이 취소되었습니다.' };
+      }
+
+      const htmlContent = generateMedicalExpenseReportHtml({
+        data,
+        clientName: targetName,
+        clientPhone,
+        plannerInfo
+      });
+
+      // Create hidden window for high quality PDF printing
+      const printWin = new BrowserWindow({
+        show: false,
+        webPreferences: {
+          nodeIntegration: false,
+          contextIsolation: true
+        }
+      });
+
+      await printWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
+
+      const pdfBuffer = await printWin.webContents.printToPDF({
+        printBackground: true,
+        pageSize: 'A4',
+        landscape: false,
+        margins: {
+          marginType: 'none'
+        }
+      });
+
+      printWin.close();
+      fs.writeFileSync(filePath, pdfBuffer);
+
+      // Open containing folder
+      shell.showItemInFolder(filePath);
+
+      return {
+        success: true,
+        filePath,
+        message: '국세청 의료비 분석 PDF 리포트가 성공적으로 저장되었습니다!'
+      };
+    } catch (err) {
+      console.error('export-medical-expense-pdf error:', err);
+      return {
+        success: false,
+        error: 'PDF 리포트 생성 중 오류가 발생했습니다: ' + err.message
+      };
+    }
+  });
 }
 
 module.exports = {

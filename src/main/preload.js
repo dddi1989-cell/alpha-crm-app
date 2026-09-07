@@ -63,7 +63,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
     syncPensionCatalog: () => ipcRenderer.invoke('tools:sync-pension-catalog'),
     updatePensionProduct: (data) => ipcRenderer.invoke('tools:update-pension-product', data),
     parseDollarProposal: (data) => ipcRenderer.invoke('tools:parse-dollar-proposal', data || {}),
-    generateDollarProposalPdf: (data) => ipcRenderer.invoke('tools:generate-dollar-proposal-pdf', data)
+    generateDollarProposalPdf: (data) => ipcRenderer.invoke('tools:generate-dollar-proposal-pdf', data),
+    ntsOpenAuthWindow: (data) => ipcRenderer.invoke('tools:nts-open-auth-window', data),
+    ntsCreateMobileLink: (data) => ipcRenderer.invoke('tools:nts-create-mobile-link', data),
+    ntsCheckMobileSession: (data) => ipcRenderer.invoke('tools:nts-check-mobile-session', data),
+    ntsCompleteMobileSession: (data) => ipcRenderer.invoke('tools:nts-complete-mobile-session', data),
+    ntsRequestAuth: (data) => ipcRenderer.invoke('tools:nts-request-auth', data),
+    ntsCheckStatus: (data) => ipcRenderer.invoke('tools:nts-check-status', data),
+    ntsConfirmAuth: (data) => ipcRenderer.invoke('tools:nts-confirm-auth', data),
+    ntsFetchData: (data) => ipcRenderer.invoke('tools:nts-fetch-data', data),
+    ntsRequestDirectAuth: (data) => ipcRenderer.invoke('tools:nts-request-direct-auth', data),
+    ntsCompleteDirectAuth: (data) => ipcRenderer.invoke('tools:nts-complete-direct-auth', data),
+    ntsGetLastRetrievedData: () => ipcRenderer.invoke('tools:nts-get-last-retrieved-data'),
+    ntsGetCustomerHometaxData: (data) => ipcRenderer.invoke('tools:nts-get-customer-hometax-data', data),
+    ntsSaveCustomerHometaxData: (data) => ipcRenderer.invoke('tools:nts-save-customer-hometax-data', data),
+    exportMedicalExpensePdf: (data) => ipcRenderer.invoke('tools:export-medical-expense-pdf', data)
   },
   system: {
     getInfo: () => ipcRenderer.invoke('system:get-info'),

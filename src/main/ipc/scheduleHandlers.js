@@ -19,8 +19,8 @@ function broadcastSchedulesUpdated(payload = null) {
 
 function syncCustomerInsuranceExpirySchedules(db) {
   try {
-    const customers = db.prepare('SELECT id, user_id, name, insurances FROM customers WHERE insurances IS NOT NULL AND insurances != ""').all();
-    const existingAutoSchedules = db.prepare('SELECT id, customer_id, title, date FROM schedules WHERE type = "expiry"').all();
+    const customers = db.prepare("SELECT id, user_id, name, insurances FROM customers WHERE insurances IS NOT NULL AND insurances != ''").all();
+    const existingAutoSchedules = db.prepare("SELECT id, customer_id, title, date FROM schedules WHERE type = 'expiry'").all();
     const existingKeySet = new Set(existingAutoSchedules.map(s => `${s.customer_id}|${s.title}|${s.date}`));
 
     const insertStmt = db.prepare(`
