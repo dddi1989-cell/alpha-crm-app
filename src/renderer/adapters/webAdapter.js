@@ -394,79 +394,47 @@ export const webAdapter = {
     selectFiles: async () => ({ cancelled: true, filePaths: [] }),
     getPosts: async (params) => {
       try {
-        let query = supabase.from('posts').select('*, attachments:post_attachments(*)').order('id', { ascending: false });
+        // Query posts and attachments separately (no FK relation in Supabase)
+        let query = supabase.from('posts').select('*').order('id', { ascending: false });
         if (params?.category && params.category !== '전체') {
           query = query.eq('category', params.category);
         }
         if (params?.search) {
           query = query.or(`title.ilike.%${params.search}%,content.ilike.%${params.search}%`);
         }
-        const { data, error } = await query;
+        const { data: posts, error } = await query;
         
-        let normalizedPosts = [];
-        if (!error && Array.isArray(data) && data.length > 0) {
-          normalizedPosts = data.map(p => {
-            const atts = Array.isArray(p.attachments) ? p.attachments : [];
-            return {
-              ...p,
-              attachment_count: atts.length,
-              first_attachment_id: atts[0]?.id || null,
-              first_file_name: atts[0]?.file_name || null,
-              first_file_url: atts[0]?.file_url || null,
-              author_name: p.author_name || '본사 전략기획실'
-            };
-          });
+        if (error || !Array.isArray(posts) || posts.length === 0) {
+          return { success: true, posts: [] };
         }
 
-        // Fallback Default Strategy Posts if empty
-        if (normalizedPosts.length === 0) {
-          const nowIso = new Date().toISOString();
-          normalizedPosts = [
-            {
-              id: 101,
-              title: '[2026 전략] 주요 생명·손해보험사 연금 및 보장성 상품 비교 분석표',
-              content: '2026년 상반기 기준 국내 주요 4대 보험사(iM라이프, 삼성생명, 삼성화재, 메트라이프)의 최신 공시이율 및 비과세 한도, 최저보증 연금수령액 비교 분석 가이드입니다.',
-              category: '상품전략',
-              author_name: 'WLB 본사 전략실',
-              views: 142,
-              created_at: nowIso,
-              attachment_count: 1,
-              first_attachment_id: 101,
-              first_file_name: '2026_주요보험사_연금상품_비교전략.pdf',
-              first_file_url: 'https://pub-8cae2df0cf0e4d77bbd7b2781b0a88fb.r2.dev/2026_pension_strategy.pdf'
-            },
-            {
-              id: 102,
-              title: '[영업 필수] 2026 세법 개정안 반영 연금저축 & IRP 절세 포트폴리오 가이드',
-              content: '연간 세액공제 한도 최대 900만원 활용 방안 및 고소득 전문직 고객 맞춤형 비과세 연금 플랜 수립을 위한 핵심 포인트 요약 자료입니다.',
-              category: '세무/절세',
-              author_name: 'WLB 세무지원팀',
-              views: 98,
-              created_at: nowIso,
-              attachment_count: 1,
-              first_attachment_id: 102,
-              first_file_name: '2026_절세포트폴리오_제안가이드.pdf',
-              first_file_url: 'https://pub-8cae2df0cf0e4d77bbd7b2781b0a88fb.r2.dev/2026_tax_guide.pdf'
-            },
-            {
-              id: 103,
-              title: '[상담 화법] 6개월 장기미터치 고객 터치 및 증권분석 리터치 스크립트',
-              content: '기존 보유 고객 중 6개월 이상 상담이 진행되지 않은 고객을 대상으로 보장 공백 점검 및 최신 이율 연금 전환을 제안하는 실전 통화 스크립트입니다.',
-              category: '영업자료',
-              author_name: 'WLB 교육육성팀',
-              views: 185,
-              created_at: nowIso,
-              attachment_count: 1,
-              first_attachment_id: 103,
-              first_file_name: '장기미터치_고객_리터치_스크립트.pdf',
-              first_file_url: 'https://pub-8cae2df0cf0e4d77bbd7b2781b0a88fb.r2.dev/touch_script.pdf'
-            }
-          ];
-        }
+        // Fetch all attachments separately
+        let attachmentMap = {};
+        try {
+          const { data: atts } = await supabase.from('post_attachments').select('*');
+          if (Array.isArray(atts)) {
+            atts.forEach(a => {
+              if (!attachmentMap[a.post_id]) attachmentMap[a.post_id] = [];
+              attachmentMap[a.post_id].push(a);
+            });
+          }
+        } catch {}
+
+        const normalizedPosts = posts.map(p => {
+          const atts = attachmentMap[p.id] || [];
+          return {
+            ...p,
+            attachment_count: atts.length,
+            first_attachment_id: atts[0]?.id || null,
+            first_file_name: atts[0]?.file_name || null,
+            first_file_url: atts[0]?.file_url || null,
+            author_name: p.author_name || '본사 전략기획실'
+          };
+        });
 
         return { success: true, posts: normalizedPosts };
       } catch (err) {
-        console.warn('[Web-Board] getPosts fallback:', err.message);
+        console.warn('[Web-Board] getPosts error:', err.message);
         return { success: true, posts: [] };
       }
     },
@@ -478,6 +446,8 @@ export const webAdapter = {
         ]);
 
         if (postRes.data) {
+          // Increment views
+          supabase.from('posts').update({ views: (postRes.data.views || 0) + 1 }).eq('id', postId).then(() => {});
           return { 
             success: true, 
             post: postRes.data, 
@@ -485,48 +455,7 @@ export const webAdapter = {
           };
         }
 
-        // Fallback detail for sample posts
-        const samplePosts = [
-          {
-            id: 101,
-            title: '[2026 전략] 주요 생명·손해보험사 연금 및 보장성 상품 비교 분석표',
-            content: '2026년 상반기 기준 국내 주요 4대 보험사(iM라이프, 삼성생명, 삼성화재, 메트라이프)의 최신 공시이율 및 비과세 한도, 최저보증 연금수령액 비교 분석 가이드입니다.\n\n[주요 핵심 포인트]\n1. iM라이프: 5년 단리 5.0% + 이후 3.0% 평생 최저보증으로 원금 대비 최고 수령액 달성\n2. 삼성생명: 업계 1위 안정성 및 유연한 펀드 전환 기능\n3. 삼성화재: 유병자 간편심사 연금 플랜 탑재\n4. 메트라이프: 달러 변액연금을 통한 글로벌 자산 배분',
-            category: '상품전략',
-            author_name: 'WLB 본사 전략실',
-            created_at: new Date().toISOString()
-          },
-          {
-            id: 102,
-            title: '[영업 필수] 2026 세법 개정안 반영 연금저축 & IRP 절세 포트폴리오 가이드',
-            content: '연간 세액공제 한도 최대 900만원 활용 방안 및 고소득 전문직 고객 맞춤형 비과세 연금 플랜 수립을 위한 핵심 포인트 요약 자료입니다.\n\n[절세 시뮬레이션]\n- 총급여 5,500만원 이하: 16.5% 세액공제 (최대 148.5만원 환급)\n- 총급여 5,500만원 초과: 13.2% 세액공제 (최대 118.8만원 환급)',
-            category: '세무/절세',
-            author_name: 'WLB 세무지원팀',
-            created_at: new Date().toISOString()
-          },
-          {
-            id: 103,
-            title: '[상담 화법] 6개월 장기미터치 고객 터치 및 증권분석 리터치 스크립트',
-            content: '기존 보유 고객 중 6개월 이상 상담이 진행되지 않은 고객을 대상으로 보장 공백 점검 및 최신 이율 연금 전환을 제안하는 실전 통화 스크립트입니다.\n\n[도입 화법]\n"고객님 안녕하세요, 담당 설계사입니다. 2026년 금융시장 이율 변동 및 기존 가입 증권의 보장 공백을 무료로 재점검해 드리고자 연락드렸습니다."',
-            category: '영업자료',
-            author_name: 'WLB 교육육성팀',
-            created_at: new Date().toISOString()
-          }
-        ];
-
-        const matched = samplePosts.find(p => Number(p.id) === Number(postId)) || samplePosts[0];
-        return {
-          success: true,
-          post: matched,
-          attachments: [
-            {
-              id: matched.id,
-              post_id: matched.id,
-              file_name: `${matched.title.slice(0, 20)}.pdf`,
-              file_size: 1024 * 350,
-              file_url: 'https://pub-8cae2df0cf0e4d77bbd7b2781b0a88fb.r2.dev/sample.pdf'
-            }
-          ]
-        };
+        return { success: false, error: '해당 게시글을 찾을 수 없습니다.' };
       } catch (err) {
         return { success: false, error: err.message };
       }
