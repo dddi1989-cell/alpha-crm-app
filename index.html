@@ -248,10 +248,14 @@
     init();
 
     // Load pre-filled info from session metadata
+    //
+    // [2026-09-21] 예전에는 저장소에서 session_ 파일을 직접 읽었다.
+    // 그러려면 저장소 키가 이 페이지에 있어야 했고, 그 키로 다른 고객의
+    // 자료까지 훑을 수 있었다. 이제 서버에 세션 번호만 주고 이름·번호를 받는다.
     async function loadSessionInfo() {
       if (!currentSessionId) return;
-      const info = await sbDownload('session_' + currentSessionId + '.json');
-      if (!info) return;
+      const info = await callWorker('/nts/session', { sessionId: currentSessionId });
+      if (!info || !info.found) return;
       sessionHandler = info.handler || null;
       if (info.clientName) {
         const el = document.getElementById('userName');
@@ -342,8 +346,18 @@
         timestamp: new Date().toISOString()
       };
 
-      // 2. Upload to Supabase Relay (so PC CRM can also see it)
-      await sbUpload('auth_request_' + currentSessionId + '.json', authReqPayload);
+      // 2. 이 요청을 설계사 PC 가 맡기로 되어 있을 때만 릴레이에 올린다.
+      //
+      // [2026-09-21] 예전에는 무조건 올렸다. 이 파일에는 고객 이름·생년월일·
+      // 전화번호가 들어 있고, 올라가는 곳은 누구나 열 수 있는 공개 저장소였다.
+      // 서버가 맡는 경우에는 아래 startAuthOnServer 가 같은 내용을 서버에
+      // 직접 건네므로 공개 저장소를 거칠 이유가 없다.
+      //
+      // PC 가 맡는 경우(발송 때 서버에 연결하지 못한 드문 경우)에만 올린다.
+      // PC 가 이 파일 말고는 고객이 입력한 값을 받을 길이 없기 때문이다.
+      if (sessionHandler === 'pc') {
+        await sbUpload('auth_request_' + currentSessionId + '.json', authReqPayload);
+      }
 
       // 3. Show Processing Screen
       document.getElementById('step-input').classList.add('hidden');
@@ -362,19 +376,22 @@
     /**
      * 서버에 1단계를 맡긴다.
      *
-     * 처리 주체 표시가 없는 세션(예전 버전 PC 가 만든 것)은 8초를 기다린다.
-     * 켜져 있는 PC 는 3초마다 릴레이를 확인하므로 그 안에 가져간다.
-     * 가져가지 않았으면 PC 가 꺼져 있다는 뜻이므로 서버가 맡는다.
+     * [2026-09-21] 표시가 없는 세션(예전 버전 PC 가 만든 것)은 예전에는 8초를
+     * 기다려 PC 에 먼저 양보했다. 그 양보는 고객이 입력한 값을 공개 저장소에
+     * 올려둬야만 성립했는데, 그 자리가 바로 개인정보가 새던 곳이다.
+     *
+     * 이제 양보하지 않고 서버가 맡는다. 서버는 고객이 입력한 값을 직접 받으므로
+     * 공개 저장소를 거치지 않는다. 대신 아주 예전 버전(v1.8.7 이하) PC 는
+     * 진행 화면이 갱신되지 않는다 — 그 버전은 서버를 부를 줄 모르기 때문이다.
+     * 고객 쪽 인증과 자료 수신은 정상으로 끝나고, PC 를 업데이트하면 보인다.
      */
     async function startAuthOnServer(payload) {
       if (sessionHandler === 'pc') return;      // PC 가 처리한다. 손대지 않는다.
 
+      // 이미 PC 가 끝낸 세션이면(응답 파일이 있으면) 건드리지 않는다.
       if (!sessionHandler) {
-        await sleep(LEGACY_WAIT_MS);
-        const req = await sbDownload('auth_request_' + currentSessionId + '.json');
-        if (req && req._processed && req._processedBy !== 'worker-auto') return;
         const resp = await sbDownload('auth_response_' + currentSessionId + '.json');
-        if (resp) return;                        // PC 가 이미 끝냈다
+        if (resp) return;
       }
 
       const res = await callWorker('/nts/auto', payload);
