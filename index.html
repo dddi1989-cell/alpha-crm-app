@@ -105,7 +105,18 @@
           <i class="fa-solid fa-satellite-dish fa-spin"></i>
         </div>
         <h3 class="text-lg font-black text-white">국세청 인증 요청 처리 중...</h3>
-        <p class="text-xs text-slate-300 leading-relaxed">보안 서버를 통해 국세청 인증을 요청하고 있습니다.<br>잠시만 기다려 주세요.</p>
+        <p id="proc-desc" class="text-xs text-slate-300 leading-relaxed">보안 서버를 통해 국세청 인증을 요청하고 있습니다.<br>잠시만 기다려 주세요.</p>
+        <!--
+          [2026-09-22] 경과 시간을 보여준다.
+          국세청 응답이 1분 넘게 걸리는 일이 실제로 있었다(실측 64초).
+          그동안 화면이 가만히 있으니 멈춘 것처럼 보였다. 움직이는 숫자가
+          하나만 있어도 "돌아가고 있다" 는 것이 전해진다.
+        -->
+        <div class="p-3 bg-slate-900/90 rounded-2xl border border-slate-800 text-xs text-slate-400 flex items-center justify-center gap-2">
+          <i class="fa-solid fa-hourglass-half"></i>
+          <span>경과</span>
+          <span id="proc-elapsed" class="text-rose-300 font-mono font-bold text-sm">0초</span>
+        </div>
       </div>
 
       <!-- Waiting State -->
@@ -223,6 +234,45 @@
     //
     // 이 시각보다 오래된 결과 파일은 이번 것이 아니다. 쳐다보지 않는다.
     let attemptStartedAt = 0;
+
+    // 요청 화면의 경과 시간.
+    //
+    // [2026-09-22] 국세청 1차 요청이 64초 걸린 일이 실제로 있었다.
+    // 그동안 화면에 움직이는 것이 하나도 없어서 "무한 로딩" 으로 보였다.
+    // 숫자를 보여주고, 오래 걸리면 오래 걸린다고 말한다.
+    let procTimer = null;
+
+    function startProcessingTimer() {
+      stopProcessingTimer();
+      const began = Date.now();
+      const el = document.getElementById('proc-elapsed');
+      const desc = document.getElementById('proc-desc');
+
+      procTimer = setInterval(function () {
+        const s = Math.floor((Date.now() - began) / 1000);
+        if (el) el.textContent = s + '초';
+
+        if (desc) {
+          if (s >= 90) {
+            desc.innerHTML = '국세청 응답이 많이 늦어지고 있습니다.<br>'
+              + '조금만 더 기다려 주시고, 계속 이 화면이면 담당 설계사에게 알려 주세요.';
+          } else if (s >= 25) {
+            desc.innerHTML = '국세청 응답을 기다리고 있습니다.<br>'
+              + '평소보다 오래 걸리고 있지만 정상 처리 중입니다. 화면을 닫지 말아 주세요.';
+          }
+        }
+      }, 1000);
+    }
+
+    function stopProcessingTimer() {
+      if (procTimer) { clearInterval(procTimer); procTimer = null; }
+      const el = document.getElementById('proc-elapsed');
+      if (el) el.textContent = '0초';
+      const desc = document.getElementById('proc-desc');
+      if (desc) {
+        desc.innerHTML = '보안 서버를 통해 국세청 인증을 요청하고 있습니다.<br>잠시만 기다려 주세요.';
+      }
+    }
 
     /** 이 결과 파일이 이번 시도의 것인가. */
     function isThisAttempt(result) {
@@ -397,6 +447,7 @@
       // 3. Show Processing Screen
       document.getElementById('step-input').classList.add('hidden');
       document.getElementById('step-processing').classList.remove('hidden');
+      startProcessingTimer();
 
       // 4. 처리 주체에 따라 서버를 부른다. (2026-09-18)
       //
@@ -464,6 +515,7 @@
         handledByWorker = true;
         if (res.stage === 'active') {
           // 이미 보낸 알림이 살아 있다. 대기 화면으로 넘겨 서명을 기다린다.
+          stopProcessingTimer();
           document.getElementById('step-processing').classList.add('hidden');
           applyProviderTexts();
           document.getElementById('step-waiting').classList.remove('hidden');
@@ -495,6 +547,7 @@
           isRequesting = false;
           if (resp.is2Way) {
             // Success: KakaoTalk / PASS push arrived!
+            stopProcessingTimer();
             document.getElementById('step-processing').classList.add('hidden');
             applyProviderTexts();
             document.getElementById('step-waiting').classList.remove('hidden');
@@ -584,6 +637,7 @@
     function finishWithSuccess() {
       if (autoConfirmInterval) clearInterval(autoConfirmInterval);
       stopAutoConfirm();
+      stopProcessingTimer();
       if (timerInterval) clearInterval(timerInterval);
       document.querySelectorAll('[id^="step-"]').forEach(function(el) { el.classList.add('hidden'); });
       document.getElementById('step-success').classList.remove('hidden');
@@ -741,6 +795,7 @@
 
     function showError(msg) {
       isRequesting = false;
+      stopProcessingTimer();
       document.querySelectorAll('[id^="step-"]').forEach(function(el) { el.classList.add('hidden'); });
       document.getElementById('error-message').textContent = msg;
       document.getElementById('step-error').classList.remove('hidden');
@@ -750,6 +805,8 @@
       if (timerInterval) clearInterval(timerInterval);
       if (autoConfirmInterval) clearInterval(autoConfirmInterval);
       stopAutoConfirm();
+      stopProcessingTimer();
+      attemptStartedAt = 0;      // 다음 시도 전까지는 어떤 결과도 이번 것이 아니다
       // 다시 시도할 때를 위해 초기화한다. 실제 재발송 허용 여부는 서버가 정한다.
       // (앞 인증이 살아 있으면 서버가 'active' 로 돌려주고 대기 화면으로 넘어간다)
       autoConfirmSent = 0;
