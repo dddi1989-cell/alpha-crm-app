@@ -3,6 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <!--
+    [2026-09-21] 이 페이지를 고치면 전원에게 즉시 적용된다. 되돌리는 데도
+    시간이 걸린다. 그런데 브라우저와 중간 캐시가 예전 페이지를 최대 10분쯤
+    들고 있어, 그동안 고객마다 예전 페이지와 새 페이지가 섞인다.
+
+    예전 페이지는 '이 인증을 누가 맡는지' 를 보지 않고 서버를 바로 부른다.
+    그래도 안전하다 — 서버가 "앞 인증이 아직 살아 있으면 다시 보내지 않는다"
+    를 지키기 때문이다(worker/src/sessionPolicy.js evaluateRetry).
+    즉 섞여 있어도 카카오톡이 두 번 가지 않는다.
+
+    다음 배포부터는 섞이는 시간 자체를 줄이려고 캐시를 막아 둔다.
+    아래 PAGE_VERSION 은 고객이 어느 판을 보고 있는지 확인할 때 쓴다.
+  -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="wlb-auth-page-version" content="2026-09-21.2">
+
   <title>국세청 연말정산 안심 본인인증</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -346,18 +365,14 @@
         timestamp: new Date().toISOString()
       };
 
-      // 2. 이 요청을 설계사 PC 가 맡기로 되어 있을 때만 릴레이에 올린다.
+      // 2. 고객이 입력한 값은 서버에만 건넨다. 저장소에 올리지 않는다.
       //
-      // [2026-09-21] 예전에는 무조건 올렸다. 이 파일에는 고객 이름·생년월일·
-      // 전화번호가 들어 있고, 올라가는 곳은 누구나 열 수 있는 공개 저장소였다.
-      // 서버가 맡는 경우에는 아래 startAuthOnServer 가 같은 내용을 서버에
-      // 직접 건네므로 공개 저장소를 거칠 이유가 없다.
+      // [2026-09-21] 예전에는 이 내용을 공개 저장소에 올렸다. 이름·생년월일·
+      // 전화번호가 들어 있는데, 주소만 알면 누구나 열 수 있는 자리였다.
       //
-      // PC 가 맡는 경우(발송 때 서버에 연결하지 못한 드문 경우)에만 올린다.
-      // PC 가 이 파일 말고는 고객이 입력한 값을 받을 길이 없기 때문이다.
-      if (sessionHandler === 'pc') {
-        await sbUpload('auth_request_' + currentSessionId + '.json', authReqPayload);
-      }
+      // 올릴 이유는 설계사 PC 가 조회를 대신 맡는 경우뿐이었다.
+      // 이제 조회는 서버만 한다 — PC 가 끼어들면 인증이 두 번 나가기 때문이다.
+      // 그래서 이 값은 아래 startAuthOnServer 가 서버에 직접 건네고 끝난다.
 
       // 3. Show Processing Screen
       document.getElementById('step-input').classList.add('hidden');
@@ -386,16 +401,20 @@
      * 고객 쪽 인증과 자료 수신은 정상으로 끝나고, PC 를 업데이트하면 보인다.
      */
     async function startAuthOnServer(payload) {
-      if (sessionHandler === 'pc') return;      // PC 가 처리한다. 손대지 않는다.
-
-      // 이미 PC 가 끝낸 세션이면(응답 파일이 있으면) 건드리지 않는다.
-      if (!sessionHandler) {
-        const resp = await sbDownload('auth_response_' + currentSessionId + '.json');
-        if (resp) return;
-      }
+      // 이미 끝난 세션이면(응답 파일이 있으면) 다시 부르지 않는다.
+      // 예전 버전 PC 가 처리해 둔 세션이 여기 해당한다.
+      const already = await sbDownload('auth_response_' + currentSessionId + '.json');
+      if (already) return;
 
       const res = await callWorker('/nts/auto', payload);
-      if (!res) return;                          // 응답을 못 받아도 릴레이 폴링이 이어받는다
+      if (!res) {
+        // 서버에 닿지 못했다. 예전에는 PC 가 이어받기를 기대하고 가만히
+        // 있었지만, 이제 PC 는 조회를 맡지 않는다. 고객을 기다리게 두지 않고
+        // 지금 사유를 알린다.
+        showError('조회 서버에 연결하지 못했습니다. 잠시 후 문자의 링크로 다시 들어와 주세요.');
+        isRequesting = false;
+        return;
+      }
 
       if (res.stage === 'pushed' || res.stage === 'done' || res.stage === 'direct') {
         handledByWorker = true;
