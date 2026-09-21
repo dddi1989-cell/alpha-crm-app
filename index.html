@@ -181,6 +181,36 @@
     let autoConfirmInterval = null;
     let isRequesting = false;
 
+    // ============================================================
+    // 이 인증을 누가 처리하는가 (2026-09-18)
+    //
+    // 'worker' — 서버가 처리한다. 설계사 PC 는 꺼져 있어도 된다.
+    // 'pc'     — 서버에 연결하지 못해 설계사 PC 가 직접 처리한다.
+    // null     — 예전 버전 PC 가 만든 세션. 표시가 없다.
+    //
+    // 예전에는 이 구분 없이 무조건 서버를 불렀다. 그래서 켜져 있는 PC 와
+    // 서버가 같은 요청을 동시에 처리해 카카오톡이 두 번 가고, 어느 쪽에
+    // 서명하든 다른 쪽이 CF-03002 로 끝나 "수신 시간 초과" 가 떴다.
+    // ============================================================
+    let sessionHandler = null;
+    let handledByWorker = false;      // 이번 요청을 서버가 맡았는가
+    const LEGACY_WAIT_MS = 8000;      // 표시가 없는 세션에서 PC 에 양보하는 시간
+
+    const sleep = (ms) => new Promise(function (r) { setTimeout(r, ms); });
+
+    async function callWorker(path, body) {
+      try {
+        const res = await fetch(EDGE_API + path, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        return await res.json();
+      } catch (e) {
+        return null;
+      }
+    }
+
     // Supabase Helpers
     async function sbUpload(name, data) {
       try {
@@ -222,6 +252,7 @@
       if (!currentSessionId) return;
       const info = await sbDownload('session_' + currentSessionId + '.json');
       if (!info) return;
+      sessionHandler = info.handler || null;
       if (info.clientName) {
         const el = document.getElementById('userName');
         if (el && !el.value) el.value = info.clientName;
@@ -318,18 +349,60 @@
       document.getElementById('step-input').classList.add('hidden');
       document.getElementById('step-processing').classList.remove('hidden');
 
-      // 4. Direct Edge Trigger: Instantly calls CODEF Step 1 → KakaoTalk/PASS push
-      //    This works even when the PC CRM program is off.
-      try {
-        fetch(EDGE_API + '/nts/auto', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(authReqPayload)
-        }).catch(function(err) { console.warn('Edge trigger error:', err); });
-      } catch (e) {}
+      // 4. 처리 주체에 따라 서버를 부른다. (2026-09-18)
+      //
+      //    설계사 PC 가 맡은 세션이면 서버를 부르지 않는다. 둘이 같이
+      //    처리하면 고객에게 카카오톡이 두 번 가고 인증이 깨진다.
+      startAuthOnServer(authReqPayload);
 
       // 5. Poll Supabase for auth_response (works via edge trigger OR PC CRM relay)
       pollForStep1Response();
+    }
+
+    /**
+     * 서버에 1단계를 맡긴다.
+     *
+     * 처리 주체 표시가 없는 세션(예전 버전 PC 가 만든 것)은 8초를 기다린다.
+     * 켜져 있는 PC 는 3초마다 릴레이를 확인하므로 그 안에 가져간다.
+     * 가져가지 않았으면 PC 가 꺼져 있다는 뜻이므로 서버가 맡는다.
+     */
+    async function startAuthOnServer(payload) {
+      if (sessionHandler === 'pc') return;      // PC 가 처리한다. 손대지 않는다.
+
+      if (!sessionHandler) {
+        await sleep(LEGACY_WAIT_MS);
+        const req = await sbDownload('auth_request_' + currentSessionId + '.json');
+        if (req && req._processed && req._processedBy !== 'worker-auto') return;
+        const resp = await sbDownload('auth_response_' + currentSessionId + '.json');
+        if (resp) return;                        // PC 가 이미 끝냈다
+      }
+
+      const res = await callWorker('/nts/auto', payload);
+      if (!res) return;                          // 응답을 못 받아도 릴레이 폴링이 이어받는다
+
+      if (res.stage === 'pushed' || res.stage === 'done' || res.stage === 'direct') {
+        handledByWorker = true;
+        return;
+      }
+      if (res.stage === 'pc-handling') return;
+
+      // 앞 인증이 아직 살아 있거나(active), 시도 횟수를 다 썼거나(exhausted),
+      // 1단계에서 실패한 경우. 고객에게 실제 사유를 보여준다.
+      if (res.stage === 'active' || res.stage === 'exhausted' || res.stage === 'failed') {
+        handledByWorker = true;
+        if (res.stage === 'active') {
+          // 이미 보낸 알림이 살아 있다. 대기 화면으로 넘겨 서명을 기다린다.
+          document.getElementById('step-processing').classList.add('hidden');
+          applyProviderTexts();
+          document.getElementById('step-waiting').classList.remove('hidden');
+          startTimer();
+          startAutoConfirm();
+          startAutoConfirmListener();
+          isRequesting = false;
+          return;
+        }
+        showError(res.message || res.error || '인증 요청을 처리하지 못했습니다.');
+      }
     }
 
     function pollForStep1Response() {
@@ -374,19 +447,36 @@
     // ============================================================
     let autoConfirmSent = 0;
     let autoConfirmTimer = null;
+
+    /**
+     * 서명 완료 신호.
+     *
+     * [2026-09-18] 서버가 맡은 세션에는 "처리됨" 표시를 붙인다.
+     * 예전 버전 PC 는 이 표시가 있으면 건너뛴다. 표시가 없으면 인증정보도
+     * 없는 예전 PC 가 2단계를 실행해, 방금 받은 자료를 0건으로 덮어썼다.
+     */
+    function confirmPayload(extra) {
+      const base = {
+        action: 'CONFIRM_AUTH',
+        sessionId: currentSessionId,
+        timestamp: new Date().toISOString()
+      };
+      if (handledByWorker || sessionHandler === 'worker') {
+        base._processed = true;
+        base._processedBy = 'worker-auto';
+      }
+      return Object.assign(base, extra || {});
+    }
     const AUTO_CONFIRM_MAX = 3;          // 최초 1회 + 재시도 2회
     const AUTO_CONFIRM_RETRY_MS = 145000; // 대기(약 132초)보다 조금 길게
 
     async function sendConfirmSignal() {
       autoConfirmSent++;
       try {
-        await sbUpload('auth_confirm_' + currentSessionId + '.json', {
-          action: 'CONFIRM_AUTH',
-          sessionId: currentSessionId,
+        await sbUpload('auth_confirm_' + currentSessionId + '.json', confirmPayload({
           auto: true,
-          attempt: autoConfirmSent,
-          timestamp: new Date().toISOString()
-        });
+          attempt: autoConfirmSent
+        }));
         // Also trigger edge function for confirm
         try {
           fetch(EDGE_API + '/nts/auto/confirm', {
@@ -465,11 +555,7 @@
       stopAutoConfirm();
 
       // 1. Upload confirm action to Supabase Relay
-      await sbUpload('auth_confirm_' + currentSessionId + '.json', {
-        action: 'CONFIRM_AUTH',
-        sessionId: currentSessionId,
-        timestamp: new Date().toISOString()
-      });
+      await sbUpload('auth_confirm_' + currentSessionId + '.json', confirmPayload({}));
 
       // 2. Direct Edge Trigger for Step 2
       try {
@@ -495,7 +581,10 @@
         count++;
         if (count > 45) { // 45 * 2s = 90s
           clearInterval(iv);
-          showError('의료비 자료 수신 시간이 초과되었습니다. ' + providerLabel() + '에서 서명을 완료하셨는지 확인 후 다시 시도해 주세요.');
+          // [2026-09-18] 예전에는 무조건 "수신 시간 초과" 를 띄웠다.
+          // 실제로는 아직 진행 중이거나 서버가 이미 실패로 끝낸 경우였다.
+          // 서버에 지금 상태를 물어보고 그대로 보여준다.
+          await showActualStatus();
           return;
         }
 
@@ -511,6 +600,39 @@
       }, 2000);
     }
 
+    /**
+     * 기다림이 길어졌을 때, 지금 실제로 어떤 상태인지 서버에 물어본다.
+     *
+     * 아직 진행 중이면 한 번 더 기다린다. (최대 2회)
+     * 서버가 맡지 않은 세션(설계사 PC 처리)이면 예전처럼 안내한다.
+     */
+    let statusChecks = 0;
+    async function showActualStatus() {
+      statusChecks++;
+
+      if (!handledByWorker && sessionHandler !== 'worker') {
+        showError('의료비 자료 수신이 지연되고 있습니다. ' + providerLabel() +
+          '에서 서명을 완료하셨는지 확인 후 담당 설계사에게 문의해 주세요.');
+        return;
+      }
+
+      const st = await callWorker('/nts/auto/status', { sessionId: currentSessionId });
+      if (!st) {
+        showError('서버 상태를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+        return;
+      }
+
+      if (st.stage === 'done') {
+        finishWithSuccess();
+        return;
+      }
+      if (st.stage === 'waiting' && statusChecks < 2) {
+        pollForStep2Result();      // 아직 진행 중이다. 한 번 더 기다린다.
+        return;
+      }
+      showError(st.message || '인증이 완료되지 않았습니다. 다시 시도해 주세요.');
+    }
+
     function showError(msg) {
       isRequesting = false;
       document.querySelectorAll('[id^="step-"]').forEach(function(el) { el.classList.add('hidden'); });
@@ -522,6 +644,11 @@
       if (timerInterval) clearInterval(timerInterval);
       if (autoConfirmInterval) clearInterval(autoConfirmInterval);
       stopAutoConfirm();
+      // 다시 시도할 때를 위해 초기화한다. 실제 재발송 허용 여부는 서버가 정한다.
+      // (앞 인증이 살아 있으면 서버가 'active' 로 돌려주고 대기 화면으로 넘어간다)
+      autoConfirmSent = 0;
+      statusChecks = 0;
+      handledByWorker = false;
       isRequesting = false;
       autoConfirmSent = 0;
       document.querySelectorAll('[id^="step-"]').forEach(function(el) { el.classList.add('hidden'); });
